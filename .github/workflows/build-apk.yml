@@ -1,0 +1,21 @@
+name: Compiler l'APK
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Compiler
+        run: chmod +x gradlew && ./gradlew assembleRelease --no-daemon
+      - name: Renommer
+        run: mkdir -p out && cp app/build/outputs/apk/release/app-release.apk out/BrawlRush.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BrawlRush-APK
+          path: out/BrawlRush.apk

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <!-- étoile (ombre) -->
+    <path android:fillColor="#99000030"
+        android:pathData="M54,25 L62,43 L82,45 L67,58 L72,78 L54,68 L36,78 L41,58 L26,45 L46,43z" android:translateY="3"/>
+    <path android:fillColor="#FFD21F" android:strokeColor="#2A1A00" android:strokeWidth="3" android:strokeLineJoin="round"
+        android:pathData="M54,22 L62,41 L83,43 L67,57 L72,77 L54,66 L36,77 L41,57 L25,43 L46,41z" />
+    <path android:fillColor="#FFF3A0"
+        android:pathData="M54,29 L59,42 L54,46 L49,42z" />
+</vector>
