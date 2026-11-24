@@ -58,11 +58,11 @@ class Cl {
   ok(ma.seed === mb.seed && ma.tiles.length > 100, 'même carte pour tous');
   // --- simulation ---
   let pos0 = null;
-  for (let i = 0; i < 170; i++) {
+  for (let i = 0; i < 260; i++) {
     A.send({ t: 'input', mx: 1, my: 0 }); B.send({ t: 'input', mx: 0, my: 1 });
-    if (i === 140) { A.send({ t: 'input', mx: 1, my: 0, a: [0, 300] }); }
+    if (i === 230) { A.send({ t: 'input', mx: 1, my: 0, a: [0, 300] }); }
     await sleep(33);
-    if (i === 110 && A.last) pos0 = A.last.e[ma.you].slice(0, 2);
+    if (!pos0 && A.last && A.last.s === 1) pos0 = A.last.e[ma.you].slice(0, 2); // dès que la partie démarre
   }
   ok(A.snaps > 30 && B.snaps > 30, 'instantanés reçus (' + A.snaps + '/' + B.snaps + ')');
   const pos1 = A.last.e[ma.you];
