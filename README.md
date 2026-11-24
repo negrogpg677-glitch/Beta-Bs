@@ -35,3 +35,12 @@ Joystick à gauche pour bouger · bouton jaune : toucher = tir automatique, glis
 - **Sans rien installer** : sur GitHub, onglet *Actions* → « Compiler l'APK » → *Run workflow* → téléchargez l'artefact `BrawlRush-APK`.
 - **En local** : `./build-apk.sh` (Java 17 + SDK Android 34).
 Le jeu se trouve dans `app/src/main/assets/www/`.
+
+## Édition développeur (`dist/BrawlRush-DEV.apk`)
+Application séparée « Brawl Rush DEV » (s'installe à côté de la normale, sauvegarde distincte). Bouton **DEV** en haut à gauche, utilisable aussi en plein match :
+- **Joueur** : pièces/gemmes/coffres, tout débloquer (10 brawlers, 7 apparences dont 3 exclusives, niveau max), trophées, quêtes, reset.
+- **Combat** (hors-ligne) : invincible, munitions/super infinis, éliminations en un coup, dégâts ×0,25–10, vitesse du joueur, vitesse du jeu ×0,2–3, ennemis passifs, soigner, tuer les ennemis, ajouter des bots, gagner/perdre immédiatement.
+- **Monde** : lancer n'importe quel mode sur n'importe quelle arène sans matchmaking ; superpositions FPS, hitboxes, chemins/cibles de l'IA.
+- **Mods** : 8 mods intégrés (vampires, turbo, supers express, géants, minis, pluie de cristaux, balles rapides, régénération) + **vos propres mods en JavaScript** (crochets `onMatchStart`, `onUpdate`, `onDamage`, `speedMul`), sauvegardés et activables.
+- **Console** JavaScript (`G`, `M`, `P`).
+En ligne, les outils de combat sont sans effet : le serveur reste seul juge. Pour compiler : `./build-apk.sh` produit les deux APK (`assembleDevRelease` pour la seule édition DEV).

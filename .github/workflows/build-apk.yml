@@ -12,10 +12,10 @@ jobs:
           distribution: temurin
           java-version: '17'
       - name: Compiler
-        run: chmod +x gradlew && ./gradlew assembleRelease --no-daemon
+        run: chmod +x gradlew && ./gradlew assembleProdRelease assembleDevRelease --no-daemon
       - name: Renommer
-        run: mkdir -p out && cp app/build/outputs/apk/release/app-release.apk out/BrawlRush.apk
+        run: mkdir -p out && cp app/build/outputs/apk/prod/release/app-prod-release.apk out/BrawlRush.apk && cp app/build/outputs/apk/dev/release/app-dev-release.apk out/BrawlRush-DEV.apk
       - uses: actions/upload-artifact@v4
         with:
           name: BrawlRush-APK
-          path: out/BrawlRush.apk
+          path: out/*.apk

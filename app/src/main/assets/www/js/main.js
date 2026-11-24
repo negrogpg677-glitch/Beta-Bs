@@ -52,6 +52,7 @@
     G.UI.hideAll();
     G.Audio.startMusic('battle');
     App.last = performance.now();
+    if (G.Dev) G.Dev.onMatchStart(M);
     if (!G.Save.data.tutorialDone) { G.UI.showTutorial(); }
   };
   App.beginOnline = function (init) {
@@ -83,7 +84,8 @@
   /* ----- boucle ----- */
   App.loop = function (now) {
     requestAnimationFrame(App.loop);
-    const dt = Math.min(0.05, (now - App.last) / 1000 || 0.016);
+    let dt = Math.min(0.05, (now - App.last) / 1000 || 0.016);
+    if (G.Dev && App.state === 'match' && App.M && !App.M.net) dt *= G.Dev.cfg.ts;
     App.last = now; App.t += dt;
     // qualité adaptative : si la fluidité chute en combat, on réduit les effets (une fois par palier)
     if (App.state === 'match' && !App.paused) {
@@ -116,6 +118,7 @@
         G.Render.drawAim(c, M, M.player, prev.ang, prev.dist, prev.sup); c.restore();
       }
       G.Render.drawHUD(c, M, App.W, App.H, G.Input, App.t);
+      if (G.Dev) G.Dev.draw(c, M, dt);
       if (M.state === 'end' && M.endT > 2.4 && !App.resultShown && (!M.net || G.NetMatch.endMsg || M.endT > 6)) App.finish();
     } else {
       G.UI.tick(dt, App.t);

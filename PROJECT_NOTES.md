@@ -25,3 +25,6 @@ gemgrab, brawlball, heist, bounty, hotzone (Zone stratégique), boss (Assaut du 
 - NON testé : sur vrai téléphone Android, réseau mobile réel, charge à grande échelle, serveur déployé sur Internet (je n'ai pas d'hébergement).
 - Les graphismes sont vectoriels générés par code (pas d'assets d'artiste) : qualité « jeu indépendant soigné », pas équivalente à Brawl Stars.
 - Push GitHub bloqué dans la session (app Claude non installée sur le dépôt) : commits locaux.
+
+## Édition DEV
+Product flavors Gradle `prod`/`dev` (dimension `edition`, `.dev` en suffixe d'applicationId). `src/dev/assets/www/js/{flavor,dev}.js` remplacent les stubs de `src/main`. Crochets `G.Dev.*` dans `game.js`/`main.js` (inactifs si `G.Dev` absent, ni côté serveur ni en ligne).

@@ -6,6 +6,6 @@ if [ -z "$ANDROID_HOME" ] && [ ! -f local.properties ]; then
   echo "SDK Android introuvable : définissez ANDROID_HOME ou créez local.properties (sdk.dir=/chemin/vers/sdk)"; exit 1
 fi
 chmod +x gradlew
-./gradlew assembleRelease --no-daemon
-mkdir -p dist && cp app/build/outputs/apk/release/app-release.apk dist/BrawlRush.apk
-echo "APK prêt : dist/BrawlRush.apk"
+./gradlew assembleProdRelease assembleDevRelease --no-daemon
+mkdir -p dist && cp app/build/outputs/apk/prod/release/app-prod-release.apk dist/BrawlRush.apk && cp app/build/outputs/apk/dev/release/app-dev-release.apk dist/BrawlRush-DEV.apk
+echo "APK prêts : dist/BrawlRush.apk et dist/BrawlRush-DEV.apk"
