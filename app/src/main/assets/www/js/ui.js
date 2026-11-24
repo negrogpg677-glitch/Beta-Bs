@@ -36,7 +36,7 @@
   })();
   const ic = (n, cls) => (ICONS[n] || '').replace('<svg', '<svg class="ic ' + (cls || '') + '"');
   G.ic = ic;
-  const MODE_ICON = { gem: 'gem', ball: 'ball', safe: 'safe', star: 'star', skull: 'skull' };
+  const MODE_ICON = { gem: 'gem', ball: 'ball', safe: 'safe', star: 'star', skull: 'skull', zone: 'flag', robot: 'gear' };
 
   /* ---------- utilitaires ---------- */
   UI.toast = function (msg, ms) {
@@ -138,11 +138,11 @@
     const canDaily = !UI.dailyDone();
     home.innerHTML = `
       <div class="topbar">
-        <div class="profile" data-act="settings"><canvas width="160" height="160"></canvas><div><div class="nm">${esc(sv.name)}</div><div class="tr">${ic('trophy')} ${fmt(tot)}</div></div></div>
+        <div class="profile" data-act="profile"><canvas width="160" height="160"></canvas><div><div class="nm">${esc(sv.name)}</div><div class="tr">${ic('trophy')} ${fmt(tot)}</div></div></div>
         <div class="spacer"></div>
         <div class="pill">${ic('gem')}<span class="cur-gems">0</span><span class="plus" data-act="goShop">+</span></div>
         <div class="pill">${ic('coin')}<span class="cur-coins">0</span><span class="plus" data-act="goShop">+</span></div>
-        <button class="icon-btn" data-act="settings">${ic('gear')}</button>
+        <button class="icon-btn" data-act="leaderboard">${ic('trophy')}</button><button class="icon-btn" data-act="settings">${ic('gear')}</button>
       </div>
       <div class="side-left">
         <button class="side-btn" data-act="quests">${ic('scroll')}${G.Quests.claimable() ? '<span class="badge">' + G.Quests.claimable() + '</span>' : ''}<span class="lbl">Quêtes</span></button>
@@ -158,10 +158,11 @@
       <div class="play-panel">
         <div class="mode-card" data-act="modes" style="--mc:${mode.color}">
           <div class="mi">${ic(MODE_ICON[mode.icon])}</div>
-          <div><div class="mn">${mode.name}</div><div class="mm">${mode.id === 'showdown' ? 'Solo · 10 joueurs' : '3 contre 3'} · ${mode.time >= 60 ? Math.round(mode.time / 60) + ' min' : mode.time + 's'}</div></div>
+          <div><div class="mn">${mode.name}</div><div class="mm">${mode.id === 'showdown' ? 'Solo · 10 joueurs' : mode.id === 'boss' ? 'Coopératif' : '3 contre 3'} · ${mode.time >= 60 ? Math.round(mode.time / 60) + ' min' : mode.time + 's'}</div></div>
           <div class="chev">›</div>
         </div>
-        <button class="btn big green pulse" data-act="play">JOUER</button>
+        <div class="row2"><button class="btn blue small" data-act="onlinePlay">${ic('bolt')} En ligne</button><button class="btn small" style="background:linear-gradient(#e0a0ff,#a032e0);box-shadow:0 .7rem 0 #5a1a8a,0 .9rem 0 .2rem var(--navy),inset 0 .35rem 0 rgba(255,255,255,.55)" data-act="team">${ic('user')} Équipe</button></div>
+        <button class="btn big green pulse" data-act="play">JOUER <small style="font-size:2rem">vs bots</small></button>
       </div>
       ${nav('home')}`;
     G.Render.portrait($('.profile canvas', home), id, skinOf(id), 0, { aim: 0.4, zoom: 1.5, y: 0.95, shadow: false });
@@ -211,7 +212,7 @@
     const sv = S();
     const html = `<h2>Choisissez un mode</h2><div class="modes">` + G.MODE_ORDER.map((id) => {
       const m = G.MODES[id];
-      return `<div class="modecard ${sv.mode === id ? 'sel' : ''}" data-act="pickMode" data-id="${id}" style="--mc:${m.color}"><div class="hd">${ic(MODE_ICON[m.icon])}<div class="mn">${m.name}</div></div><div class="bd">${m.desc}<br><span style="color:#ffd21f">${id === 'showdown' ? 'Solo · 10 joueurs' : '3 contre 3'}</span></div></div>`;
+      return `<div class="modecard ${sv.mode === id ? 'sel' : ''}" data-act="pickMode" data-id="${id}" style="--mc:${m.color}"><div class="hd">${ic(MODE_ICON[m.icon])}<div class="mn">${m.name}</div></div><div class="bd">${m.desc}<br><span style="color:#ffd21f">${id === 'showdown' ? 'Solo · 10 joueurs' : id === 'boss' ? 'Coopératif · 1 à 3 joueurs' : '3 contre 3'}</span></div></div>`;
     }).join('') + '</div>';
     UI.modal(html);
   };
@@ -267,7 +268,8 @@
       const s = S().settings;
       const tg = (k, label) => `<div class="setrow"><span>${label}</span><div class="toggle ${s[k] ? 'on' : ''}" data-act="toggle" data-k="${k}"></div></div>`;
       return `<h2>Réglages</h2>${tg('sound', 'Effets sonores')}${tg('music', 'Musique')}${tg('vibrate', 'Vibrations')}${tg('aimAssist', 'Aide à la visée')}${tg('lefty', 'Mode gaucher')}
-        <div class="setrow"><span>Qualité graphique</span><button class="btn small ${s.quality === 'high' ? 'green' : 'gray'}" data-act="quality">${s.quality === 'high' ? 'Haute' : 'Économie'}</button></div>
+        <div class="setrow"><span>Qualité graphique</span><button class="btn small ${s.quality === 'high' ? 'green' : s.quality === 'medium' ? 'blue' : 'gray'}" data-act="quality">${s.quality === 'high' ? 'Haute' : s.quality === 'medium' ? 'Moyenne' : 'Économie'}</button></div>
+        <div class="setrow"><span>Serveur en ligne</span><button class="btn small ${S().settings.server ? 'green' : 'gray'}" data-act="serverCfg">${S().settings.server ? 'Configuré' : 'À configurer'}</button></div>
         <div class="setrow"><span>Pseudo : ${esc(S().name)}</span><button class="btn small blue" data-act="rename">Modifier</button></div>
         <div class="row" style="margin-top:2rem"><button class="btn small red" data-act="reset">Réinitialiser la progression</button></div>
         <div class="row" style="margin-top:1.6rem;font-size:2rem;color:#9aa7c8">Brawl Rush v1.0 — Jeu indépendant</div>`;
@@ -282,7 +284,7 @@
     const o = UI.modals[UI.modals.length - 1]; if (!o || !UI._settingsRender) return;
     const m = o.querySelector('.modal'); const x = m.querySelector('.x'); m.innerHTML = ''; m.appendChild(x); m.insertAdjacentHTML('beforeend', UI._settingsRender());
   }
-  ACT.quality = () => { const s = S().settings; s.quality = s.quality === 'high' ? 'eco' : 'high'; G.Save.commit(); G.App.resize(); refreshSettings(); };
+  ACT.quality = () => { const s = S().settings; s.quality = s.quality === 'high' ? 'medium' : s.quality === 'medium' ? 'low' : 'high'; G.Save.commit(); G.App.resize(); refreshSettings(); };
   ACT.rename = () => {
     const o = UI.modal(`<h2>Votre pseudo</h2><div class="row"><input class="txt" id="nameIn" maxlength="14" value="${esc(S().name)}"></div><div class="row" style="margin-top:2.4rem"><button class="btn green" data-act="saveName">OK</button></div>`);
     setTimeout(() => { const i = $('#nameIn'); if (i) i.focus(); }, 200);
@@ -627,4 +629,5 @@
       requestAnimationFrame(loop);
     })(last);
   }
+  UI.ACT = ACT; UI.h = { $, $$, el, esc, portraitCanvas, animate, fmt, S, ic, addTimer, clearTimers, skinOf, head, nav };
 })();

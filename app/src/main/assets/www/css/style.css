@@ -198,7 +198,7 @@ button { font: inherit; color: inherit; text-shadow: inherit; border: 0; backgro
 .modal h2 { margin: 0 0 2rem; font-size: 5rem; font-weight: normal; text-align: center; }
 .modal .x { position: absolute; top: 1.2rem; right: 1.6rem; width: 6rem; height: 6rem; border-radius: 50%; background: linear-gradient(#ff8a8a, #e62a3a); border: .35rem solid var(--navy); font-size: 4rem; box-shadow: 0 .4rem 0 #8a1020; z-index: 3; }
 .modal .row { display: flex; gap: 2rem; align-items: center; justify-content: center; flex-wrap: wrap; }
-.modes { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2rem; width: 140rem; max-width: 100%; }
+.modes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2rem; width: 130rem; max-width: 100%; }
 .modecard { border-radius: 2.2rem; border: .4rem solid var(--navy); overflow: hidden; background: #1a1d58; box-shadow: 0 .6rem 0 #0c0e3a; text-align: center; display: flex; flex-direction: column; }
 .modecard .hd { background: var(--mc); padding: 2rem 0 1.4rem; box-shadow: inset 0 -.4rem 0 rgba(0,0,0,.2); }
 .modecard .hd svg { width: 9rem; height: 9rem; }
@@ -274,3 +274,21 @@ body.in-match #pauseBtn { display: block; }
 .reward .ic { width: 16rem; height: 16rem; }
 .reward canvas { width: 34rem; height: 34rem; }
 .glow { position: absolute; left: 50%; top: 50%; width: 80rem; height: 80rem; transform: translate(-50%, -50%); background: conic-gradient(from 0deg, rgba(255,230,120,.0), rgba(255,230,120,.5), rgba(255,230,120,0) 12%, rgba(255,230,120,.5) 25%, rgba(255,230,120,0) 37%, rgba(255,230,120,.5) 50%, rgba(255,230,120,0) 62%, rgba(255,230,120,.5) 75%, rgba(255,230,120,0) 87%); border-radius: 50%; animation: spin 8s linear infinite; mask-image: radial-gradient(circle, #000 20%, transparent 70%); -webkit-mask-image: radial-gradient(circle, #000 20%, transparent 70%); pointer-events: none; }
+
+.row2 { display: flex; gap: 1.6rem; } .row2 .btn { flex: 1; font-size: 2.8rem; }
+.netdot { display: inline-block; width: 1.8rem; height: 1.8rem; border-radius: 50%; background: #888; margin-right: .6rem; vertical-align: middle; box-shadow: 0 0 0 .25rem var(--navy); }
+.netdot.on { background: #4cd964; } .netdot.wait { background: #ffd21f; animation: blink 1s infinite; } .netdot.off { background: #ff4a55; }
+.code { font-size: 12rem; letter-spacing: 1.4rem; color: var(--yellow); text-align: center; line-height: 1; margin: .4rem 0 1rem; padding-left: 1.4rem; }
+.members { display: flex; flex-wrap: wrap; gap: 1.6rem; justify-content: center; margin: 1.6rem 0; max-width: 130rem; }
+.member { position: relative; width: 24rem; border-radius: 2rem; border: .35rem solid var(--navy); background: linear-gradient(#3d44b8, #232873); text-align: center; padding: .6rem .6rem 1.2rem; font-size: 2.6rem; }
+.member canvas { width: 16rem; height: 16rem; }
+.member .crown { position: absolute; top: -1.6rem; left: -1.2rem; font-size: 4rem; transform: rotate(-20deg); }
+.member .kick { position: absolute; top: .4rem; right: .6rem; width: 4rem; height: 4rem; border-radius: 50%; background: var(--red); border: .25rem solid var(--navy); font-size: 2.2rem; }
+.member.empty { opacity: .45; display: grid; place-items: center; min-height: 24rem; font-size: 2.4rem; border-style: dashed; background: none; }
+.member .off { color: #ff9a9a; font-size: 2rem; }
+.lbrow { display: grid; grid-template-columns: 7rem 1fr 14rem 10rem; gap: 1rem; align-items: center; font-size: 3rem; padding: .7rem 2rem; border-radius: 1.4rem; background: rgba(0,0,0,.25); margin-bottom: .8rem; min-width: 100rem; }
+.lbrow.me { background: rgba(255,210,31,.3); outline: .3rem solid var(--yellow); } .lbrow.h { background: none; color: #aab; font-size: 2.2rem; }
+.lbrow .rk { color: var(--yellow); }
+.netov { position: absolute; inset: 0; z-index: 80; background: rgba(6,6,30,.78); display: grid; place-items: center; text-align: center; font-size: 4rem; gap: 2rem; align-content: center; }
+.statgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.4rem; margin: 1.4rem 0; font-size: 2.6rem; }
+.statgrid div { background: rgba(0,0,0,.28); border-radius: 1.4rem; padding: 1rem 2rem; text-align: center; } .statgrid b { display: block; font-weight: normal; font-size: 4rem; color: var(--yellow); }

@@ -8,12 +8,24 @@ Jeu d'arène complet inspiré des jeux de « brawlers », 100 % hors-ligne, écr
 3. Lancez **Brawl Rush**.
 
 ## Contenu
-- **10 brawlers** uniques (attaque + super chacun), 4 apparences, niveaux 1-10
-- **5 modes** : Razzia de cristaux, Foot brawl, Braquage, Chasse aux primes (3v3) et Survie (10 joueurs, gaz toxique)
-- **16 arènes** générées de façon symétrique (5 thèmes : prairie, désert, toundra, volcan, nuit), buissons, caisses destructibles, eau
-- **Bots** avec pathfinding A*, esquive, visée prédictive, rôles tactiques par mode, difficulté selon vos trophées
-- Trophées, route des trophées, coffres, boutique (offres du jour), quêtes, cadeau quotidien, sauvegarde automatique
-- Menus animés, musique et effets synthétisés, vibrations, mode gaucher
+- **10 brawlers** originaux (+ le boss Mégabot), chacun avec attaque, super, carrure et animations propres ; 4 apparences, niveaux 1-10
+- **7 modes** : Razzia de cristaux, Foot brawl, Braquage, Chasse aux primes, **Zone stratégique**, **Assaut du Mégabot** (coopératif) — en 3 contre 3 — et Survie (10 joueurs, gaz toxique)
+- **19 arènes** symétriques (5 thèmes), buissons, caisses destructibles, eau, zones à capturer
+- **Multijoueur en ligne** (serveur autoritatif) : équipes privées avec **code à 5 caractères**, rejoindre/quitter/exclure, matchmaking, salle d'attente, match privé (équipe contre bots ou amis contre amis), reconnexion automatique, classement mondial
+- **Bots** (A*, esquive, visée prédictive) utilisés hors-ligne et pour compléter les places vides en ligne (toujours étiquetés « Bot-… »)
+- Personnages animés (attente, course, attaque, dégâts, élimination, victoire, défaite), lumière/ombres, particules, explosions ; 3 niveaux de qualité + réglage automatique si ça rame
+- Trophées, route des trophées, coffres, boutique, quêtes, profil, sauvegarde automatique
+
+## Jouer en ligne avec vos amis (il faut un serveur)
+Le serveur est dans `server/`. Le jeu fonctionne hors-ligne sans lui ; le multijoueur nécessite qu'il tourne quelque part sur Internet.
+
+**Option la plus simple — Render.com (gratuit)** : créez un compte, *New > Blueprint*, choisissez ce dépôt GitHub (le fichier `render.yaml` fait tout). Vous obtenez une adresse du type `brawl-rush-server.onrender.com`. (L'offre gratuite s'endort après ~15 min d'inactivité : la 1ʳᵉ connexion peut prendre ~1 min.)
+**Autres** : n'importe quel hébergeur Docker (`Dockerfile` fourni : Fly.io, Railway, VPS) ou `cd server && npm ci && npm start` (port 8080, variable `PORT`).
+
+**Dans le jeu** : Réglages > *Serveur en ligne* > saisissez l'adresse (ex. `brawl-rush-server.onrender.com`) > *Enregistrer et tester*. Chaque ami fait pareil, puis **Équipe** > *Créer une équipe* et partage le code (bouton *Partager*) ; l'ami choisit **Équipe** > saisit le code.
+Pour que l'adresse soit préconfigurée dans l'APK, renseignez `G.DEFAULT_SERVER` dans `app/src/main/assets/www/js/data.js` avant de recompiler.
+Test en réseau local : `cd server && npm start`, puis l'adresse `192.168.x.x:8080` (IP de l'ordinateur) dans le jeu.
+Le serveur sert aussi le jeu dans un navigateur à `http://adresse/` et expose `/health`.
 
 ## Contrôles
 Joystick à gauche pour bouger · bouton jaune : toucher = tir automatique, glisser = viser · éclair = super.

@@ -6,3 +6,5 @@ app/build/
 .idea/
 captures/
 node_modules/
+server/node_modules/
+server/data/

@@ -142,7 +142,8 @@
       if (!p.alive || M.state !== 'play') continue;
       const isSuper = ev.kind === 'sup';
       const a = ev.mouse ? aimFor(M, p, null, isSuper, true) : aimFor(M, p, ev, isSuper, false);
-      if (isSuper) G.Sim.trySuper(M, p, a.ang, a.dist); else if (!G.Sim.tryAttack(M, p, a.ang, a.dist) && p.ammo < 1) G.Audio.sfx('error');
+      if (M.net) { if (!G.NetMatch.attack(M, a.ang, a.dist, isSuper) && !isSuper && p.ammo < 1) G.Audio.sfx('error'); }
+      else if (isSuper) G.Sim.trySuper(M, p, a.ang, a.dist); else if (!G.Sim.tryAttack(M, p, a.ang, a.dist) && p.ammo < 1) G.Audio.sfx('error');
     }
   };
 

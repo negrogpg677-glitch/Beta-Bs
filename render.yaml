@@ -1,0 +1,10 @@
+# Déploiement en un clic sur Render.com (Blueprint) : New > Blueprint > ce dépôt
+services:
+  - type: web
+    name: brawl-rush-server
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: FILL_WAIT
+        value: "12"

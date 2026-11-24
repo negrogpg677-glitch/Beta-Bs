@@ -90,6 +90,11 @@
         reserve(mx - 2, cy - 2, mx + 2, cy + 2);
         map.mine = tc(mx, cy); must.push([mx, cy]);
       }
+      if (mode === 'hotzone') {
+        const mx = Math.floor(cx);
+        map.caps = [];
+        for (const dy of [-5, 5]) { reserve(mx - 3, cy + dy - 3, mx + 3, cy + dy + 3); const c = tc(mx, cy + dy); map.caps.push({ x: c.x, y: c.y, r: 2.3 * T }); must.push([mx, cy + dy]); }
+      }
       if (mode === 'brawlball') {
         const mx = Math.floor(cx);
         reserve(mx - 2, cy - 2, mx + 2, cy + 2);

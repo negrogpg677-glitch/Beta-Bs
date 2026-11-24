@@ -23,8 +23,10 @@
   };
 
   App.resize = function () {
-    const q = G.Save.data.settings.quality;
-    App.dpr = Math.min(window.devicePixelRatio || 1, q === 'high' ? 2 : 1.2);
+    let q = G.Save.data.settings.quality;
+    if (q === 'eco') q = 'low';
+    G.Render.q = q === 'high' ? 2 : q === 'medium' ? 1 : 0;
+    App.dpr = Math.min(window.devicePixelRatio || 1, q === 'high' ? 2 : q === 'medium' ? 1.5 : 1);
     App.W = window.innerWidth; App.H = window.innerHeight;
     const cv = App.canvas;
     cv.width = Math.round(App.W * App.dpr); cv.height = Math.round(App.H * App.dpr);
@@ -52,6 +54,11 @@
     App.last = performance.now();
     if (!G.Save.data.tutorialDone) { G.UI.showTutorial(); }
   };
+  App.beginOnline = function (init) {
+    G.UI.hideAll();
+    const M = G.NetMatch.begin(init);
+    App.begin(M);
+  };
   App.togglePause = function () {
     if (App.state !== 'match' || !App.M || App.M.state === 'end') return;
     App.paused = !App.paused;
@@ -62,6 +69,10 @@
     const M = App.M;
     App.paused = false;
     G.UI.hidePause();
+    if (M && M.net) { // abandon d'un match en ligne : l'IA reprend le brawler
+      G.Net.send({ t: 'match_leave' }); App.state = 'menu'; App.M = null; G.Input.enabled = false; document.body.classList.remove('in-match');
+      G.UI.netOverlay(false); G.Audio.startMusic('menu'); G.UI.show('home'); return;
+    }
     if (M && M.state !== 'end') { // abandon = défaite
       M.result = { win: false, draw: false, winnerTeam: -1, place: M.mode === 'showdown' ? (M.player.alive ? M.alive : M.player.place || 10) : 0, time: M.t, quit: true };
       M.state = 'end'; M.endT = 99;
@@ -74,10 +85,24 @@
     requestAnimationFrame(App.loop);
     const dt = Math.min(0.05, (now - App.last) / 1000 || 0.016);
     App.last = now; App.t += dt;
+    // qualité adaptative : si la fluidité chute en combat, on réduit les effets (une fois par palier)
+    if (App.state === 'match' && !App.paused) {
+      App.fpsN = (App.fpsN || 0) + 1; App.fpsT = (App.fpsT || 0) + dt;
+      if (App.fpsT > 2.5) {
+        const fps = App.fpsN / App.fpsT; App.fpsN = 0; App.fpsT = 0;
+        const set = G.Save.data.settings;
+        if (fps < 38 && set.quality !== 'low' && set.quality !== 'eco') { set.quality = set.quality === 'high' ? 'medium' : 'low'; G.Save.commit(); App.resize(); G.UI.toast('Qualité réduite pour rester fluide', 2200); }
+      }
+    }
     const c = App.ctx;
     if (App.state === 'match' && App.M) {
       const M = App.M;
-      if (!App.paused) {
+      if (M.net) { // combat en ligne : le serveur fait la simulation
+        if (!App.paused) G.Input.update(M, dt);
+        G.NetMatch.update(M, dt);
+        App.updateCam(M, dt);
+        if (!M.ready) { c.setTransform(App.dpr, 0, 0, App.dpr, 0, 0); c.fillStyle = '#12134a'; c.fillRect(0, 0, App.W, App.H); c.fillStyle = '#fff'; c.font = '28px "Lilita One", sans-serif'; c.textAlign = 'center'; c.fillText('Connexion à la partie…', App.W / 2, App.H / 2); return; }
+      } else if (!App.paused) {
         G.Input.update(M, dt);
         G.Sim.update(M, dt);
         App.updateCam(M, dt);
@@ -91,7 +116,7 @@
         G.Render.drawAim(c, M, M.player, prev.ang, prev.dist, prev.sup); c.restore();
       }
       G.Render.drawHUD(c, M, App.W, App.H, G.Input, App.t);
-      if (M.state === 'end' && M.endT > 2.4 && !App.resultShown) App.finish();
+      if (M.state === 'end' && M.endT > 2.4 && !App.resultShown && (!M.net || G.NetMatch.endMsg || M.endT > 6)) App.finish();
     } else {
       G.UI.tick(dt, App.t);
     }
@@ -120,6 +145,7 @@
     if (App.resultShown) return;
     App.resultShown = true;
     const M = App.M, r = M.result, p = M.player, save = G.Save.data, id = p.id;
+    const online = M.net ? (G.NetMatch.endMsg || { delta: 0, coins: 20 + p.kills * 4, place: r.place }) : null;
     const before = save.trophies[id] || 0;
     let delta = 0, coins = 0, gems = 0, box = 0;
     if (M.mode === 'showdown') {
@@ -132,9 +158,10 @@
       box = Math.random() < 0.75 ? 1 : 0; if (Math.random() < 0.15) gems = 1 + G.ri(0, 1);
     } else if (r.draw) { delta = 0; coins = 28; box = Math.random() < 0.2 ? 1 : 0; }
     else { delta = -Math.min(before, G.clamp(Math.round(2 + before / 70), 2, 8)); coins = 20 + G.ri(0, 8); box = Math.random() < 0.2 ? 1 : 0; }
+    if (online) { delta = online.delta; coins = online.coins - 4 * (M.stats.kills || p.kills || 0); box = r.win ? (Math.random() < 0.6 ? 1 : 0) : (Math.random() < 0.2 ? 1 : 0); gems = 0; }
     if (r.quit) { delta = -Math.min(before, 5); coins = 0; box = 0; gems = 0; }
     coins += M.stats.kills * 4;
-    const kill = M.stats.kills;
+    const kill = M.stats.kills || 0;
     save.trophies[id] = Math.max(0, before + delta);
     save.coins += coins; save.gems += gems; save.boxes += box;
     const st = save.stats;
@@ -150,8 +177,38 @@
     App.state = 'menu'; G.Input.enabled = false; App.M = null;
     document.body.classList.remove('in-match');
     G.Audio.startMusic('menu');
-    G.UI.showResult({ M, r, delta, coins, gems, box, brawler: id, before, after: save.trophies[id], kills: kill, damage: Math.round(M.stats.damage), mode: M.mode, place: r.place, time: M.t });
+    if (online) G.UI.netOverlay(false);
+    G.UI.showResult({ online: !!online, M, r, delta, coins, gems, box, brawler: id, before, after: save.trophies[id], kills: kill, damage: Math.round(M.stats.damage), mode: M.mode, place: r.place, time: M.t });
   };
+
+  /* ----- évènements réseau ----- */
+  G.Net.on('snap', (s) => G.NetMatch.onSnap(s));
+  G.Net.on('match', (init) => {
+    if (App.state === 'match' && App.M && App.M.net) { App.M = G.NetMatch.begin(init); G.UI.netOverlay(false); return; }
+    if (App.state === 'match') return;
+    App.beginOnline(init); G.UI.versusRoster(init);
+  });
+  G.Net.on('end', (e) => {
+    const M = App.M;
+    if (App.state === 'match' && M && M.net && M.state !== 'end') { // fin manquée pendant une coupure
+      M.result = { win: e.win, draw: e.draw, winnerTeam: -1, place: e.place, time: M.t }; M.state = 'end'; M.endT = 3;
+      M.stats = Object.assign({ damage: 0, kills: 0, supers: 0, heal: 0, gems: 0, goals: 0 }, e.stats || {});
+    }
+  });
+  G.Net.on('status', (st) => {
+    const M = App.M;
+    if (App.state === 'match' && M && M.net && M.state !== 'end') {
+      G.UI.netOverlay(st !== 'online', st === 'online' ? '' : 'Connexion perdue… reconnexion en cours');
+      if (st !== 'online') M.resumeWait = true;
+    }
+  });
+  G.Net.on('welcome', () => {
+    const M = App.M;
+    if (App.state === 'match' && M && M.net && M.resumeWait) {
+      setTimeout(() => { if (App.M === M && M.resumeWait && App.state === 'match' && M.state !== 'end') { G.UI.netOverlay(false); G.UI.toast('La partie est terminée.'); App.quitMatch(); } }, 3500);
+    }
+  });
+  G.Net.on('match', () => { if (App.M) App.M.resumeWait = false; });
 
   /* ----- appel natif Android ----- */
   G.onBack = function () {

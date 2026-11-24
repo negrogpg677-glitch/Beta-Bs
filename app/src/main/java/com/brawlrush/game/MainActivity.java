@@ -106,6 +106,17 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public void share(String text) {
+            runOnUiThread(() -> {
+                try {
+                    android.content.Intent i = new android.content.Intent(android.content.Intent.ACTION_SEND);
+                    i.setType("text/plain"); i.putExtra(android.content.Intent.EXTRA_TEXT, text);
+                    startActivity(android.content.Intent.createChooser(i, "Inviter un ami"));
+                } catch (Exception ignored) { }
+            });
+        }
+
+        @JavascriptInterface
         public void quit() { runOnUiThread(MainActivity.this::finish); }
     }
 }

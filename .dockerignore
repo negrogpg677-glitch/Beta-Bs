@@ -1,0 +1,7 @@
+**/node_modules
+app/build
+build
+.gradle
+dist
+.git
+server/data

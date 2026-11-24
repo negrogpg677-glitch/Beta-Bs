@@ -86,8 +86,15 @@
     },
   ];
   G.BRAWLER = {};
+  // le boss n'est pas jouable : il n'apparaît pas dans la liste des brawlers
+  G.BOSS = { id: 'robot', name: 'Mégabot', role: 'Boss', rarity: 'legend', price: 0, hp: 100000, speed: 2.9, superCost: 5000, desc: 'Un robot géant.', aiRange: 5.2, noHpScale: true,
+    look: { skin: '#9fb0c8', body: '#59657e', body2: '#303a52', hair: '#ff4a55', accent: '#ff4a55', hat: 'robot', weapon: 'bigshotgun' },
+    atk: { name: 'Salve', n: 7, spread: 64, range: 6.4, speed: 12, dmg: 330, r: 9, reload: 1.7, shape: 'bolt', color: '#ff6a6a', sfx: 'shotgun' },
+    sup: { name: 'Onde de choc', type: 'aura', radius: 3.8, dmg: 1300, stun: 0.9, color: '#ff6a6a', sfx: 'zap' } };
   G.HP_SCALE = 2.1; // équilibrage : combats plus longs et plus lisibles
   G.BRAWLERS.forEach((b) => { b.hp = Math.round(b.hp * G.HP_SCALE / 50) * 50; G.BRAWLER[b.id] = b; });
+  G.BRAWLER.robot = G.BOSS;
+  G.DEFAULT_SERVER = ''; // adresse du serveur par défaut (ex. 'mon-jeu.onrender.com') ; modifiable dans Réglages
 
   /* skins : décalage de teinte global + doré */
   G.SKINS = [
@@ -129,7 +136,11 @@
     showdown: { id: 'showdown', name: 'Survie', short: 'Survie', color: '#ff8a1f', icon: 'skull', teams: 10, per: 1, time: 240,
       desc: 'Seul contre 9 ! Ramassez des cubes de puissance et survivez au gaz toxique.', maps: ['jungle', 'desert', 'sommet', 'crater'] },
   };
-  G.MODE_ORDER = ['gemgrab', 'brawlball', 'heist', 'bounty', 'showdown'];
+  G.MODES.hotzone = { id: 'hotzone', name: 'Zone stratégique', short: 'Zones', color: '#1fc8b8', icon: 'zone', teams: 2, per: 3, time: 150,
+    desc: 'Contrôlez les zones sans ennemi à l\'intérieur : première équipe à 100 points !', maps: ['plateau', 'ruines', 'givre'] };
+  G.MODES.boss = { id: 'boss', name: 'Assaut du Mégabot', short: 'Mégabot', color: '#6a7bff', icon: 'robot', teams: 2, per: 3, time: 150,
+    desc: 'Défi coopératif ! Unissez vos forces pour détruire le robot géant avant d\'être éliminés.', maps: ['usine', 'arene_boss'] };
+  G.MODE_ORDER = ['gemgrab', 'brawlball', 'heist', 'bounty', 'hotzone', 'boss', 'showdown'];
 
   /* thèmes visuels des arènes */
   G.THEMES = {
@@ -154,6 +165,11 @@
     canyon: { name: 'Grand canyon', mode: 'bounty', theme: 'desert', seed: 107, w: 31, h: 21, density: 1.0, vmirror: true },
     foret: { name: 'Forêt mystique', mode: 'bounty', theme: 'meadow', seed: 118, w: 31, h: 21, density: 1.2, vmirror: false },
     polaire: { name: 'Station polaire', mode: 'bounty', theme: 'snow', seed: 129, w: 31, h: 21, density: 1.0, vmirror: true },
+    plateau: { name: 'Plateau des zones', mode: 'hotzone', theme: 'meadow', seed: 141, w: 33, h: 21, density: 0.9, vmirror: true },
+    ruines: { name: 'Ruines du désert', mode: 'hotzone', theme: 'desert', seed: 152, w: 33, h: 21, density: 1.0, vmirror: true },
+    givre: { name: 'Plateau du givre', mode: 'hotzone', theme: 'snow', seed: 163, w: 33, h: 21, density: 0.9, vmirror: true },
+    usine: { name: 'Usine abandonnée', mode: 'boss', theme: 'night', seed: 174, w: 31, h: 21, density: 0.8, vmirror: true },
+    arene_boss: { name: 'Arène du Mégabot', mode: 'boss', theme: 'volcano', seed: 185, w: 31, h: 21, density: 0.7, vmirror: true },
     jungle: { name: 'Jungle dangereuse', mode: 'showdown', theme: 'meadow', seed: 0, w: 38, h: 38, density: 1.0 },
     desert: { name: 'Désert brûlant', mode: 'showdown', theme: 'desert', seed: 0, w: 38, h: 38, density: 0.9 },
     sommet: { name: 'Sommet gelé', mode: 'showdown', theme: 'snow', seed: 0, w: 38, h: 38, density: 1.0 },

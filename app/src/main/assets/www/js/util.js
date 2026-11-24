@@ -53,6 +53,7 @@
     const A = hex2rgb(a), B = hex2rgb(b);
     return rgb2hex(A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t);
   };
+  G.hexA = (hex, a) => { const [r, g, b] = hex2rgb(hex); return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')'; };
   G.hueShift = (hex, deg) => {
     let [r, g, b] = hex2rgb(hex).map((v) => v / 255);
     const mx = Math.max(r, g, b), mn = Math.min(r, g, b);

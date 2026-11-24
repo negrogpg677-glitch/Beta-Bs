@@ -5,20 +5,20 @@
   const Sim = (G.Sim = {});
   const BOT_NAMES = ['Zébulon', 'Ninja42', 'Tornade', 'LeBoss', 'Pixel', 'Mistral', 'Gaufre', 'Turbo', 'Chaton', 'Ombre', 'Rafale', 'Biscotte', 'Éclair', 'Panda', 'Dragon', 'Cactus', 'Fusée', 'Comète', 'Loup', 'Nuage'];
 
+  /* ---------- évènements réseau / audio ---------- */
+  Sim.sfx = function (M, name, x, y) {
+    if (M.online) { if (M.evq.length < 500) M.evq.push(['s', name, x === undefined ? -1 : Math.round(x), y === undefined ? -1 : Math.round(y)]); return; }
+    if (x !== undefined && M.player && Math.hypot(x - M.player.x, y - M.player.y) > 1100) return;
+    G.Audio.sfx(name);
+  };
+
   /* ---------- création ---------- */
   Sim.create = function (opts) {
     const mode = G.MODES[opts.mode];
     const mdef = G.MAPS[opts.mapKey];
     const seed = mode.id === 'showdown' ? Math.floor(Math.random() * 100000) : mdef.seed;
     const map = G.genMap(mdef, seed);
-    const M = {
-      mode: mode.id, modeDef: mode, mapKey: opts.mapKey, map, w: map.w, h: map.h, t: 0, state: 'countdown', cd: 3.2, cdLast: 4, endT: 0,
-      left: mode.time, ents: [], projs: [], items: [], zones: [], parts: [], texts: [], strikes: [], events: [], rings: [],
-      score: [0, 0], cam: { x: 0, y: 0, shake: 0, zoom: 1 }, player: null, result: null, banner: null, shakeT: 0,
-      stats: { damage: 0, kills: 0, supers: 0, heal: 0, gems: 0, goals: 0 }, trophiesAvg: opts.trophies || 0, practice: !!opts.practice,
-      overtime: false, ball: null, safes: [], gg: { count: [0, 0], active: [false, false], t: [15, 15] }, gemT: 3, zone: null, alive: 0, place: 0, tick: 0,
-      skill: G.clamp(0.15 + (opts.trophies || 0) / 800, 0.15, 0.95), hitstop: 0,
-    };
+    const M = makeM(mode, opts.mapKey, map, opts.trophies || 0);
     // joueurs
     const names = G.shuffle(BOT_NAMES.slice());
     const all = G.BRAWLERS.slice();
@@ -45,8 +45,9 @@
       let pi = 0;
       for (let team = 0; team < 2; team++) {
         for (let k = 0; k < 3; k++) {
+          if (mode.id === 'boss' && team === 1 && k > 0) continue;
           const isP = team === 0 && k === 0;
-          const def = isP ? G.BRAWLER[opts.brawlerId] : pool[pi++ % pool.length];
+          const def = isP ? G.BRAWLER[opts.brawlerId] : (mode.id === 'boss' && team === 1 ? G.BRAWLER.robot : pool[pi++ % pool.length]);
           const b = mkBrawler(M, def, team, isP ? opts.name : names[pi + k + team * 3], isP ? lv : botLevel(), isP ? opts.skin : G.pick(G.SKINS).id, isP, map.spawns[team][k], team * 3 + k);
           b.spawnIdx = k;
           M.ents.push(b);
@@ -54,23 +55,43 @@
         }
       }
     }
+    if (mode.id === 'boss') setupBoss(M);
     if (mode.id === 'heist') {
       map.safes.forEach((s) => { s.maxhp = 24000; s.hp = s.maxhp; s.flash = 0; M.safes.push(s); });
     }
     if (mode.id === 'brawlball') M.ball = { x: map.ball.x, y: map.ball.y, vx: 0, vy: 0, owner: null, cd: {}, z: 0, spin: 0 };
+    M.stats = M.player.st;
     M.cam.x = M.player.x; M.cam.y = M.player.y;
     return M;
   };
 
+  function makeM(mode, mapKey, map, trophies) {
+    return {
+      mode: mode.id, modeDef: mode, mapKey: mapKey, map, w: map.w, h: map.h, t: 0, state: 'countdown', cd: 3.2, cdLast: 4, endT: 0,
+      left: mode.time, ents: [], projs: [], items: [], zones: [], parts: [], texts: [], strikes: [], events: [], rings: [],
+      score: [0, 0], cam: { x: 0, y: 0, shake: 0, zoom: 1 }, player: null, result: null, banner: null, shakeT: 0,
+      stats: null, caps: (map.caps || []).map((c) => ({ x: c.x, y: c.y, r: c.r, state: -1 })), trophiesAvg: trophies || 0, practice: false, online: false, evq: [], pid: 0,
+      overtime: false, ball: null, safes: [], gg: { count: [0, 0], active: [false, false], t: [15, 15] }, gemT: 3, zone: null, alive: 0, place: 0, tick: 0,
+      skill: G.clamp(0.15 + (trophies || 0) / 800, 0.15, 0.95), hitstop: 0,
+    };
+  }
+
+  function setupBoss(M) {
+    const boss = M.ents.find((e) => e.id === 'robot'); if (!boss) return;
+    boss.r = 28; boss.big = 1.8; boss.isBoss = true; boss.name = 'Mégabot';
+    const n = M.ents.filter((e) => e.team === 0).length;
+    boss.maxhp = boss.hp = G.BOSS.hp * (0.8 + 0.3 * n) * (boss.dmgMul || 1);
+    boss.ammo = 3;
+  }
   function mkBrawler(M, def, team, name, level, skin, isP, pos, idx) {
     const mul = G.levelMul(level);
     return {
       id: def.id, def, team, name, level, skin, isPlayer: isP, idx, x: pos.x, y: pos.y, r: 21, vx: 0, vy: 0, kx: 0, ky: 0,
       maxhp: def.hp * mul, hp: def.hp * mul, dmgMul: mul, ammo: 3, reload: 0, superCharge: 0, ang: team === 1 ? Math.PI : 0, face: team === 1 ? Math.PI : 0,
-      alive: true, respawn: 0, stun: 0, freeze: 0, slowF: 1, slowT: 0, poison: 0, poisonDps: 0, poisonBy: null, poisonAcc: 0, boostF: 1, boostT: 0, invuln: 0,
+      deathT: -1, alive: true, respawn: 0, stun: 0, freeze: 0, slowF: 1, slowT: 0, poison: 0, poisonDps: 0, poisonBy: null, poisonAcc: 0, boostF: 1, boostT: 0, invuln: 0,
       revealT: 0, hidden: false, atkCd: 0, queue: [], dash: null, jump: null, gems: 0, hasBall: false, cubes: 0, kills: 0, deaths: 0, dmgDealt: 0,
       bounty: 0, flash: 0, recoil: 0, walkT: Math.random() * 6, moving: false, supers: 0, input: { mx: 0, my: 0 }, ai: { t: Math.random() * 0.3 }, popObj: null, popT: 0,
-      px: pos.x, py: pos.y, spawn: pos, lastHitBy: null, z: 0, superReadyFx: false, place: 0, emote: 0, emoteT: 0, shield: 0,
+      st: { damage: 0, kills: 0, supers: 0, heal: 0, gems: 0, goals: 0 }, pid: null, human: false, px: pos.x, py: pos.y, spawn: pos, lastHitBy: null, z: 0, superReadyFx: false, place: 0, emote: 0, emoteT: 0, shield: 0,
     };
   }
 
@@ -125,15 +146,20 @@
   /* ---------- effets visuels ---------- */
   function part(M, o) { if (M.parts.length < 500) M.parts.push(o); }
   Sim.burst = function (M, x, y, color, n, spd, size, dur, type) {
+    if (M.online) { if (M.evq.length < 400) M.evq.push(['b', Math.round(x), Math.round(y), color, n, spd, size, dur, type || 0]); return; }
     for (let i = 0; i < n; i++) {
       const a = Math.random() * 6.283, s = spd * (0.3 + Math.random() * 0.9);
       part(M, { type: type || 'circle', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, t: 0, dur: dur * (0.6 + Math.random() * 0.6), r0: size * (0.7 + Math.random() * 0.6), r1: 0, color, drag: 3 });
     }
   };
-  Sim.ring = function (M, x, y, r0, r1, dur, color, fill) { M.rings.push({ x, y, r0, r1, t: 0, dur, color, fill }); };
-  Sim.text = function (M, x, y, txt, color, size) { M.texts.push({ x, y, txt, color: color || '#fff', t: 0, dur: 0.9, size: size || 22, vy: -70 }); };
-  Sim.shake = function (M, a) { M.cam.shake = Math.max(M.cam.shake, a); };
-  Sim.banner = function (M, txt, sub, color, dur) { M.banner = { txt, sub, color: color || '#ffd21f', t: 0, dur: dur || 2 }; };
+  Sim.ring = function (M, x, y, r0, r1, dur, color, fill) {
+    if (M.online) { M.evq.push(['r', Math.round(x), Math.round(y), r0, r1, dur, color, fill ? 1 : 0]); return; } M.rings.push({ x, y, r0, r1, t: 0, dur, color, fill }); };
+  Sim.text = function (M, x, y, txt, color, size) {
+    if (M.online) { M.evq.push(['t', Math.round(x), Math.round(y), txt, color || '#fff', size || 22]); return; } M.texts.push({ x, y, txt, color: color || '#fff', t: 0, dur: 0.9, size: size || 22, vy: -70 }); };
+  Sim.shake = function (M, a) {
+    if (M.online) return; M.cam.shake = Math.max(M.cam.shake, a); };
+  Sim.banner = function (M, txt, sub, color, dur, team) {
+    if (M.online) { M.evq.push(['n', txt, sub || '', color || '#ffd21f', dur || 2, team === undefined ? -1 : team]); return; } M.banner = { txt, sub, color: color || '#ffd21f', t: 0, dur: dur || 2 }; };
 
   /* ---------- dégâts ---------- */
   Sim.damage = function (M, tgt, amt, src, fx) {
@@ -141,15 +167,16 @@
     if (M.state === 'end') return 0;
     tgt.hp -= amt; tgt.flash = 0.12; tgt.revealT = 0.9; tgt.lastHitBy = src || tgt.lastHitBy;
     if (tgt.hasBall) dropBall(M, tgt);
-    if (tgt.popObj && tgt.popT > 0 && tgt.popObj.t < 0.5) { tgt.popObj.amt += amt; tgt.popObj.txt = String(Math.round(tgt.popObj.amt)); tgt.popObj.t = 0.1; }
+    if (M.online) { M.evq.push(['d', Math.round(tgt.x), Math.round(tgt.y - 40), Math.round(amt), tgt.idx, tgt.team]); }
+    else if (tgt.popObj && tgt.popT > 0 && tgt.popObj.t < 0.5) { tgt.popObj.amt += amt; tgt.popObj.txt = String(Math.round(tgt.popObj.amt)); tgt.popObj.t = 0.1; }
     else {
       const o = { x: tgt.x + G.rr(-8, 8), y: tgt.y - 40, txt: String(Math.round(amt)), color: tgt.team === M.player.team ? '#ff5252' : '#fff', t: 0, dur: 0.9, size: 22, vy: -70, amt };
       M.texts.push(o); tgt.popObj = o; tgt.popT = 0.25;
     }
     if (src && src !== tgt) {
       src.dmgDealt += amt; src.superCharge = Math.min(1, src.superCharge + amt / src.def.superCost);
-      if (src === M.player) M.stats.damage += amt;
-      if (src.superCharge >= 1 && !src.superReadyFx) { src.superReadyFx = true; if (src === M.player) G.Audio.sfx('superReady'); }
+      src.st.damage += amt;
+      if (src.superCharge >= 1 && !src.superReadyFx) { src.superReadyFx = true; if (M.online) M.evq.push(['sr', src.idx]); else if (src === M.player) Sim.sfx(M, 'superReady'); }
     }
     if (tgt === M.player) { G.vibrate(25); Sim.shake(M, 5); }
     if (fx) applyFx(M, tgt, fx, src);
@@ -161,7 +188,7 @@
     const a = Math.min(amt, tgt.maxhp - tgt.hp);
     if (a <= 0) return;
     tgt.hp += a;
-    if (src && src === M.player) M.stats.heal += a;
+    if (src) src.st.heal += a;
     Sim.text(M, tgt.x, tgt.y - 44, '+' + Math.round(a), '#6dff8a', 22);
     Sim.burst(M, tgt.x, tgt.y - 10, '#6dff8a', 4, 60, 4, 0.5);
   };
@@ -180,23 +207,24 @@
     Sim.burst(M, (tx + 0.5) * T, (ty + 0.5) * T, '#c98b4a', 3, 90, 5, 0.5, 'chunk');
     if (M.map.hp[k] <= 0) {
       M.map.tiles[k] = 0; M.map.dirty = true;
+      if (M.online) M.evq.push(['T', tx, ty, t]);
       Sim.burst(M, (tx + 0.5) * T, (ty + 0.5) * T, t === 6 ? '#ffe14a' : '#d9a25e', 12, 200, 7, 0.8, 'chunk');
       Sim.ring(M, (tx + 0.5) * T, (ty + 0.5) * T, 10, 55, 0.35, 'rgba(255,255,255,0.8)');
       if (t === 6) {
         const n = Math.random() < 0.35 ? 2 : 1;
         for (let i = 0; i < n; i++) spawnItem(M, 'cube', (tx + 0.5) * T, (ty + 0.5) * T, G.rr(80, 160));
       }
-      G.Audio.sfx('hit');
+      Sim.sfx(M, 'hit');
     }
   };
   function damageSafe(M, s, amt, src) {
     if (M.state !== 'play' || s.hp <= 0) return;
     s.hp = Math.max(0, s.hp - amt); s.flash = 0.12;
-    if (src) { src.dmgDealt += amt; src.superCharge = Math.min(1, src.superCharge + amt / src.def.superCost * 0.6); if (src === M.player) M.stats.damage += amt; }
-    M.texts.push({ x: s.x + G.rr(-30, 30), y: s.y - 70, txt: String(Math.round(amt)), color: '#fff', t: 0, dur: 0.8, size: 22, vy: -60 });
+    if (src) { src.dmgDealt += amt; src.superCharge = Math.min(1, src.superCharge + amt / src.def.superCost * 0.6); src.st.damage += amt; }
+    if (M.online) M.evq.push(['t', Math.round(s.x + G.rr(-30, 30)), Math.round(s.y - 70), String(Math.round(amt)), '#fff', 22]); else M.texts.push({ x: s.x + G.rr(-30, 30), y: s.y - 70, txt: String(Math.round(amt)), color: '#fff', t: 0, dur: 0.8, size: 22, vy: -60 });
     Sim.burst(M, s.x + G.rr(-40, 40), s.y + G.rr(-40, 40), '#ffd21f', 2, 90, 4, 0.4);
     if (s.hp <= 0) {
-      Sim.burst(M, s.x, s.y, '#ffd21f', 40, 400, 9, 1.2); Sim.shake(M, 16); G.Audio.sfx('explode');
+      Sim.burst(M, s.x, s.y, '#ffd21f', 40, 400, 9, 1.2); Sim.shake(M, 16); Sim.sfx(M, 'explode');
       finish(M, 1 - s.team);
     }
   }
@@ -213,16 +241,16 @@
   }
 
   function die(M, b, killer) {
+    b.deathT = 0; b.deathAng = b.face;
     b.alive = false; b.hp = 0; b.deaths++; b.stun = b.freeze = 0; b.dash = null; b.jump = null; b.queue.length = 0; b.poison = 0;
     if (b.hasBall) dropBall(M, b);
     if (killer && killer !== b) {
-      killer.kills++;
-      if (killer === M.player) M.stats.kills++;
+      killer.kills++; killer.st.kills = killer.kills;
     }
     Sim.burst(M, b.x, b.y, G.getLook(b.id, b.skin).body, 18, 240, 8, 0.9);
     Sim.burst(M, b.x, b.y, '#fff', 8, 160, 5, 0.6);
     Sim.ring(M, b.x, b.y, 10, 70, 0.4, 'rgba(255,255,255,0.7)');
-    if (G.dist(b.x, b.y, M.player.x, M.player.y) < 700) G.Audio.sfx('die');
+    Sim.sfx(M, 'die', b.x, b.y);
     // objets lâchés
     if (b.gems > 0) {
       for (let i = 0; i < b.gems; i++) spawnItem(M, 'gem', b.x, b.y, G.rr(90, 220));
@@ -234,10 +262,15 @@
       b.cubes = 0;
       M.alive = M.ents.filter((e) => e.alive).length;
       b.place = M.alive + 1;
-      if (b === M.player) { M.place = b.place; finishShowdown(M, b.place); }
+      if (M.online) { if (M.alive <= 1) endShowdownOnline(M); }
+      else if (b === M.player) { M.place = b.place; finishShowdown(M, b.place); }
       else if (M.alive <= 1) { const w = M.ents.find((e) => e.alive); if (w) w.place = 1; finishShowdown(M, M.player.alive ? 1 : M.player.place); }
     } else {
       b.respawn = M.mode === 'bounty' ? 3.2 : 3.4;
+      if (M.mode === 'boss') {
+        if (b.isBoss) { Sim.burst(M, b.x, b.y, '#ff6a6a', 60, 500, 12, 1.4); Sim.shake(M, 18); finish(M, 0); }
+        else { b.respawn = 1e9; if (!M.ents.some((e) => e.team === 0 && e.alive)) finish(M, 1); }
+      }
       if (M.mode === 'bounty' && killer && killer.team !== b.team) {
         M.score[killer.team] += 1 + b.bounty;
         killer.bounty = Math.min(7, killer.bounty + 1);
@@ -258,11 +291,11 @@
   function finish(M, winnerTeam) {
     if (M.state === 'end') return;
     M.state = 'end'; M.endT = 0;
-    const p = M.player;
-    const draw = winnerTeam === -1;
-    const win = !draw && winnerTeam === p.team;
-    M.result = { win, draw, winnerTeam, place: p.place || 1, time: M.t };
-    G.Audio.sfx(win ? 'win' : 'lose');
+    const p = M.player, draw = winnerTeam === -1;
+    const win = p ? !draw && winnerTeam === p.team : false;
+    M.result = { win, draw, winnerTeam, place: p ? p.place || 1 : 0, time: M.t };
+    if (M.online) { M.result.places = M.ents.map((e) => e.place || 0); return; }
+    Sim.sfx(M, win ? 'win' : 'lose');
     Sim.banner(M, draw ? 'ÉGALITÉ' : win ? 'VICTOIRE !' : 'DÉFAITE', '', win ? '#ffd21f' : '#ff5252', 3);
   }
   function finishShowdown(M, place) {
@@ -270,8 +303,14 @@
     M.state = 'end'; M.endT = 0;
     const win = place === 1;
     M.result = { win, draw: false, winnerTeam: win ? 0 : -1, place, time: M.t };
-    G.Audio.sfx(win ? 'win' : 'lose');
+    Sim.sfx(M, win ? 'win' : 'lose');
     Sim.banner(M, win ? 'DERNIER SURVIVANT !' : 'ÉLIMINÉ', '#' + place + ' sur 10', win ? '#ffd21f' : '#ff5252', 3);
+  }
+  // fin de la Survie en ligne : classement de tous les joueurs
+  function endShowdownOnline(M) {
+    const al = M.ents.filter((e) => e.alive).sort((a, b) => b.hp - a.hp);
+    al.forEach((e, i) => { e.place = i + 1; });
+    finish(M, al.length ? al[0].team : -1);
   }
 
   /* ---------- attaques ---------- */
@@ -287,33 +326,33 @@
     if (!b.alive || M.state !== 'play' || b.stun > 0 || b.freeze > 0 || b.dash || b.jump) return false;
     if (b.superCharge < 1) return false;
     b.superCharge = 0; b.superReadyFx = false; b.supers++; b.face = ang; b.ang = ang;
-    if (b === M.player) M.stats.supers++;
+    b.st.supers++;
     launch(M, b, b.def.sup, ang, dist, true);
     return true;
   };
   function kickBall(M, b, ang) {
     const B = M.ball;
     B.owner = null; b.hasBall = false;
-    B.vx = Math.cos(ang) * 1150; B.vy = Math.sin(ang) * 1150; B.cd[b.idx] = 0.35;
+    B.last = b; B.vx = Math.cos(ang) * 1150; B.vy = Math.sin(ang) * 1150; B.cd[b.idx] = 0.35;
     B.x = b.x + Math.cos(ang) * (b.r + 14); B.y = b.y + Math.sin(ang) * (b.r + 14);
-    b.recoil = 1; G.Audio.sfx('kick'); b.revealT = 0.6;
+    b.recoil = 1; Sim.sfx(M, 'kick'); b.revealT = 0.6;
     Sim.burst(M, B.x, B.y, '#fff', 8, 160, 5, 0.4);
   }
 
   function launch(M, b, spec, ang, dist, isSuper) {
     b.recoil = 1; b.revealT = Math.max(b.revealT, 0.9);
     const dmgMul = b.dmgMul * (1 + 0.1 * b.cubes);
-    if (spec.sfx) G.Audio.sfx(isSuper && spec.sfx === 'shoot' ? 'super' : spec.sfx);
-    if (isSuper) { G.Audio.sfx('super'); if (b === M.player) { G.vibrate(40); Sim.shake(M, 6); } }
+    if (spec.sfx) Sim.sfx(M, isSuper && spec.sfx === 'shoot' ? 'super' : spec.sfx);
+    if (isSuper) { Sim.sfx(M, 'super'); if (b === M.player) { G.vibrate(40); Sim.shake(M, 6); } }
     const type = isSuper ? spec.type : 'proj';
     if (type === 'proj') {
       const burst = spec.burst || 1;
-      volley(M, b, spec, ang, dist, dmgMul);
-      for (let i = 1; i < burst; i++) b.queue.push({ t: i * spec.burstDelay, spec, ang, dist, dmgMul });
+      volley(M, b, spec, ang, dist, dmgMul, isSuper);
+      for (let i = 1; i < burst; i++) b.queue.push({ t: i * spec.burstDelay, spec, ang, dist, dmgMul, isSuper });
     } else if (type === 'dash') {
       b.dash = { ax: Math.cos(ang), ay: Math.sin(ang), left: spec.dist * T, speed: spec.speed * T, hit: new Set(), spec, dmgMul };
       b.invuln = 0;
-      G.Audio.sfx('dash');
+      Sim.sfx(M, 'dash');
     } else if (type === 'jump') {
       let d = Math.min(spec.dist * T, Math.max(2 * T, dist || spec.dist * T));
       if (dist === undefined || dist === null) d = spec.dist * T;
@@ -324,7 +363,7 @@
         d -= 12; tx = b.x + Math.cos(ang) * d; ty = b.y + Math.sin(ang) * d;
       }
       b.jump = { sx: b.x, sy: b.y, tx, ty, t: 0, dur: 0.55, spec, dmgMul };
-      G.Audio.sfx('dash');
+      Sim.sfx(M, 'dash');
     } else if (type === 'aura') {
       doAura(M, b, spec, dmgMul);
     } else if (type === 'lobArea') {
@@ -332,19 +371,21 @@
       const p = newProj(M, b, spec, ang, dmgMul);
       p.lob = { sx: b.x, sy: b.y, tx: b.x + Math.cos(ang) * d, ty: b.y + Math.sin(ang) * d, t: 0, dur: Math.max(0.3, d / (spec.speed * T)) };
       p.splash = spec.splash * T; p.big = !!spec.big;
-      M.projs.push(p);
+      addProj(M, p, isSuper);
     } else if (type === 'barrage') {
       const d = G.clamp(dist == null ? spec.range * T : dist, 1.5 * T, spec.range * T);
       const cx = b.x + Math.cos(ang) * d, cy = b.y + Math.sin(ang) * d;
       for (let i = 0; i < spec.count; i++) {
         const a = Math.random() * 6.283, rr = Math.sqrt(Math.random()) * spec.area * T;
-        M.strikes.push({ x: cx + Math.cos(a) * rr, y: cy + Math.sin(a) * rr, t: -(i * spec.duration / spec.count), delay: 0.55, spec, owner: b, dmgMul });
+        const sk = { x: cx + Math.cos(a) * rr, y: cy + Math.sin(a) * rr, t: -(i * spec.duration / spec.count), delay: 0.55, spec, owner: b, dmgMul };
+        M.strikes.push(sk);
+        if (M.online) M.evq.push(['k', Math.round(sk.x), Math.round(sk.y), +(-sk.t).toFixed(2), b.id]);
       }
       Sim.ring(M, cx, cy, spec.area * T, spec.area * T, 1.8, 'rgba(255,80,40,0.45)', true);
     }
   }
 
-  function volley(M, b, spec, ang, dist, dmgMul) {
+  function volley(M, b, spec, ang, dist, dmgMul, isSuper) {
     const n = spec.n || 1;
     for (let j = 0; j < n; j++) {
       let a = ang;
@@ -354,12 +395,22 @@
         const d = G.clamp(dist == null ? spec.range * T : dist, 1.5 * T, spec.range * T);
         p.lob = { sx: b.x, sy: b.y, tx: b.x + Math.cos(a) * d, ty: b.y + Math.sin(a) * d, t: 0, dur: Math.max(0.3, d / (spec.speed * T)) };
       }
-      M.projs.push(p);
+      addProj(M, p, isSuper);
     }
     const mx = b.x + Math.cos(ang) * 34, my = b.y + Math.sin(ang) * 34;
     Sim.burst(M, mx, my, spec.color || '#ffe066', 4, 120, 4, 0.2);
   }
 
+  let _pid = 1;
+  function addProj(M, p, isSuper) {
+    p.id = _pid++; p.isSuper = !!isSuper;
+    M.projs.push(p);
+    if (M.online && M.evq.length < 500) {
+      const l = p.lob;
+      M.evq.push(['p', p.id, p.owner.id, isSuper ? 1 : 0, Math.round(p.x), Math.round(p.y), Math.round(p.vx), Math.round(p.vy), +p.ang.toFixed(3),
+        l ? [Math.round(l.sx), Math.round(l.sy), Math.round(l.tx), Math.round(l.ty), +l.dur.toFixed(2)] : 0, p.big ? 1 : 0, p.owner.team, Math.round(p.splash), p.owner.idx]);
+    }
+  }
   function newProj(M, b, spec, a, dmgMul) {
     const sp = spec.speed * T * (spec.n > 3 ? G.rr(0.93, 1.07) : 1);
     return {
@@ -375,7 +426,7 @@
     Sim.ring(M, b.x, b.y, 20, R, 0.5, spec.color, true);
     Sim.ring(M, b.x, b.y, 10, R * 0.8, 0.7, '#fff');
     Sim.burst(M, b.x, b.y, spec.color, 26, R * 1.4, 6, 0.8);
-    if (spec.sfx) G.Audio.sfx(spec.sfx);
+    if (spec.sfx) Sim.sfx(M, spec.sfx);
     for (const e of M.ents) {
       if (!e.alive) continue;
       const d = G.dist(b.x, b.y, e.x, e.y);
@@ -399,9 +450,11 @@
     Sim.shake(M, p.big ? 14 : 5);
     Sim.ring(M, x, y, rad * 0.3, rad, 0.35, p.color, true);
     Sim.burst(M, x, y, p.color, p.big ? 30 : 14, rad * 2.2, p.big ? 10 : 6, 0.7);
-    Sim.burst(M, x, y, '#fff3b0', 8, rad * 1.5, 5, 0.4);
+    Sim.burst(M, x, y, '#ffd86a', p.big ? 10 : 5, rad * 0.8, rad * 0.55, 0.55, 'fire');
+    Sim.burst(M, x, y, '#fff3b0', 10, rad * 2.4, 5, 0.4, 'spark');
+    Sim.ring(M, x, y, rad * 0.1, rad * 1.5, 0.22, 'rgba(255,255,255,0.9)', true);
     Sim.burst(M, x, y, '#444', 8, rad * 1.2, 9, 0.9, 'smoke');
-    G.Audio.sfx('explode');
+    Sim.sfx(M, 'explode');
     for (const e of M.ents) {
       if (!e.alive || e.team === p.team) continue;
       const d = G.dist(x, y, e.x, e.y);
@@ -425,6 +478,7 @@
       }
     }
     if (spec.zone) {
+      if (M.online) M.evq.push(['z', Math.round(x), Math.round(y), Math.round(rad * 1.05), spec.zone.t, spec.zone.color]);
       M.zones.push({ x, y, r: rad * 1.05, t: spec.zone.t, max: spec.zone.t, slow: spec.zone.slow, dps: spec.zone.dps, team: p.team, owner: o, color: spec.zone.color, acc: 0 });
     }
   }
@@ -440,8 +494,8 @@
       const prev = Math.ceil(M.cd);
       M.cd -= dt;
       const cur = Math.ceil(M.cd);
-      if (cur !== prev && cur > 0) G.Audio.sfx('count');
-      if (M.cd <= 0) { M.state = 'play'; G.Audio.sfx('go'); Sim.banner(M, 'GO !', '', '#ffd21f', 0.8); }
+      if (cur !== prev && cur > 0) Sim.sfx(M, 'count');
+      if (M.cd <= 0) { M.state = 'play'; Sim.sfx(M, 'go'); Sim.banner(M, 'GO !', '', '#ffd21f', 0.8); }
     }
     if (M.state === 'end') { M.endT += dt; }
     const active = M.state === 'play';
@@ -466,6 +520,7 @@
       if (M.mode === 'gemgrab') updateGemGrab(M, dt);
       if (M.mode === 'brawlball') updateBall(M, dt);
       if (M.mode === 'showdown') updateShowdown(M, dt);
+      if (M.mode === 'hotzone' && M.state === 'play') updateHotzone(M, dt);
       if (M.mode === 'bounty') { /* score géré à la mort */ }
     }
     if (M.safes.length) for (const s of M.safes) if (s.flash > 0) s.flash -= dt;
@@ -484,13 +539,15 @@
       const a = M.safes[0].hp / M.safes[0].maxhp, b = M.safes[1].hp / M.safes[1].maxhp;
       // l'équipe dont le coffre est le plus sain gagne
       finish(M, Math.abs(a - b) < 0.001 ? -1 : a > b ? 0 : 1);
-    } else if (M.mode === 'bounty') {
-      finish(M, M.score[0] === M.score[1] ? -1 : M.score[0] > M.score[1] ? 0 : 1);
+    } else if (M.mode === 'bounty' || M.mode === 'hotzone') {
+      finish(M, Math.floor(M.score[0]) === Math.floor(M.score[1]) ? -1 : M.score[0] > M.score[1] ? 0 : 1);
+    } else if (M.mode === 'boss') {
+      finish(M, 1);
     } else if (M.mode === 'showdown') {
       const al = M.ents.filter((e) => e.alive);
       al.sort((a, b) => b.hp - a.hp);
       al.forEach((e, i) => { e.place = i + 1; });
-      finishShowdown(M, M.player.alive ? M.player.place : M.player.place);
+      if (M.online) endShowdownOnline(M); else finishShowdown(M, M.player.alive ? M.player.place : M.player.place);
     }
   }
 
@@ -520,6 +577,7 @@
     b.recoil = Math.max(0, b.recoil - dt * 6);
     if (b.emoteT > 0) b.emoteT -= dt;
     if (!b.alive) {
+      if (b.deathT >= 0) b.deathT += dt;
       if (M.mode !== 'showdown' && M.state !== 'end' && M.state !== 'countdown') {
         b.respawn -= dt;
         if (b.respawn <= 0) respawn(M, b);
@@ -542,7 +600,7 @@
     // file de rafales
     for (let i = b.queue.length - 1; i >= 0; i--) {
       const q = b.queue[i]; q.t -= dt;
-      if (q.t <= 0) { b.queue.splice(i, 1); if (b.stun <= 0 && b.freeze <= 0) volley(M, b, q.spec, q.ang, q.dist, q.dmgMul); }
+      if (q.t <= 0) { b.queue.splice(i, 1); if (b.stun <= 0 && b.freeze <= 0) volley(M, b, q.spec, q.ang, q.dist, q.dmgMul, q.isSuper); }
     }
     // décisions / entrées
     if (!b.isPlayer && active && M.state === 'play') G.AI.update(M, b, dt);
@@ -591,7 +649,7 @@
     if (M.mode === 'showdown') spd *= 1;
     if (blockedMove) { mx = my = 0; }
     b.moving = ml > 0.1 && !blockedMove;
-    if (b.moving) { b.walkT += dt * 12 * (spd / 240); }
+    if (b.moving) { b.walkT += dt * 12 * (spd / 240); if (!M.online && Math.random() < dt * 7) Sim.burst(M, b.x, b.y + 14, '#d8d0b8', 1, 30, 5, 0.45, 'smoke'); }
     const vx = mx * spd + b.kx, vy = my * spd + b.ky;
     b.kx *= Math.exp(-8 * dt); b.ky *= Math.exp(-8 * dt);
     if (vx || vy) tryMove(M, b, vx * dt, vy * dt);
@@ -617,7 +675,7 @@
 
   function respawn(M, b) {
     const sp = M.map.spawns[b.team][b.spawnIdx || 0] || M.map.spawns[b.team][0];
-    b.alive = true; b.hp = b.maxhp; b.x = sp.x; b.y = sp.y; b.px = sp.x; b.py = sp.y; b.ammo = 3; b.invuln = 1.6;
+    b.deathT = -1; b.alive = true; b.hp = b.maxhp; b.x = sp.x; b.y = sp.y; b.px = sp.x; b.py = sp.y; b.ammo = 3; b.invuln = 1.6;
     b.kx = b.ky = 0; b.slowF = 1; b.boostF = 1; b.face = b.team === 0 ? 0 : Math.PI; b.ang = b.face;
     b.input.mx = b.input.my = 0; b.hasBall = false; b.gems = 0; b.superCharge = Math.min(b.superCharge, 0.3);
     Sim.ring(M, b.x, b.y, 10, 90, 0.5, '#fff', true);
@@ -669,6 +727,7 @@
   }
   function endProj(M, p) {
     p.dead = true;
+    if (M.online) M.evq.push(['px', p.id, Math.round(p.x), Math.round(p.y)]);
     if (p.splash) explode(M, p, p.x, p.y, p.splash, p.spec);
     else Sim.burst(M, p.x, p.y, p.color, 3, 90, 3, 0.25);
   }
@@ -676,7 +735,7 @@
     const l = p.lob; l.t += dt;
     const k = Math.min(1, l.t / l.dur);
     p.x = l.sx + (l.tx - l.sx) * k; p.y = l.sy + (l.ty - l.sy) * k; p.z = Math.sin(k * Math.PI) * 110; p.travelled = 0;
-    if (k >= 1) { p.dead = true; p.z = 0; explode(M, p, l.tx, l.ty, p.splash || 1.4 * T, p.spec); }
+    if (k >= 1) { p.dead = true; p.z = 0; if (M.online) M.evq.push(['px', p.id, Math.round(l.tx), Math.round(l.ty)]); explode(M, p, l.tx, l.ty, p.splash || 1.4 * T, p.spec); }
   }
   function updateStrikes(M, dt) {
     for (let i = M.strikes.length - 1; i >= 0; i--) {
@@ -717,12 +776,12 @@
         if (G.dist(b.x, b.y, it.x, it.y) < b.r + 18) {
           if (it.type === 'gem') {
             if (M.mode !== 'gemgrab') { M.items.splice(i, 1); break; }
-            b.gems++; if (b === M.player) M.stats.gems++;
-            G.Audio.sfx(b === M.player ? 'pickup' : 'ui');
+            b.gems++; b.st.gems++;
+            Sim.sfx(M, 'pickup', b.x, b.y);
             Sim.text(M, b.x, b.y - 50, '+1', '#e07bff', 22);
           } else {
             b.cubes++; const add = b.def.hp * b.dmgMul * 0.1; b.maxhp += add; b.hp += add;
-            if (b === M.player) { G.Audio.sfx('pickup'); Sim.text(M, b.x, b.y - 50, 'CUBE +10%', '#6dff8a', 22); }
+            Sim.sfx(M, 'pickup', b.x, b.y); Sim.text(M, b.x, b.y - 50, 'CUBE +10%', '#6dff8a', 22);
           }
           Sim.burst(M, it.x, it.y, it.type === 'gem' ? '#e07bff' : '#6dff8a', 8, 120, 4, 0.4);
           M.items.splice(i, 1);
@@ -748,11 +807,22 @@
     for (let t = 0; t < 2; t++) {
       const g = teamGems(M, t);
       if (g >= 10) {
-        if (!M.gg.active[t]) { M.gg.active[t] = true; M.gg.t[t] = 15; if (t === 0) Sim.banner(M, 'VOUS AVEZ 10 CRISTAUX !', 'Tenez 15 secondes', '#e07bff', 2); else Sim.banner(M, 'L\'ENNEMI A 10 CRISTAUX !', 'Reprenez-les !', '#ff5252', 2); }
+        if (!M.gg.active[t]) { M.gg.active[t] = true; M.gg.t[t] = 15; if (M.online) Sim.banner(M, '10 CRISTAUX !', 'Tenez 15 secondes / reprenez-les', '#e07bff', 2, t); else if (t === 0) Sim.banner(M, 'VOUS AVEZ 10 CRISTAUX !', 'Tenez 15 secondes', '#e07bff', 2); else Sim.banner(M, 'L\'ENNEMI A 10 CRISTAUX !', 'Reprenez-les !', '#ff5252', 2); }
         M.gg.t[t] -= dt;
         if (M.gg.t[t] <= 0) finish(M, t);
       } else { M.gg.active[t] = false; M.gg.t[t] = 15; }
     }
+  }
+
+  /* ---------- Zone stratégique ---------- */
+  function updateHotzone(M, dt) {
+    for (const c of M.caps) {
+      const cnt = [0, 0];
+      for (const b of M.ents) if (b.alive && !b.jump && G.dist(b.x, b.y, c.x, c.y) < c.r + 4) cnt[b.team]++;
+      c.state = cnt[0] && cnt[1] ? 2 : cnt[0] ? 0 : cnt[1] ? 1 : -1;
+      if (c.state === 0 || c.state === 1) M.score[c.state] = Math.min(100, M.score[c.state] + dt * (1.7 + 0.35 * cnt[c.state]));
+    }
+    if (M.score[0] >= 100 || M.score[1] >= 100) finish(M, M.score[0] >= 100 && M.score[0] >= M.score[1] ? 0 : 1);
   }
 
   /* ---------- Foot brawl ---------- */
@@ -778,8 +848,8 @@
         if (!b.alive || b.jump || b.stun > 0 && false) continue;
         if ((B.cd[b.idx] || 0) > 0) continue;
         if (G.dist(b.x, b.y, B.x, B.y) < b.r + R + 4) {
-          B.owner = b; b.hasBall = true; b.revealT = 0.4;
-          G.Audio.sfx('pickup'); Sim.text(M, b.x, b.y - 55, 'BALLON !', '#fff', 20);
+          B.owner = b; B.last = b; b.hasBall = true; b.revealT = 0.4;
+          Sim.sfx(M, 'pickup'); Sim.text(M, b.x, b.y - 55, 'BALLON !', '#fff', 20);
           break;
         }
       }
@@ -792,9 +862,9 @@
   function scoreGoal(M, team, g) {
     M.score[team]++;
     M.state = 'goal'; M.goalT = 2.8;
-    if (team === 0) M.stats.goals++;
-    Sim.banner(M, 'BUT !!!', team === M.player.team ? 'Quelle frappe !' : 'Dommage...', team === M.player.team ? '#6dff8a' : '#ff5252', 2.6);
-    G.Audio.sfx('goal'); Sim.shake(M, 14);
+    if (M.ball.last && M.ball.last.team === team) M.ball.last.st.goals++;
+    if (M.player) Sim.banner(M, 'BUT !!!', team === M.player.team ? 'Quelle frappe !' : 'Dommage...', team === M.player.team ? '#6dff8a' : '#ff5252', 2.6); else Sim.banner(M, 'BUT !!!', '', '#ffd21f', 2.6, team);
+    Sim.sfx(M, 'goal'); Sim.shake(M, 14);
     Sim.burst(M, M.ball.x, M.ball.y, '#ffd21f', 40, 420, 8, 1.2);
     Sim.burst(M, M.ball.x, M.ball.y, '#fff', 30, 300, 6, 1.0);
     if (M.ball.owner) { M.ball.owner.hasBall = false; M.ball.owner = null; }
@@ -832,7 +902,7 @@
           Sim.damage(M, b, 360 * lvl, null);
           b.invuln = 0;
           Sim.burst(M, b.x, b.y - 10, '#8cff3a', 3, 70, 5, 0.6);
-          if (b === M.player) G.Audio.sfx('poison');
+          if (b === M.player) Sim.sfx(M, 'poison');
         }
       }
     }
@@ -840,7 +910,7 @@
     if (M.state === 'play' && M.alive <= 1 && !M.result) {
       const w = M.ents.find((e) => e.alive);
       if (w) w.place = 1;
-      finishShowdown(M, M.player.alive ? 1 : M.player.place);
+      if (M.online) endShowdownOnline(M); else finishShowdown(M, M.player.alive ? 1 : M.player.place);
     }
   }
 
@@ -857,4 +927,75 @@
     if (!best) for (const s of M.safes) if (s.team !== b.team) { const d = G.dist(b.x, b.y, s.x, s.y) - 60; if (d < bd) { bd = d; best = { x: s.x, y: s.y, vx: 0, vy: 0, safe: true }; } }
     return best;
   };
+
+  /* ---------- multijoueur : création côté serveur ---------- */
+  const BOT_TAGS = ['Robo', 'Bot', 'Auto'];
+  /* opts : {mode, mapKey, seed, players:[{pid, name, brawler, skin, level, team, trophies}]}  — les places vides sont remplies par des bots étiquetés */
+  Sim.createOnline = function (opts) {
+    const mode = G.MODES[opts.mode], mdef = G.MAPS[opts.mapKey];
+    const map = G.genMap(mdef, opts.seed);
+    const avg = opts.players.length ? opts.players.reduce((a, p) => a + (p.trophies || 0), 0) / opts.players.length : 0;
+    const M = makeM(mode, opts.mapKey, map, avg);
+    M.online = true; M.player = null; M.seed = opts.seed;
+    const pool = G.shuffle(G.BRAWLERS.slice());
+    let bi = 0;
+    const botName = () => BOT_TAGS[bi % 3] + '-' + G.pick(['Zèbre', 'Lynx', 'Pixel', 'Tonnerre', 'Moka', 'Fusée', 'Nova', 'Panda', 'Comète', 'Ninja']);
+    const addBot = (team, slot) => {
+      const def = pool[bi++ % pool.length];
+      return { pid: null, bot: true, name: botName(), brawler: def.id, skin: 'classic', level: G.clamp(Math.round((opts.players[0] ? opts.players[0].level : 3) + G.rr(-1, 1)), 1, G.MAX_LEVEL), team, trophies: avg };
+    };
+    let list = [];
+    if (mode.id === 'showdown') {
+      list = opts.players.slice(0, 10).map((p, i) => Object.assign({}, p, { team: i }));
+      while (list.length < 10) list.push(addBot(list.length));
+      const sp = G.shuffle(map.spawns.slice());
+      list.forEach((p, i) => {
+        const b = mkBrawler(M, G.BRAWLER[p.brawler], i, p.name, p.level, p.skin, !p.bot, sp[i], i);
+        b.pid = p.pid; b.human = !p.bot; b.isBot = !!p.bot; M.ents.push(b);
+      });
+      M.alive = 10;
+      M.ents.forEach((e) => { e.invuln = 6.5; });
+      const fx = (M.w / 2 + G.rr(-5, 5)) * T, fy = (M.h / 2 + G.rr(-5, 5)) * T, half = 3.2 * T;
+      M.zone = { x0: T, y0: T, x1: (M.w - 1) * T, y1: (M.h - 1) * T, fx0: fx - half, fy0: fy - half, fx1: fx + half, fy1: fy + half, sx0: T, sy0: T, sx1: (M.w - 1) * T, sy1: (M.h - 1) * T, start: 22, dur: 150, dmgT: 0 };
+    } else {
+      for (let team = 0; team < 2; team++) {
+        let mine = opts.players.filter((p) => (mode.id === 'boss' ? 0 : p.team) === team).slice(0, 3);
+        if (mode.id === 'boss' && team === 1) mine = [{ pid: null, bot: true, name: 'Mégabot', brawler: 'robot', skin: 'classic', level: opts.players[0] ? opts.players[0].level : 3, team: 1, trophies: avg }];
+        while (mine.length < 3 && !(mode.id === 'boss' && team === 1)) mine.push(addBot(team));
+        mine.forEach((p, k) => {
+          const b = mkBrawler(M, G.BRAWLER[p.brawler], team, p.name, p.level, p.skin, !p.bot, map.spawns[team][k], team * 3 + k);
+          b.spawnIdx = k; b.pid = p.pid; b.human = !p.bot; b.isBot = !!p.bot; M.ents.push(b);
+        });
+      }
+    }
+    if (mode.id === 'boss') setupBoss(M);
+    if (mode.id === 'heist') map.safes.forEach((sf) => { sf.maxhp = 24000; sf.hp = sf.maxhp; sf.flash = 0; M.safes.push(sf); });
+    if (mode.id === 'brawlball') M.ball = { x: map.ball.x, y: map.ball.y, vx: 0, vy: 0, owner: null, cd: {}, z: 0, spin: 0, last: null };
+    return M;
+  };
+
+  /* instantané compact envoyé aux clients (20 Hz) ; les évènements (tirs, explosions…) sont envoyés à part */
+  const STATE_CODE = { countdown: 0, play: 1, goal: 2, end: 3 };
+  Sim.snapshot = function (M) {
+    const e = M.ents.map((b) => {
+      const f = (b.alive ? 1 : 0) | (b.hidden ? 2 : 0) | (b.stun > 0 ? 4 : 0) | (b.freeze > 0 ? 8 : 0) | (b.poison > 0 ? 16 : 0) | (b.slowT > 0 && b.slowF < 1 ? 32 : 0) | (b.boostT > 0 ? 64 : 0) | (b.invuln > 0 ? 128 : 0) | (b.hasBall ? 256 : 0) | (b.dash ? 512 : 0) | (b.moving ? 1024 : 0) | (b.revealT > 0 ? 2048 : 0);
+      return [Math.round(b.x), Math.round(b.y), +b.ang.toFixed(2), +b.face.toFixed(2), Math.round(b.hp), Math.round(b.maxhp), f, Math.round(b.ammo * 10), Math.round(b.superCharge * 100), b.gems, b.cubes, b.bounty, Math.round(b.z || 0), +Math.max(0, b.respawn).toFixed(1), b.kills, b.dash ? +Math.atan2(b.dash.ay, b.dash.ax).toFixed(2) : 0];
+    });
+    const snap = {
+      tm: +M.t.toFixed(2), s: STATE_CODE[M.state], cd: +M.cd.toFixed(1), left: +M.left.toFixed(1), sc: M.score, e,
+      it: M.items.map((i) => [i.type === 'gem' ? 0 : 1, Math.round(i.x), Math.round(i.y)]),
+    };
+    if (M.mode === 'gemgrab') snap.gg = [M.gg.active[0] ? 1 : 0, +M.gg.t[0].toFixed(1), M.gg.active[1] ? 1 : 0, +M.gg.t[1].toFixed(1)];
+    if (M.zone) snap.z = [Math.round(M.zone.x0), Math.round(M.zone.y0), Math.round(M.zone.x1), Math.round(M.zone.y1)];
+    if (M.ball) snap.b = [Math.round(M.ball.x), Math.round(M.ball.y), M.ball.owner ? M.ball.owner.idx : -1];
+    if (M.caps.length) snap.cp = M.caps.map((c) => c.state);
+    if (M.safes.length) snap.sf = M.safes.map((x) => Math.round(x.hp));
+    if (M.alive !== undefined) snap.al = M.alive;
+    snap.ak = M.ents.map((b) => b.ack || 0);
+    if (M.result) snap.res = Object.assign({}, M.result, { stats: M.ents.map((b) => Object.assign({}, b.st, { kills: b.kills })) });
+    return snap;
+  };
+  Sim.flushEvents = function (M) { const q = M.evq; M.evq = []; return q; };
+  Sim.updateFx = updateFx;
+  Sim.makeM = makeM; Sim.mkBrawler = mkBrawler; Sim.tryMove = tryMove; Sim.explodeFx = null;
 })();

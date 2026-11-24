@@ -159,6 +159,20 @@
         const off = (b.spawnIdx - 1) * 1.6 * T;
         return { x: es.x - ownSide * (want + 80), y: es.y + off, kind: 'attack' };
       }
+      case 'hotzone': {
+        // aller vers la zone non contrôlée la plus proche (ou aider à défendre)
+        let best = null, bs = 1e9;
+        for (const c of M.caps) { const d = G.dist(b.x, b.y, c.x, c.y) + (c.state === my ? 5 * T : 0) - (c.state === 2 ? 3 * T : 0); if (d < bs) { bs = d; best = c; } }
+        if (b.hp < b.maxhp * 0.3) return { x: M.map.spawns[my][1].x + ownSide * 3 * T, y: M.map.spawns[my][1].y, kind: 'retreat' };
+        return best ? { x: best.x + (b.spawnIdx - 1) * 20, y: best.y + (b.spawnIdx - 1) * 25, kind: 'zone2' } : { x: mw / 2, y: mh / 2, kind: 'center' };
+      }
+      case 'boss': {
+        let near = null, nd = 1e9;
+        for (const e of M.ents) if (e.alive && e.team === enemy) { const d = G.dist(b.x, b.y, e.x, e.y); if (d < nd) { nd = d; near = e; } }
+        if (b.isBoss) return near ? { x: near.x, y: near.y, kind: 'hunt' } : { x: mw / 2, y: mh / 2, kind: 'center' };
+        if (near) return { x: near.x, y: near.y, kind: 'hunt' };
+        return { x: mw / 2, y: mh / 2, kind: 'center' };
+      }
       case 'bounty': {
         let near = null, nd = 1e9;
         for (const e of M.ents) if (e.alive && e.team === enemy) { const d = G.dist(b.x, b.y, e.x, e.y); if (d < nd) { nd = d; near = e; } }

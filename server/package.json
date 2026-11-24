@@ -1,0 +1,9 @@
+{
+  "name": "brawl-rush-server",
+  "version": "1.0.0",
+  "description": "Serveur multijoueur autoritatif de Brawl Rush (WebSocket)",
+  "main": "server.js",
+  "scripts": { "start": "node server.js", "test": "node test/run.js" },
+  "engines": { "node": ">=18" },
+  "dependencies": { "ws": "^8.18.0" }
+}
