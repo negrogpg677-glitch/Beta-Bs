@@ -96,6 +96,21 @@ class Cl {
   const mbo = await C.wait('match', 12000);
   ok(mbo.mode === 'boss' && mbo.roster.some((r) => r.brawler === 'robot') && mbo.roster.filter((r) => r.team === 0).length === 3, 'Assaut du Mégabot : 3 héros contre le boss');
   await sleep(4500); ok(C.last && C.last.e.length === 4, 'boss : instantanés (4 entités)');
+  // --- social : amis par code, invitations, clubs et discussion ---
+  const D = new Cl(url, 'Dora'), E = new Cl(url, 'Eli'); await D.connect(); await E.connect(); await sleep(150);
+  const fcD = D.lastOf('friends').code; ok(/^[A-Z0-9]{6}$/.test(fcD), 'code d\'ami personnel (' + fcD + ')');
+  E.clear(); E.send({ t: 'friend_add', code: 'NOPE12' }); ok((await E.wait('error')).code === 'friend_nf', 'code d\'ami invalide refusé');
+  E.send({ t: 'friend_add', code: fcD }); await sleep(250);
+  ok(E.lastOf('friends').list.some((f) => f.pid === D.pid && f.status === 'menu') && D.lastOf('friends').list.some((f) => f.pid === E.pid), 'amitié mutuelle + statut en ligne');
+  D.clear(); E.send({ t: 'invite', pid: D.pid, mode: 'bounty' }); const inv = await D.wait('invited');
+  ok(/^[A-Z0-9]{5}$/.test(inv.code) && inv.from === 'Eli', 'invitation reçue avec le code d\'équipe');
+  D.send({ t: 'party_join', code: inv.code }); await sleep(250); ok(D.lastOf('party').party.members.length === 2, 'rejoindre via l\'invitation');
+  D.send({ t: 'party_leave' }); E.send({ t: 'party_leave' });
+  D.clear(); E.clear(); D.send({ t: 'club_create', name: 'Les Tests', tag: 'TST' }); const cl = await D.wait('club'); ok(cl.club && cl.club.tag === 'TST', 'création de club');
+  E.send({ t: 'club_list' }); const cll = await E.wait('club_list'); ok(cll.list.some((x) => x.name === 'Les Tests'), 'liste des clubs');
+  E.send({ t: 'club_join', id: cl.club.id }); await sleep(250); ok(E.lastOf('club').club.count === 2, 'rejoindre un club');
+  D.clear(); E.send({ t: 'club_chat', txt: 'Salut <b>tous</b> !' }); const msgc = await D.wait('club_msg'); ok(msgc.msg.txt === 'Salut btous /b !' || !/[<>]/.test(msgc.msg.txt), 'chat de club (HTML nettoyé)');
+  E.send({ t: 'club_leave' }); await sleep(200); ok(D.lastOf('club').club.count === 1, 'quitter un club');
   console.log(fails ? '\n' + fails + ' ECHEC(S)' : '\nTOUS LES TESTS PASSENT');
   process.exit(fails ? 1 : 0);
 })().catch((e) => { console.error('ERREUR', e); process.exit(2); });

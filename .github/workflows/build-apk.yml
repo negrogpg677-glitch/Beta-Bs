@@ -11,6 +11,9 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - name: Intégrer l'adresse du serveur dans le jeu
+        if: ${{ vars.SERVER_URL != '' }}
+        run: sed -i "s#G.DEFAULT_SERVER = '';#G.DEFAULT_SERVER = '${{ vars.SERVER_URL }}';#" app/src/main/assets/www/js/data.js
       - name: Compiler
         run: chmod +x gradlew && ./gradlew assembleProdRelease assembleDevRelease --no-daemon
       - name: Renommer

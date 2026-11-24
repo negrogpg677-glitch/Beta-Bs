@@ -135,8 +135,10 @@
       this.sfxGain.gain.value = s.sound ? 0.8 : 0;
       this.musGain.gain.value = s.music ? 0.32 : 0;
     },
+    _pm: 1,
     tone(freq, dur, type, vol, slide, delay) {
       if (!this.ready || !G.Save.data.settings.sound) return;
+      freq *= this._pm; if (slide) slide *= this._pm;
       const c = this.ctx, t = c.currentTime + (delay || 0);
       const o = c.createOscillator(), g = c.createGain();
       o.type = type || 'square';
@@ -159,8 +161,9 @@
       s.connect(f); f.connect(g); g.connect(this.sfxGain);
       s.start(t, Math.random() * 0.5); s.stop(t + dur + 0.02);
     },
-    sfx(name) {
+    sfx(name, pitch) {
       if (!this.ready) return;
+      this._pm = pitch || 1;
       switch (name) {
         case 'shoot': this.tone(520, 0.1, 'square', 0.12, 180); this.noise(0.06, 0.12, 2500); break;
         case 'shotgun': this.noise(0.16, 0.3, 1800); this.tone(150, 0.14, 'sawtooth', 0.14, 60); break;
@@ -190,6 +193,7 @@
         case 'poison': this.tone(100, 0.15, 'sawtooth', 0.05, 80); break;
         case 'kick': this.tone(160, 0.12, 'sine', 0.3, 60); this.noise(0.08, 0.15, 800); break;
       }
+      this._pm = 1;
     },
     // musique procédurale simple : basse + arpège + percussions
     startMusic(mode) {

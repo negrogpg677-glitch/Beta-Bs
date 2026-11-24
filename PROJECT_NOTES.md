@@ -28,3 +28,11 @@ gemgrab, brawlball, heist, bounty, hotzone (Zone stratégique), boss (Assaut du 
 
 ## Édition DEV
 Product flavors Gradle `prod`/`dev` (dimension `edition`, `.dev` en suffixe d'applicationId). `src/dev/assets/www/js/{flavor,dev}.js` remplacent les stubs de `src/main`. Crochets `G.Dev.*` dans `game.js`/`main.js` (inactifs si `G.Dev` absent, ni côté serveur ni en ligne).
+
+## v3 (refonte) — résumé
+- Réseau : horloge serveur recalée, file d'instantanés (30 Hz), délai d'interpolation adaptatif à la gigue, tirs fantômes immédiats, prédiction + réconciliation. Banc de test : `tools/lagproxy.js` (latence/gigue simulées), `tools/soak.js` (charge : 40 parties / 240 joueurs ≈ 37 % d'un cœur).
+- Serveur : `server/social.js` (amis par code, invitations, clubs + chat, persistés), PWA servie par le serveur, `fly.toml`, `deploy/fly-deploy.sh`, workflows CI, `DEPLOY.md`. Adresse intégrable : `G.DEFAULT_SERVER` / `SERVER_URL=… ./build-apk.sh`. Sans adresse : si la page est servie en http(s), le jeu se connecte à son propre serveur.
+- Contenu : 19 brawlers (+ boss), skins légendaires à effets, victoires personnalisées, événements du jour (règles réelles), météo, mode Duel d'élite, voix/hauteur des sons par brawler.
+- UI : Social (amis/club/classement), profil détaillé, bannière d'événement, résultats animés, effets tactiles, rotation/PWA.
+- Bugs corrigés : téléportations en ligne (désynchronisation état/position), double dégâts des projectiles à explosion, anti-blocage dans les murs, remise en place du Duel d'élite.
+- À faire / limites : serveur non déployé (compte+jeton requis), pas de test sur vrai téléphone/iPhone, pas de compensation de latence côté serveur pour les tirs, graphismes vectoriels (pas d'artiste).

@@ -15,10 +15,13 @@
     const local = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(s);
     return (local ? 'ws://' : 'wss://') + s;
   };
+  // priorité : ?server= (test) > réglage avancé > adresse intégrée au jeu > serveur qui héberge la page (PWA / navigateur)
   Net.serverUrl = function () {
     const q = (location.search.match(/[?&]server=([^&]+)/) || [])[1];
     const saved = G.Save.data.settings.server || '';
-    return Net.normalize(q ? decodeURIComponent(q) : saved || G.DEFAULT_SERVER || '');
+    let u = q ? decodeURIComponent(q) : saved || G.DEFAULT_SERVER || '';
+    if (!u && /^https?:$/.test(location.protocol)) u = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host;
+    return Net.normalize(u);
   };
   Net.on = (t, fn) => { (Net.handlers[t] = Net.handlers[t] || []).push(fn); };
   Net.off = (t, fn) => { Net.handlers[t] = (Net.handlers[t] || []).filter((f) => f !== fn); };
@@ -67,6 +70,7 @@
   Net.handle = function (m) {
     switch (m.t) {
       case 'welcome':
+        Net.friendCode = m.friendCode; Net.club = m.club;
         Net.pid = m.pid; Net.token = m.token; Net.welcome = m; Net.retry = 0; Net.online = m.online;
         G.Save.data.net = { pid: m.pid, token: m.token }; G.Save.commit();
         Net.setStatus('online'); Net.sendProfile();
@@ -80,6 +84,9 @@
       case 'match': Net.lobby = null; Net.queue = null; Net.matchId = m.id; break;
       case 'lb': Net.lb = m; break;
       case 'kicked': Net.party = null; break;
+      case 'friends': Net.friends = m; break;
+      case 'club': Net.club = m.club; break;
+      case 'club_list': Net.clubList = m.list; break;
       case 'error': Net.lastErr = m.msg; break;
     }
     emit(m.t, m);
@@ -95,4 +102,12 @@
   Net.startPrivate = (mode, split) => Net.send({ t: 'party_start', mode, kind: 'private', split: !!split });
   Net.cancelQueue = () => Net.send({ t: 'queue_cancel' });
   Net.getLeaderboard = () => Net.send({ t: 'lb' });
+  Net.addFriend = (code) => Net.send({ t: 'friend_add', code });
+  Net.removeFriend = (pid) => Net.send({ t: 'friend_remove', pid });
+  Net.invite = (pid, mode) => Net.send({ t: 'invite', pid, mode });
+  Net.clubCreate = (name, tag) => Net.send({ t: 'club_create', name, tag });
+  Net.clubJoin = (id) => Net.send({ t: 'club_join', id });
+  Net.clubLeave = () => Net.send({ t: 'club_leave' });
+  Net.clubChat = (txt) => Net.send({ t: 'club_chat', txt });
+  Net.clubList2 = () => Net.send({ t: 'club_list' });
 })();

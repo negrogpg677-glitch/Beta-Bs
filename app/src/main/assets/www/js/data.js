@@ -84,34 +84,103 @@
       atk: { name: 'Éclair', n: 1, range: 7.4, speed: 42, dmg: 1150, r: 11, reload: 1.25, shape: 'bolt', color: '#7df9ff', pierce: true, sfx: 'zap' },
       sup: { name: 'Tempête électrique', type: 'aura', radius: 3.4, dmg: 1250, stun: 1.3, color: '#7df9ff', sfx: 'zap' },
     },
+
+    {
+      id: 'maree', name: 'Marée', role: 'Contrôleuse', rarity: 'superrare', price: 80, hp: 4200, speed: 4.0, superCost: 3500, voice: 1.15,
+      desc: 'Elle domine les flots : ses vagues repoussent les ennemis, son tsunami les balaie.', aiRange: 5.5,
+      look: { skin: '#e8c9a8', body: '#1f9ad6', body2: '#0d5f94', hair: '#37e0d0', accent: '#b8f4ff', hat: 'tide', weapon: 'staff', win: 'dance' },
+      atk: { name: 'Vague', n: 1, range: 6.5, speed: 13, dmg: 600, r: 20, reload: 1.5, shape: 'wave', color: '#5fe0ff', pierce: true, knock: 90, sfx: 'magic' },
+      sup: { name: 'Tsunami', type: 'lobArea', range: 8.4, speed: 12, dmg: 1500, splash: 3.2, knock: 220, shape: 'wave', color: '#2aa8ff' },
+    },
+    {
+      id: 'nimbus', name: 'Nimbus', role: 'Artilleur', rarity: 'epic', price: 170, hp: 3800, speed: 3.9, superCost: 3600, voice: 0.9,
+      desc: 'Un petit nuage grognon qui bombarde le terrain de pluie explosive.', aiRange: 6.2,
+      look: { skin: '#f2f4ff', body: '#8a96c8', body2: '#4f5a8c', hair: '#d8e0ff', accent: '#ffe14a', hat: 'cloud', weapon: 'bomb', win: 'spin' },
+      atk: { name: 'Gouttes explosives', n: 3, lob: true, spread: 44, range: 6.8, speed: 12, dmg: 520, splash: 0.95, reload: 1.9, shape: 'bomb', color: '#8ab8ff', sfx: 'rocket' },
+      sup: { name: 'Orage', type: 'lobArea', range: 8.6, speed: 12, dmg: 700, splash: 2.7, zone: { t: 5, slow: 0.6, dps: 430, color: '#8aa6ff' }, shape: 'ice', color: '#9fb8ff' },
+    },
+    {
+      id: 'grimm', name: 'Grimm', role: 'Faucheur', rarity: 'epic', price: 170, hp: 4600, speed: 4.3, superCost: 3200, voice: 0.7,
+      desc: 'Son coup de faux fauche tout ce qui s\'approche, et il se soigne en frappant.', aiRange: 3.0,
+      look: { skin: '#dcd6e8', body: '#3b2e5a', body2: '#1d1530', hair: '#7a5cff', accent: '#9dffb4', hat: 'reaper', weapon: 'scythe', win: 'bow' },
+      atk: { name: 'Coup de faux', n: 9, spread: 100, range: 3.5, speed: 16, dmg: 330, r: 8, reload: 1.15, shape: 'scythe', color: '#b8a4ff', sfx: 'shotgun' },
+      sup: { name: 'Moisson', type: 'jump', dist: 6.2, dmg: 1100, splash: 1.9, heal: 2600, color: '#9dffb4' },
+    },
+    {
+      id: 'tictac', name: 'Tic-Tac', role: 'Horloger', rarity: 'mythic', price: 350, hp: 3600, speed: 4.1, superCost: 3500, voice: 1.4,
+      desc: 'Un automate à rouages. Sa rafale est précise, et son super arrête le temps !', aiRange: 6.4,
+      look: { skin: '#e0c27a', body: '#b0742a', body2: '#6a4012', hair: '#ffd24a', accent: '#7af0ff', hat: 'clock', weapon: 'tesla', win: 'flex' },
+      atk: { name: 'Rafale d\'engrenages', n: 1, burst: 5, burstDelay: 0.06, range: 7.2, speed: 26, dmg: 300, r: 6, reload: 1.3, shape: 'gear', color: '#ffd24a', sfx: 'shoot' },
+      sup: { name: 'Arrêt du temps', type: 'aura', radius: 4.8, stun: 1.7, color: '#7af0ff', sfx: 'zap' },
+    },
+    {
+      id: 'zen', name: 'Zen', role: 'Gardien', rarity: 'superrare', price: 80, hp: 5200, speed: 3.9, superCost: 3400, voice: 0.85,
+      desc: 'Un moine serein. Ses sphères soignent, sa méditation protège toute l\'équipe.', aiRange: 5.8,
+      look: { skin: '#e8b890', body: '#e8791f', body2: '#a04a0a', hair: '#3a2410', accent: '#ffe9a8', hat: 'monk', weapon: 'staff', win: 'bow' },
+      atk: { name: 'Sphère de lumière', n: 1, range: 7.2, speed: 14, dmg: 560, r: 14, reload: 1.3, shape: 'orb', color: '#ffe9a8', pierce: true, heal: 380, sfx: 'magic' },
+      sup: { name: 'Méditation', type: 'aura', radius: 4.2, shield: 2.4, heal: 900, color: '#ffe9a8', sfx: 'heal' },
+    },
+    {
+      id: 'scarab', name: 'Scarabée', role: 'Tireur d\'élite', rarity: 'epic', price: 170, hp: 3000, speed: 3.8, superCost: 3600, voice: 1.1,
+      desc: 'Un chasseur de l\'ombre. Un seul tir à très longue portée, redoutable.', aiRange: 9.6,
+      look: { skin: '#d9a05a', body: '#1c6a5a', body2: '#0c3a30', hair: '#ffd21f', accent: '#ffd21f', hat: 'scarab', weapon: 'sniper', win: 'flex' },
+      atk: { name: 'Tir de précision', n: 1, range: 11.6, speed: 32, dmg: 1900, r: 8, reload: 2.5, shape: 'bullet', color: '#ffd21f', sfx: 'zap' },
+      sup: { name: 'Frappes ciblées', type: 'barrage', range: 11, count: 4, area: 1.3, dmg: 1150, splash: 1.0, duration: 0.8, shape: 'rocket', color: '#ffd21f' },
+    },
+    {
+      id: 'bumper', name: 'Bumper', role: 'Bagarreur', rarity: 'rare', price: 40, hp: 6500, speed: 4.0, superCost: 3500, voice: 0.95,
+      desc: 'Une boule de flipper vivante. Ses tirs repoussent, sa charge assomme.', aiRange: 3.6,
+      look: { skin: '#f0c090', body: '#e8334a', body2: '#9a1226', hair: '#ffffff', accent: '#ffe14a', hat: 'bumper', weapon: 'bigshotgun', win: 'spin' },
+      atk: { name: 'Choc', n: 3, spread: 22, range: 5.2, speed: 18, dmg: 420, r: 9, reload: 1.2, shape: 'pellet', color: '#ff9a9a', knock: 170, sfx: 'shotgun' },
+      sup: { name: 'Super bumper', type: 'dash', dist: 6.4, speed: 18, dmg: 800, stun: 1.2, knock: 260 },
+    },
+    {
+      id: 'jongleur', name: 'Jongleur', role: 'Trublion', rarity: 'rare', price: 40, hp: 4000, speed: 4.2, superCost: 3000, voice: 1.3,
+      desc: 'Il lance des bombes en rafale, puis entre en transe : dégâts et vitesse boostés !', aiRange: 5.8,
+      look: { skin: '#f6cfa4', body: '#a436d6', body2: '#5f1488', hair: '#ff4a8a', accent: '#ffd21f', hat: 'jester', weapon: 'bomb', win: 'flip' },
+      atk: { name: 'Jonglage', n: 3, lob: true, spread: 26, range: 6.6, speed: 12, dmg: 470, splash: 0.85, reload: 1.7, shape: 'bomb', color: '#ff7ad8', sfx: 'rocket' },
+      sup: { name: 'Transe du cirque', type: 'aura', radius: 0.01, rage: { t: 5.5, dmg: 1.6, speed: 1.25 }, color: '#ffd21f', sfx: 'super' },
+    },
+    {
+      id: 'yeti', name: 'Yéti', role: 'Colosse', rarity: 'mythic', price: 350, hp: 8200, speed: 3.8, superCost: 3800, voice: 0.6,
+      desc: 'Le roi des glaces. Ses griffes ralentissent, son saut gèle toute la zone.', aiRange: 3.2,
+      look: { skin: '#cfe6f5', body: '#6aa8d8', body2: '#34608c', hair: '#ffffff', accent: '#e8fbff', hat: 'yeti', weapon: 'bigshotgun', win: 'flex' },
+      atk: { name: 'Griffes de givre', n: 5, spread: 50, range: 3.8, speed: 15, dmg: 520, r: 9, reload: 1.15, shape: 'ice', color: '#c8f0ff', slow: { f: 0.55, t: 1.4 }, sfx: 'shotgun' },
+      sup: { name: 'Avalanche', type: 'jump', dist: 5.2, dmg: 1200, splash: 2.3, freeze: 1.3, knock: 120, color: '#c8f0ff' },
+    },
   ];
   G.BRAWLER = {};
   // le boss n'est pas jouable : il n'apparaît pas dans la liste des brawlers
-  G.BOSS = { id: 'robot', name: 'Mégabot', role: 'Boss', rarity: 'legend', price: 0, hp: 100000, speed: 2.9, superCost: 5000, desc: 'Un robot géant.', aiRange: 5.2, noHpScale: true,
+  G.BOSS = { id: 'robot', name: 'Mégabot', role: 'Boss', rarity: 'legend', price: 0, hp: 70000, speed: 2.9, superCost: 5000, desc: 'Un robot géant.', aiRange: 5.2, noHpScale: true,
     look: { skin: '#9fb0c8', body: '#59657e', body2: '#303a52', hair: '#ff4a55', accent: '#ff4a55', hat: 'robot', weapon: 'bigshotgun' },
     atk: { name: 'Salve', n: 7, spread: 64, range: 6.4, speed: 12, dmg: 330, r: 9, reload: 1.7, shape: 'bolt', color: '#ff6a6a', sfx: 'shotgun' },
     sup: { name: 'Onde de choc', type: 'aura', radius: 3.8, dmg: 1300, stun: 0.9, color: '#ff6a6a', sfx: 'zap' } };
   G.HP_SCALE = 2.1; // équilibrage : combats plus longs et plus lisibles
-  G.BRAWLERS.forEach((b) => { b.hp = Math.round(b.hp * G.HP_SCALE / 50) * 50; G.BRAWLER[b.id] = b; });
+  G.BRAWLERS.forEach((b) => { if (!b.voice) b.voice = 1; b.hp = Math.round(b.hp * G.HP_SCALE / 50) * 50; G.BRAWLER[b.id] = b; });
   G.BRAWLER.robot = G.BOSS;
   G.DEFAULT_SERVER = ''; // adresse du serveur par défaut (ex. 'mon-jeu.onrender.com') ; modifiable dans Réglages
 
   /* skins : décalage de teinte global + doré */
   G.SKINS = [
-    { id: 'classic', name: 'Classique', price: 0, hue: 0 },
-    { id: 'neon', name: 'Néon', price: 30, hue: 80 },
-    { id: 'toxic', name: 'Toxique', price: 30, hue: 170 },
-    { id: 'gold', name: 'Doré', price: 90, hue: 0, gold: true },
+    { id: 'classic', name: 'Classique', price: 0, hue: 0, tier: 'Commun' },
+    { id: 'neon', name: 'Néon', price: 30, hue: 80, tier: 'Rare' },
+    { id: 'toxic', name: 'Toxique', price: 30, hue: 170, tier: 'Rare' },
+    { id: 'gold', name: 'Doré', price: 90, hue: 0, gold: true, tier: 'Épique' },
+    { id: 'rainbow', name: 'Arc-en-ciel', price: 220, hue: 0, rainbow: true, fx: 'rainbow', tier: 'Légendaire' },
+    { id: 'ghost', name: 'Spectre', price: 200, hue: 200, fx: 'ghost', tier: 'Légendaire' },
+    { id: 'crystal', name: 'Cristal', price: 240, hue: 160, fx: 'crystal', tier: 'Légendaire' },
+    { id: 'inferno', name: 'Inferno', price: 260, hue: 330, fx: 'inferno', tier: 'Légendaire' },
   ];
   G.SKIN = {};
   G.SKINS.forEach((s) => (G.SKIN[s.id] = s));
 
   const _lookCache = {};
-  G.getLook = function (id, skinId) {
-    const key = id + '|' + (skinId || 'classic');
+  G.getLook = function (id, skinId, hueStep) {
+    const key = id + '|' + (skinId || 'classic') + (hueStep !== undefined ? '|' + hueStep : '');
     if (_lookCache[key]) return _lookCache[key];
     const base = G.BRAWLER[id].look, sk = G.SKIN[skinId || 'classic'] || G.SKINS[0];
     const out = Object.assign({}, base);
+    if (sk.rainbow) { const h = (hueStep || 0) * 30; ['body', 'body2', 'hair', 'accent'].forEach((k) => (out[k] = G.hueShift(base[k], h))); _lookCache[key] = null; return out; }
     if (sk.hue) ['body', 'body2', 'hair', 'accent'].forEach((k) => (out[k] = G.hueShift(base[k], sk.hue)));
     if (sk.gold) { out.body = '#f5c518'; out.body2 = '#b8860b'; out.accent = '#fff3b0'; out.hair = G.mix(base.hair, '#ffd21f', 0.5); }
     _lookCache[key] = out;
@@ -140,7 +209,18 @@
     desc: 'Contrôlez les zones sans ennemi à l\'intérieur : première équipe à 100 points !', maps: ['plateau', 'ruines', 'givre'] };
   G.MODES.boss = { id: 'boss', name: 'Assaut du Mégabot', short: 'Mégabot', color: '#6a7bff', icon: 'robot', teams: 2, per: 3, time: 150,
     desc: 'Défi coopératif ! Unissez vos forces pour détruire le robot géant avant d\'être éliminés.', maps: ['usine', 'arene_boss'] };
-  G.MODE_ORDER = ['gemgrab', 'brawlball', 'heist', 'bounty', 'hotzone', 'boss', 'showdown'];
+  G.MODES.knockout = { id: 'knockout', name: 'Duel d\'élite', short: 'Duel', color: '#e8334a', icon: 'skull', teams: 2, per: 3, time: 150,
+    desc: 'Sans réapparition ! Éliminez toute l\'équipe adverse. Premier à 2 manches.', maps: ['duel1', 'duel2'] };
+  G.MODE_ORDER = ['gemgrab', 'brawlball', 'heist', 'bounty', 'hotzone', 'knockout', 'boss', 'showdown'];
+  /* événements du jour : de vraies règles modifiées, identiques hors-ligne et en ligne */
+  G.EVENTS = [
+    { id: 'turbo', name: 'Journée Turbo', icon: '⚡', desc: 'Tout le monde court 20 % plus vite !' },
+    { id: 'vampire', name: 'Nuit des Vampires', icon: '🦇', desc: 'Chaque dégât soigne l\'attaquant de 15 %.' },
+    { id: 'supercharge', name: 'Supers express', icon: '💥', desc: 'Les supers se chargent presque 2 fois plus vite.' },
+    { id: 'giants', name: 'Festival des Géants', icon: '🗿', desc: 'Brawlers plus grands et plus costauds.' },
+    { id: 'none', name: 'Jour classique', icon: '⭐', desc: 'Les règles habituelles.' },
+  ];
+  G.todayEvent = function (d) { d = d || new Date(); const n = Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000); return G.EVENTS[n % G.EVENTS.length]; };
 
   /* thèmes visuels des arènes */
   G.THEMES = {
@@ -170,6 +250,8 @@
     givre: { name: 'Plateau du givre', mode: 'hotzone', theme: 'snow', seed: 163, w: 33, h: 21, density: 0.9, vmirror: true },
     usine: { name: 'Usine abandonnée', mode: 'boss', theme: 'night', seed: 174, w: 31, h: 21, density: 0.8, vmirror: true },
     arene_boss: { name: 'Arène du Mégabot', mode: 'boss', theme: 'volcano', seed: 185, w: 31, h: 21, density: 0.7, vmirror: true },
+    duel1: { name: 'Arène des champions', mode: 'knockout', theme: 'desert', seed: 196, w: 29, h: 19, density: 0.9, vmirror: true },
+    duel2: { name: 'Temple glacé', mode: 'knockout', theme: 'snow', seed: 207, w: 29, h: 19, density: 1.0, vmirror: true },
     jungle: { name: 'Jungle dangereuse', mode: 'showdown', theme: 'meadow', seed: 0, w: 38, h: 38, density: 1.0 },
     desert: { name: 'Désert brûlant', mode: 'showdown', theme: 'desert', seed: 0, w: 38, h: 38, density: 0.9 },
     sommet: { name: 'Sommet gelé', mode: 'showdown', theme: 'snow', seed: 0, w: 38, h: 38, density: 1.0 },

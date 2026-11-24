@@ -173,6 +173,7 @@
         if (near) return { x: near.x, y: near.y, kind: 'hunt' };
         return { x: mw / 2, y: mh / 2, kind: 'center' };
       }
+      case 'knockout':
       case 'bounty': {
         let near = null, nd = 1e9;
         for (const e of M.ents) if (e.alive && e.team === enemy) { const d = G.dist(b.x, b.y, e.x, e.y); if (d < nd) { nd = d; near = e; } }
@@ -366,6 +367,7 @@
       }
       case 'aura': {
         const R = s.radius * T;
+        if (s.rage) return tgt && tdist < 7 * T ? Sim.trySuper(M, b, 0, 0) : false;
         if (s.heal) {
           let miss = 0; const mates = [b].concat(alliesOf(M, b));
           for (const a of mates) if (G.dist(a.x, a.y, b.x, b.y) < R) miss += a.maxhp - a.hp;

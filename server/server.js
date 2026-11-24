@@ -49,6 +49,8 @@ function newCode() {
 }
 const send = (c, msg) => { if (c && c.ws && c.ws.readyState === 1) { try { c.ws.send(JSON.stringify(msg)); } catch (e) { /* ignore */ } } };
 const err = (c, code, msg) => send(c, { t: 'error', code, msg });
+const markDirty = () => { dirty = true; };
+let social = null; // initialisé plus bas (a besoin de createParty)
 
 /* ---------- équipes (parties) ---------- */
 function partyView(p) {
@@ -77,6 +79,9 @@ function leaveParty(c) {
   pushParty(p);
 }
 function removeTicket(p) { for (const m in queues) queues[m] = queues[m].filter((t) => t.party !== p.code); if (p.state === 'queue') { p.state = 'idle'; } }
+
+/* ---------- social : amis, invitations, clubs ---------- */
+social = require('./social.js')({ players, clients, parties, send, err, G, DATA_DIR, markDirty, createParty });
 
 /* ---------- matchmaking ---------- */
 function enqueue(p) {
@@ -150,7 +155,8 @@ function startMatch(m) {
   if (m.state !== 'lobby') return;
   m.slots = m.slots.filter((s) => clients.get(s.pid) && clients.get(s.pid).match === m.id);
   if (!m.slots.length) { matches.delete(m.id); return; }
-  m.M = Sim.createOnline({ mode: m.mode, mapKey: m.mapKey, seed: m.seed, players: m.slots });
+  m.event = G.todayEvent(new Date()).id;
+  m.M = Sim.createOnline({ mode: m.mode, mapKey: m.mapKey, seed: m.seed, players: m.slots, event: m.event });
   m.state = 'play'; m.lastT = process.hrtime.bigint();
   m.M.ents.forEach((b) => { if (b.pid) { const c = clients.get(b.pid); c.ent = b.idx; b.isPlayer = !!c.ws; b.disc = c.ws ? 0 : Date.now(); } });
   for (const pc of m.parties) { const p = parties.get(pc); if (p) { p.state = 'match'; pushParty(p); } }
@@ -161,7 +167,7 @@ function rosterOf(m) {
 }
 function sendInit(c, m) {
   const M = m.M;
-  send(c, { t: 'match', id: m.id, mode: m.mode, mapKey: m.mapKey, seed: m.seed, roster: rosterOf(m), you: c.ent, tiles: Buffer.from(M.map.tiles).toString('base64'), proto: PROTOCOL });
+  send(c, { t: 'match', id: m.id, mode: m.mode, mapKey: m.mapKey, seed: m.seed, roster: rosterOf(m), event: m.event, you: c.ent, tiles: Buffer.from(M.map.tiles).toString('base64'), proto: PROTOCOL });
 }
 
 setInterval(() => {
@@ -175,7 +181,7 @@ setInterval(() => {
       while (dt > 0) { const step = Math.min(dt, 0.033); Sim.update(M, step); dt -= step; }
       m.tick++;
       // reprise automatique des joueurs déconnectés par l'IA ; libération du slot après le délai
-      if (m.tick % 3 === 0) {
+      if (m.tick % 2 === 0) {
         const snap = Sim.snapshot(M); snap.ev = Sim.flushEvents(M); snap.t = 'snap'; snap.n = m.tick;
         const raw = JSON.stringify(snap);
         for (const b of M.ents) { if (b.pid) { const c = clients.get(b.pid); if (c && c.ws && c.ws.readyState === 1 && c.match === m.id) { try { c.ws.send(raw); } catch (e) { /* ignore */ } } } }
@@ -217,6 +223,7 @@ function onMessage(c, raw) {
   c.msgs = (c.msgs || 0) + 1;
   let msg; try { msg = JSON.parse(raw); } catch (e) { return; }
   if (!msg || typeof msg.t !== 'string') return;
+  if (social.handle(c, msg)) return;
   switch (msg.t) {
     case 'ping': send(c, { t: 'pong', ts: msg.ts }); break;
     case 'input': {
@@ -305,7 +312,8 @@ function handshake(ws, msg) {
   if (!c) { c = { pid, party: null, match: null, ent: null, ready: false, brawler: 'sherry', skin: 'classic', level: 1, trophies: pl.trophies }; clients.set(pid, c); }
   c.ws = ws; ws.pid = pid; c.name = pl.name; c.trophies = pl.trophies; c.lastSeen = Date.now(); c.dropAt = 0;
   if (msg.name) { c.name = pl.name = cleanName(msg.name); dirty = true; }
-  send(c, { t: 'welcome', pid, token: pl.token, name: c.name, proto: PROTOCOL, trophies: pl.trophies, online: wss.clients.size, resumed });
+  send(c, { t: 'welcome', pid, token: pl.token, name: c.name, proto: PROTOCOL, trophies: pl.trophies, online: wss.clients.size, resumed, friendCode: social.ensureCode(pid), club: social.clubView(pid) });
+  social.pushFriends(pid); social.pushClub(pid); social.notifyPresence(pid);
   // reprise de partie / retour dans l'équipe
   const m = c.match && matches.get(c.match);
   if (m && m.state === 'play' && m.M && m.M.ents[c.ent] && m.M.ents[c.ent].pid === pid) {
@@ -323,7 +331,8 @@ const server = http.createServer((req, res) => {
   fs.readFile(fp, (e, data) => {
     if (e) { res.writeHead(404); return res.end('Brawl Rush server'); }
     const ext = path.extname(fp);
-    res.writeHead(200, { 'content-type': { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.ttf': 'font/ttf' }[ext] || 'application/octet-stream' });
+    const mime = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css', '.ttf': 'font/ttf', '.png': 'image/png', '.webmanifest': 'application/manifest+json', '.json': 'application/json', '.svg': 'image/svg+xml' }[ext] || 'application/octet-stream';
+    res.writeHead(200, { 'content-type': mime, 'cache-control': ext === '.html' || rel === 'sw.js' ? 'no-cache' : 'public, max-age=3600' });
     res.end(data);
   });
 });
@@ -343,7 +352,7 @@ wss.on('connection', (ws) => {
     clearTimeout(hs);
     const c = clients.get(ws.pid);
     if (!c || c.ws !== ws) return;
-    c.ws = null; c.dropAt = Date.now();
+    c.ws = null; c.dropAt = Date.now(); social.notifyPresence(c.pid);
     const m = c.match && matches.get(c.match);
     if (m && m.M && m.state === 'play') { const b = m.M.ents[c.ent]; if (b) { b.isPlayer = false; b.disc = Date.now(); } }
     const p = parties.get(c.party); if (p) { if (p.state === 'queue') { /* reste en file */ } pushParty(p); }

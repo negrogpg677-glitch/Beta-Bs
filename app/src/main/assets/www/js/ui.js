@@ -27,6 +27,9 @@
     chest: `<svg viewBox="0 0 32 32"><path d="M4 14q0-9 12-9t12 9z" fill="#c9742a" stroke="${O}" stroke-width="3" stroke-linejoin="round"/><rect x="4" y="14" width="24" height="14" rx="2" fill="#a85a1c" stroke="${O}" stroke-width="3"/><rect x="13" y="12" width="6" height="8" rx="1.5" fill="#ffd21f" stroke="${O}" stroke-width="2.4"/><path d="M4 14h24" stroke="#ffd21f" stroke-width="2.4"/></svg>`,
     check: `<svg viewBox="0 0 32 32"><path d="M6 17l7 7 13-14" fill="none" stroke="${O}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 17l7 7 13-14" fill="none" stroke="#7dff7a" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
     bolt: `<svg viewBox="0 0 32 32"><polygon points="19,2 7,18 15,18 12,30 25,13 17,13" fill="#ffd21f" stroke="${O}" stroke-width="3" stroke-linejoin="round"/></svg>`,
+    friends: `<svg viewBox="0 0 32 32"><circle cx="11" cy="10" r="5.5" fill="#ffe0b8" stroke="${O}" stroke-width="3"/><circle cx="22" cy="12" r="4.5" fill="#ffd0a0" stroke="${O}" stroke-width="3"/><path d="M1.5 28c0-7 4-10 9.5-10s9.5 3 9.5 10z" fill="#3a8cff" stroke="${O}" stroke-width="3" stroke-linejoin="round"/><path d="M19 20c1-1 2.5-1.5 4-1.5 5 0 7.500 3 7.500 9.500h-8" fill="#ff7a8a" stroke="${O}" stroke-width="3" stroke-linejoin="round"/></svg>`,
+    shield: `<svg viewBox="0 0 32 32"><path d="M16 3l11 4v9c0 7-5 11-11 13C10 27 5 23 5 16V7z" fill="#ffc21f" stroke="${O}" stroke-width="3" stroke-linejoin="round"/><path d="M16 8l6 2v6c0 4-3 6.500-6 7.500-3-1-6-3.500-6-7.500v-6z" fill="#ff5a3a"/></svg>`,
+    chat: `<svg viewBox="0 0 32 32"><path d="M4 6h24v16H15l-6 5v-5H4z" fill="#fff" stroke="${O}" stroke-width="3" stroke-linejoin="round"/><path d="M9 12h14M9 17h9" stroke="#3a8cff" stroke-width="2.600" stroke-linecap="round"/></svg>`,
     back: `<svg viewBox="0 0 32 32"><path d="M20 6L9 16l11 10" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   };
   (function () { // engrenage
@@ -64,7 +67,7 @@
   /* ---------- initialisation ---------- */
   UI.init = function () {
     const root = $('#ui');
-    root.innerHTML = '<section id="splash" class="screen"></section><section id="home" class="screen"></section><section id="shop" class="screen slide"></section><section id="brawlers" class="screen slide"></section><section id="road" class="screen slide"></section>';
+    root.innerHTML = '<section id="splash" class="screen"></section><section id="home" class="screen"></section><section id="shop" class="screen slide"></section><section id="brawlers" class="screen slide"></section><section id="road" class="screen slide"></section><section id="social" class="screen slide"></section>';
     root.addEventListener('click', (e) => {
       const a = e.target.closest('[data-act]');
       if (!a || a.disabled) return;
@@ -138,13 +141,14 @@
     const canDaily = !UI.dailyDone();
     home.innerHTML = `
       <div class="topbar">
-        <div class="profile" data-act="profile"><canvas width="160" height="160"></canvas><div><div class="nm">${esc(sv.name)}</div><div class="tr">${ic('trophy')} ${fmt(tot)}</div></div></div>
+        <div class="profile" data-act="profile"><canvas width="160" height="160"></canvas><div><div class="nm">${esc(sv.name)}</div><div class="tr">${ic('trophy')} ${fmt(tot)} <span class="netdot hd" title="Connexion"></span></div></div></div>
         <div class="spacer"></div>
         <div class="pill">${ic('gem')}<span class="cur-gems">0</span><span class="plus" data-act="goShop">+</span></div>
         <div class="pill">${ic('coin')}<span class="cur-coins">0</span><span class="plus" data-act="goShop">+</span></div>
         <button class="icon-btn" data-act="leaderboard">${ic('trophy')}</button><button class="icon-btn" data-act="settings">${ic('gear')}</button>
       </div>
       <div class="side-left">
+        <button class="side-btn" data-act="goSocial">${ic('friends')}${UI.pendingInvites ? '<span class="badge">' + UI.pendingInvites + '</span>' : ''}<span class="lbl">Amis</span></button>
         <button class="side-btn" data-act="quests">${ic('scroll')}${G.Quests.claimable() ? '<span class="badge">' + G.Quests.claimable() + '</span>' : ''}<span class="lbl">Quêtes</span></button>
         <button class="side-btn" data-act="daily">${ic('gift')}${canDaily ? '<span class="badge">!</span>' : ''}<span class="lbl">Cadeau</span></button>
         <button class="side-btn" data-act="boxes">${ic('chest')}${sv.boxes ? '<span class="badge">' + sv.boxes + '</span>' : ''}<span class="lbl">Coffres</span></button>
@@ -156,6 +160,7 @@
         <button class="btn small change" data-act="goBrawlers">Changer de Brawler</button>
       </div>
       <div class="play-panel">
+        ${UI.eventBanner()}
         <div class="mode-card" data-act="modes" style="--mc:${mode.color}">
           <div class="mi">${ic(MODE_ICON[mode.icon])}</div>
           <div><div class="mn">${mode.name}</div><div class="mm">${mode.id === 'showdown' ? 'Solo · 10 joueurs' : mode.id === 'boss' ? 'Coopératif' : '3 contre 3'} · ${mode.time >= 60 ? Math.round(mode.time / 60) + ' min' : mode.time + 's'}</div></div>
@@ -166,10 +171,11 @@
       </div>
       ${nav('home')}`;
     G.Render.portrait($('.profile canvas', home), id, skinOf(id), 0, { aim: 0.4, zoom: 1.5, y: 0.95, shadow: false });
+    if (UI.updateNetDot) UI.updateNetDot();
     const cv = $('.stage canvas', home); animate(cv, id, skinOf(id), { zoom: 0.9, y: 0.7, aim: -0.35 });
   };
   function nav(active) {
-    const items = [['shop', 'bag', 'Boutique'], ['brawlers', 'user', 'Brawlers'], ['home', 'home', 'Accueil'], ['road', 'flag', 'Trophées']];
+    const items = [['shop', 'bag', 'Boutique'], ['brawlers', 'user', 'Brawlers'], ['home', 'home', 'Accueil'], ['road', 'flag', 'Trophées'], ['social', 'friends', 'Social']];
     return '<nav class="nav">' + items.map(([k, i, l]) => `<button class="${k === active ? 'act' : ''}" data-act="nav" data-to="${k}">${ic(i)}<span>${l}</span></button>`).join('') + '</nav>';
   }
   function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
@@ -269,6 +275,7 @@
       const tg = (k, label) => `<div class="setrow"><span>${label}</span><div class="toggle ${s[k] ? 'on' : ''}" data-act="toggle" data-k="${k}"></div></div>`;
       return `<h2>Réglages</h2>${tg('sound', 'Effets sonores')}${tg('music', 'Musique')}${tg('vibrate', 'Vibrations')}${tg('aimAssist', 'Aide à la visée')}${tg('lefty', 'Mode gaucher')}
         <div class="setrow"><span>Qualité graphique</span><button class="btn small ${s.quality === 'high' ? 'green' : s.quality === 'medium' ? 'blue' : 'gray'}" data-act="quality">${s.quality === 'high' ? 'Haute' : s.quality === 'medium' ? 'Moyenne' : 'Économie'}</button></div>
+        ${window.AndroidBridge ? '' : '<div class="setrow"><span>Installer le jeu (PWA)</span><button class="btn small blue" data-act="installApp">Installer</button></div>'}
         <div class="setrow"><span>Serveur en ligne</span><button class="btn small ${S().settings.server ? 'green' : 'gray'}" data-act="serverCfg">${S().settings.server ? 'Configuré' : 'À configurer'}</button></div>
         <div class="setrow"><span>Pseudo : ${esc(S().name)}</span><button class="btn small blue" data-act="rename">Modifier</button></div>
         <div class="row" style="margin-top:2rem"><button class="btn small red" data-act="reset">Réinitialiser la progression</button></div>
@@ -302,7 +309,7 @@
   /* ---------- boutique ---------- */
   UI.build.shop = function () {
     const root = $('#shop'), sv = S();
-    const tabs = [['offers', 'Offres du jour'], ['brawlers', 'Brawlers']];
+    const tabs = [['offers', 'Offres du jour'], ['brawlers', 'Brawlers'], ['skins', 'Skins']];
     root.innerHTML = head('Boutique') + `<div class="body"><div class="tabs">${tabs.map(([k, l]) => `<button class="tab ${UI.shopTab === k ? 'act' : ''}" data-act="shopTab" data-k="${k}">${l}</button>`).join('')}</div><div id="shopBody"></div></div>` + nav('shop');
     UI.anim = [];
     const body = $('#shopBody', root);
@@ -318,6 +325,16 @@
         if (o.type === 'brawler') { const cv = portraitCanvas(o.id, 'classic', 300); art.appendChild(cv); animate(cv, o.id, 'classic', { zoom: 0.78 }); }
         else if (o.type === 'skin') { const cv = portraitCanvas(o.id, o.skin, 300); art.appendChild(cv); animate(cv, o.id, o.skin, {}); }
         else art.innerHTML = o.icon;
+        body.appendChild(card);
+      });
+    } else if (UI.shopTab === 'skins') {
+      body.className = 'offers'; body.innerHTML = '';
+      const bid = sv.selected;
+      G.SKINS.filter((k) => k.id !== 'classic').forEach((k) => {
+        const have = (sv.ownedSkins[bid] || []).includes(k.id);
+        const col = k.tier === 'Légendaire' ? '#ffd21f' : k.tier === 'Épique' ? '#b455ff' : '#3aa0ff';
+        const card = el(`<div class="offer rar ${have ? 'sold' : ''}" style="--rc:${col}"><div class="ot">${G.BRAWLER[bid].name}<br><span class="rarity" style="background:${col}">${k.tier} · ${k.name}</span></div><div class="art"></div>${have ? '<div class="price">Possédé ✔</div>' : `<button class="btn small blue" data-act="buySkin" data-s="${k.id}"><span class="price ${sv.gems < k.price ? 'cost-bad' : ''}">${ic('gem')}${k.price}</span></button>`}</div>`);
+        const cv = portraitCanvas(bid, k.id, 300); $('.art', card).appendChild(cv); animate(cv, bid, k.id, {});
         body.appendChild(card);
       });
     } else {
@@ -369,6 +386,13 @@
     UI.toast(o.type === 'box' ? 'Coffre ajouté ! Ouvrez-le depuis l\'accueil.' : 'Achat réussi !');
     UI.build.shop(); UI.refreshCur(); bump('cur-gems'); bump('cur-coins');
   };
+  ACT.buySkin = (a) => {
+    const sv = S(), id = sv.selected, k = G.SKIN[a.dataset.s];
+    if ((sv.ownedSkins[id] || []).includes(k.id)) return;
+    if (sv.gems < k.price) { G.Audio.sfx('error'); UI.toast('Pas assez de gemmes !'); return; }
+    sv.gems -= k.price; (sv.ownedSkins[id] = sv.ownedSkins[id] || []).push(k.id); sv.skins[id] = k.id; G.Save.commit(); G.Audio.sfx('open');
+    UI.toast('Skin ' + k.name + ' débloqué et équipé !'); UI.build.shop(); UI.refreshCur();
+  };
   ACT.buyBrawler = (a) => {
     const b = G.BRAWLER[a.dataset.id], sv = S();
     if (sv.unlocked.includes(b.id)) return;
@@ -411,7 +435,7 @@
     const next = G.UPGRADE_COST[lvl + 1];
     const skins = G.SKINS.map((s) => {
       const have = s.id === 'classic' || (sv.ownedSkins[id] || []).includes(s.id), on = skinOf(id) === s.id;
-      return `<div class="skin ${on ? 'on' : ''}" data-act="skin" data-s="${s.id}"><canvas width="160" height="160" data-s="${s.id}"></canvas>${s.name}<div class="pr">${have ? (on ? 'Équipé' : 'Choisir') : ic('gem') + s.price}</div></div>`;
+      return `<div class="skin ${on ? 'on' : ''}" data-act="skin" data-s="${s.id}"><canvas width="160" height="160" data-s="${s.id}"></canvas>${s.name}<div class="tier">${s.tier || ''}</div><div class="pr">${have ? (on ? 'Équipé' : 'Choisir') : ic('gem') + s.price}</div></div>`;
     }).join('');
     d.innerHTML = `<div class="top"><canvas class="big anim-detail" width="400" height="400" style="background:radial-gradient(${r.color},${G.shade(r.color, -0.6)})"></canvas><div><div class="nm">${b.name}</div><div class="role">${b.role}</div><span class="rarity" style="background:${r.color}">${r.name}</span>
       ${owned ? `<div style="margin-top:1rem;font-size:2.6rem"><span class="lvl">Niv. ${lvl}</span> &nbsp; ${ic('trophy')} ${fmt(sv.trophies[id] || 0)}</div>` : ''}</div></div>
