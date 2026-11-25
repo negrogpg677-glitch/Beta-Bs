@@ -62,7 +62,7 @@ module.exports = function (ctx) {
     c.handle = p.handle; c.elo = p.elo; c.rg = p.ranked_games; c.rw = p.ranked_wins; c.uname = p.username;
     const last = Date.parse(p.name_changed_at || p.created_at || 0) || 0, recent = (p.name_changes || []).filter((t) => Date.now() - Date.parse(t) < 365 * DAY).length;
     const gu = await globalUnlock();
-    send(c, { t: 'me', uid: c.uid, handle: p.handle, name: p.username, dev: !!c.dev, canHandle: (p.handle_changes || 0) < 1 || p.handle_unlock || gu,
+    send(c, { t: 'me', uid: c.uid, email: c.email, devConfigured: DEVS.length > 0, handle: p.handle, name: p.username, dev: !!c.dev, canHandle: (p.handle_changes || 0) < 1 || p.handle_unlock || gu,
       nameAt: last + NAME_DELAY, namePrice: Math.min(640, 20 * Math.pow(2, recent)), elo: p.elo, rank: rankOf(p.elo), games: p.ranked_games, wins: p.ranked_wins,
       rankedAt: RANKED_AT, rankedOpen: rankedOpen(c) });
   }
@@ -86,9 +86,14 @@ module.exports = function (ctx) {
   }
 
   /* ---------- carte publique d'un joueur ---------- */
+  async function findProfile(q, cols) {
+    const raw = String(q || '').trim(), h = normHandle(raw);
+    let p = validHandle(h) ? await one('handle=eq.' + enc(h) + '&select=' + cols) : null;
+    if (!p && /^[A-Za-z0-9_]{3,16}$/.test(raw)) p = await one('username=ilike.' + enc(raw) + '&select=' + cols); // recherche par pseudo
+    return p;
+  }
   async function card(c, handle) {
-    const h = normHandle(handle); if (!validHandle(h)) return null;
-    const p = await one('handle=eq.' + enc(h) + '&select=id,username,handle,trophies,avatar,elo,ranked_games,ranked_wins,last_seen' + (c.dev ? ',save' : ''));
+    const p = await findProfile(handle, 'id,username,handle,trophies,avatar,elo,ranked_games,ranked_wins,last_seen' + (c.dev ? ',save' : ''));
     if (!p) return null;
     const ls = liveStatus(p.id), fr = await db('/rest/v1/friendships?or=(and(a.eq.' + c.uid + ',b.eq.' + p.id + '),and(a.eq.' + p.id + ',b.eq.' + c.uid + '))&select=a,b,status');
     const f = fr && fr[0];
@@ -108,7 +113,10 @@ module.exports = function (ctx) {
     c.uid = u.id; c.email = String(u.email || '').toLowerCase(); c.dev = DEVS.includes(c.email); byUid.set(c.uid, c.pid);
     let p = await one('id=eq.' + enc(c.uid) + '&select=' + COLS);
     if (!p) return err(c, 'auth', 'Profil introuvable.');
-    if (!p.handle) { for (let i = 0; i < 3 && !p.handle; i++) { const h = await newHandle(); try { await patchProfile(c.uid, { handle: h }); p.handle = h; } catch (e) { if (e.status !== 409) throw e; } } }
+    if (!p.handle) {
+      try { for (let i = 0; i < 3 && !p.handle; i++) { const h = await newHandle(); try { await patchProfile(c.uid, { handle: h }); p.handle = h; } catch (e) { if (e.status !== 409) throw e; } } }
+      catch (e) { err(c, 'db_handle', 'Identifiant non créé : ' + (e.message || 'erreur base') + ' (exécutez supabase/v2b.sql dans Supabase).'); }
+    }
     await patchProfile(c.uid, { last_seen: new Date().toISOString() }).catch(() => {});
     c.name = p.username || c.name;
     await me(c, p); await pushFriends(c); await notifyFriends(c);
@@ -177,8 +185,8 @@ module.exports = function (ctx) {
   const dev = (fn) => need(async (c, msg) => { if (!c.dev) return err(c, 'forbidden', 'Réservé au compte développeur.'); await fn(c, msg); });
   H.dev_gift = dev(async (c, msg) => {
     const id = String(msg.brawler || ''); if (!G.BRAWLER[id] || id === 'robot') return err(c, 'dev', 'Brawler inconnu.');
-    const h = normHandle(msg.handle), p = validHandle(h) && await one('handle=eq.' + enc(h) + '&select=id,username,save');
-    if (!p) return err(c, 'dev', 'Joueur introuvable.');
+    const p = /^[0-9a-f-]{36}$/i.test(String(msg.uid || '')) ? await one('id=eq.' + enc(msg.uid) + '&select=id,username,save') : await findProfile(msg.handle, 'id,username,save');
+    if (!p) return err(c, 'dev', 'Joueur introuvable. Il doit s\'être connecté à son compte au moins une fois avec la dernière version du jeu.');
     if (p.save && (p.save.unlocked || []).includes(id)) return err(c, 'dev_owned', p.username + ' possède déjà ' + G.BRAWLER[id].name + '.');
     const pend = await db('/rest/v1/gifts?to_id=eq.' + p.id + '&brawler=eq.' + enc(id) + '&claimed=eq.false&select=id'); if (pend.length) return err(c, 'dev_owned', 'Ce cadeau attend déjà ' + p.username + '.');
     const row = await db('/rest/v1/gifts', { method: 'POST', body: { to_id: p.id, brawler: id, from_name: c.name }, prefer: 'return=representation' });
@@ -187,7 +195,7 @@ module.exports = function (ctx) {
   });
   H.dev_unlock_handle = dev(async (c, msg) => {
     if (msg.all !== undefined) { await db('/rest/v1/game_config?on_conflict=key', { method: 'POST', body: { key: 'handle_unlock_all', value: !!msg.all }, prefer: 'resolution=merge-duplicates,return=minimal' }); return send(c, { t: 'toast', msg: msg.all ? 'Tous les joueurs peuvent modifier leur identifiant.' : 'Restriction d\'identifiant rétablie pour tous.' }); }
-    const h = normHandle(msg.handle), p = validHandle(h) && await one('handle=eq.' + enc(h) + '&select=id,username');
+    const p = /^[0-9a-f-]{36}$/i.test(String(msg.uid || '')) ? await one('id=eq.' + enc(msg.uid) + '&select=id,username') : await findProfile(msg.handle, 'id,username');
     if (!p) return err(c, 'dev', 'Joueur introuvable.');
     await patchProfile(p.id, { handle_unlock: true }); send(c, { t: 'toast', msg: p.username + ' peut à nouveau modifier son identifiant (une fois).' });
   });

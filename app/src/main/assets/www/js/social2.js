@@ -17,7 +17,7 @@
   Net.on('welcome', () => { lastTok = null; setTimeout(() => auth(true), 30); });
   if (A) A.on(() => { if (A.loggedIn()) auth(false); else if (Net.me) { Net.me = null; Net.fr = null; lastTok = null; } });
   Net.on('status', (s) => { if (s !== 'online') lastTok = null; });
-  Net.on('me', (m) => { Net.me = m; if (UI.screen === 'social') UI.renderSocial(); const pf = $('.pf-left'); if (pf) profileExtra(pf.closest('.modal')); });
+  Net.on('me', (m) => { Net.me = m; if (m.dev && G.DevTools) { G.DevTools.activate(); if (!UI._devHello) { UI._devHello = 1; UI.toast('🔧 Compte développeur reconnu : menu DEV activé', 3000); } } if (UI.screen === 'social') UI.renderSocial(); const pf = $('.pf-left'); if (pf) profileExtra(pf.closest('.modal')); });
   Net.on('fr', (m) => {
     Net.fr = m;
     Net.friends = { code: Net.me && Net.me.handle, list: m.friends.map((f) => ({ pid: f.pid, uid: f.uid, name: f.name, trophies: f.trophies, status: f.status, club: '', handle: f.handle })) };
@@ -43,7 +43,7 @@
 
   /* ---------- recherche de joueur (réponses « player ») ---------- */
   const waiting = {};
-  const findPlayer = (handle, cb) => { const ref = handleFmt(handle) + ':' + Math.random().toString(36).slice(2, 6); waiting[ref] = cb; Net.send({ t: 'player_find', handle, ref }); };
+  const findPlayer = (handle, cb) => { const ref = (handleFmt(handle) || 'P') + ':' + Math.random().toString(36).slice(2, 6); waiting[ref] = cb; Net.send({ t: 'player_find', handle, ref }); };
   Net.on('player', (m) => { const cb = waiting[m.ref]; if (cb) { delete waiting[m.ref]; cb(m.card); } });
 
   /* ---------- écran Amis (comptes) ---------- */
@@ -165,22 +165,29 @@
   /* ---------- panneau développeur (vérifié par le serveur) ---------- */
   UI.devPanel = function () {
     if (!Net.me || !Net.me.dev) { UI.toast('Réservé au compte développeur.'); return; }
-    UI.modal(`<h2>🔧 Panneau développeur</h2><div class="fr-add"><input id="dvIn" maxlength="16" placeholder="IDENTIFIANT DU JOUEUR" autocapitalize="characters" autocomplete="off"><button class="btn green" data-act="dvSearch">Rechercher</button></div><div id="dvRes"></div>
+    UI.modal(`<h2>🔧 Panneau développeur</h2><div class="fr-add"><input id="dvIn" maxlength="16" placeholder="Identifiant ou pseudo du joueur" autocomplete="off" style="text-transform:none"><button class="btn green" data-act="dvSearch">Rechercher</button></div><div id="dvRes"></div>
       <div class="dv-all"><span>Identifiants (tous les joueurs) :</span><button class="btn small green" data-act="dvAll" data-v="1">Autoriser 1 modification</button><button class="btn small red" data-act="dvAll" data-v="0">Rétablir la restriction</button></div>`, { style: 'width:min(150rem,96vw)' });
-    const i = $('#dvIn'); i.addEventListener('input', () => { i.value = handleFmt(i.value); });
   };
   ACT.devPanel = () => UI.devPanel();
+  ACT.devTools = () => { if (G.Dev && G.Dev.open) G.Dev.open(); };
+  UI.devStatusRow = () => {
+    const me = Net.me;
+    if (!A || !A.loggedIn()) return '';
+    if (!me) return '<div class="setrow"><span>🔧 Mode développeur : compte en cours de connexion au serveur…</span></div>';
+    if (me.dev) return '<div class="setrow"><span>🔧 Compte développeur ✔</span><span><button class="btn small green" data-act="devTools">Outils DEV</button> <button class="btn small blue" data-act="devPanel">Cadeaux / joueurs</button></span></div>';
+    return '<div class="setrow"><span style="font-size:2.2rem">🔧 Mode développeur : non activé pour ce compte (e-mail : <b>' + esc(me.email || '?') + '</b>).' + (me.devConfigured ? ' Mettez exactement cet e-mail dans DEV_EMAILS sur Render.' : ' DEV_EMAILS est vide sur Render.') + '</span></div>';
+  };
   ACT.dvAll = (a) => Net.send({ t: 'dev_unlock_handle', all: a.dataset.v === '1' });
   ACT.dvSearch = () => {
-    const h = handleFmt($('#dvIn').value), res = $('#dvRes'); res.innerHTML = '<div class="spinner"></div>';
+    const h = ($('#dvIn').value || '').trim(), res = $('#dvRes'); if (h.length < 3) { UI.toast('Entrez un identifiant ou un pseudo.'); return; } res.innerHTML = '<div class="spinner"></div>';
     findPlayer(h, (cdd) => {
-      if (!cdd) { res.innerHTML = '<div class="fr-none">Joueur introuvable.</div>'; return; }
+      if (!cdd) { res.innerHTML = '<div class="fr-none">Joueur introuvable. Il doit s\'être connecté à son compte au moins une fois avec la dernière version du jeu.</div>'; return; }
       const owned = cdd.owned || [];
-      res.innerHTML = `<div class="fr-card"><div class="fr-ci"><div class="fn">${esc(cdd.name)}</div><div class="fh">${esc(cdd.handle)}</div><div class="fs">${ic('trophy')} ${fmt(cdd.trophies)} · ${owned.length}/${G.BRAWLERS.length} brawlers · ${esc(cdd.rank.name)}</div></div><button class="btn small blue" data-act="dvUnlock" data-h="${esc(cdd.handle)}">Autoriser à modifier son identifiant</button></div>
-        <div class="fr-sec">Offrir un brawler (touchez pour l'offrir)</div><div class="dv-grid">${G.BRAWLERS.map((b) => `<button class="dv-b ${owned.includes(b.id) ? 'own' : ''}" data-act="dvGift" data-id="${b.id}" data-h="${esc(cdd.handle)}" ${owned.includes(b.id) ? 'disabled' : ''}><i class="dv-pv" data-id="${b.id}"></i><span>${esc(b.name)}</span>${owned.includes(b.id) ? '<em>Possédé</em>' : ''}</button>`).join('')}</div>`;
+      res.innerHTML = `<div class="fr-card"><div class="fr-ci"><div class="fn">${esc(cdd.name)}</div><div class="fh">${esc(cdd.handle)}</div><div class="fs">${ic('trophy')} ${fmt(cdd.trophies)} · ${owned.length}/${G.BRAWLERS.length} brawlers · ${esc(cdd.rank.name)}</div></div><button class="btn small blue" data-act="dvUnlock" data-uid="${esc(cdd.uid)}">Autoriser à modifier son identifiant</button></div>
+        <div class="fr-sec">Offrir un brawler (touchez pour l'offrir)</div><div class="dv-grid">${G.BRAWLERS.map((b) => `<button class="dv-b ${owned.includes(b.id) ? 'own' : ''}" data-act="dvGift" data-id="${b.id}" data-uid="${esc(cdd.uid)}" ${owned.includes(b.id) ? 'disabled' : ''}><i class="dv-pv" data-id="${b.id}"></i><span>${esc(b.name)}</span>${owned.includes(b.id) ? '<em>Possédé</em>' : ''}</button>`).join('')}</div>`;
       $$('.dv-pv', res).forEach((v) => v.replaceWith(portraitCanvas(v.dataset.id, 'classic', 110)));
     });
   };
-  ACT.dvUnlock = (a) => Net.send({ t: 'dev_unlock_handle', handle: a.dataset.h });
-  ACT.dvGift = (a) => { if (a.disabled) return; G.Audio.sfx('buy'); Net.send({ t: 'dev_gift', handle: a.dataset.h, brawler: a.dataset.id }); a.classList.add('own'); a.disabled = true; a.insertAdjacentHTML('beforeend', '<em>Offert</em>'); };
+  ACT.dvUnlock = (a) => Net.send({ t: 'dev_unlock_handle', uid: a.dataset.uid });
+  ACT.dvGift = (a) => { if (a.disabled) return; G.Audio.sfx('buy'); Net.send({ t: 'dev_gift', uid: a.dataset.uid, brawler: a.dataset.id }); a.classList.add('own'); a.disabled = true; a.insertAdjacentHTML('beforeend', '<em>Offert</em>'); };
 })();

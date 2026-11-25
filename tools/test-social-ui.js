@@ -36,6 +36,13 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const md = await D.evaluate(() => G.Net.me), mb = await B.evaluate(() => G.Net.me);
   ok(md && /^[A-Z]{4,16}$/.test(md.handle) && md.dev === true, 'connexion du compte développeur : identifiant ' + (md && md.handle) + ', droits développeur reconnus');
   ok(mb && /^[A-Z]{4,16}$/.test(mb.handle) && !mb.dev, 'connexion de Bob : identifiant ' + (mb && mb.handle));
+  ok(await D.evaluate(() => !!(G.DevReady && G.Dev && document.getElementById('devBtn') && document.getElementById('devGiftBtn'))), 'compte développeur : menu DEV (outils + cadeaux) activé automatiquement à la connexion');
+  ok(await B.evaluate(() => !G.Dev && !document.getElementById('devBtn')), 'compte normal : pas de menu DEV');
+  await B.evaluate(() => G.UI.ACT.settings()); await sleep(300);
+  ok((await B.textContent('.modal')).includes('bob@test.fr'), 'réglages d\'un compte normal : diagnostic avec l\'e-mail du compte');
+  await B.evaluate(() => { while (G.UI.modals.length) G.UI.closeModal(); });
+  await D.click('#devBtn', { force: true }); await sleep(400); ok(await D.evaluate(() => !!G.Dev.panel), 'le bouton DEV ouvre les outils (aimbot, invincible…)');
+  await D.screenshot({ path: path.join(OUT, 'soc_devtools.png') }); await D.evaluate(() => { G.Dev.panel && G.Dev.panel.remove(); G.Dev.panel = null; });
   // Bob ajoute le développeur par son identifiant
   await B.evaluate(() => { G.UI.socialTab = 'friends'; G.UI.frTab = 'add'; G.UI.show('social'); }); await sleep(600);
   await B.fill('#frIn', md.handle.toLowerCase()); await B.click('[data-act=frSearch]', { force: true }); await sleep(700);
@@ -58,7 +65,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   ok(await B.evaluate(() => G.Net.me.handle === 'LOUPGIVRE' && !G.Net.me.canHandle), 'identifiant modifié (LOUPGIVRE) puis verrouillé');
   // cadeau du développeur
   await D.evaluate(() => { while (G.UI.modals.length) G.UI.closeModal(); G.UI.show('home'); G.UI.devPanel(); }); await sleep(400);
-  await D.fill('#dvIn', 'LOUPGIVRE'); await D.click('[data-act=dvSearch]', { force: true }); await sleep(800);
+  await D.fill('#dvIn', 'bob'); await D.click('[data-act=dvSearch]', { force: true }); await sleep(800); // recherche par pseudo
   ok(await D.isVisible('.dv-b[data-id=yeti]'), 'panneau développeur : profil du joueur + liste des brawlers à offrir');
   await D.screenshot({ path: path.join(OUT, 'soc_dev.png') });
   await B.evaluate(() => { while (G.UI.modals.length) G.UI.closeModal(); });

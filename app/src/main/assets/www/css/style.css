@@ -617,3 +617,5 @@ body.in-match #pauseBtn { display: block; }
 @media (max-aspect-ratio: 16/9) { .rk-grid { grid-template-columns: 1fr 1fr; } .rk-side { grid-column: 1 / -1; } .fr-st { min-width: 0; } }
 .rk-badge b, .rk-badge span, .rk-m.act, .fr-tab.act, .rk-chip, .pass-btn span { -webkit-text-stroke: 0 !important; text-shadow: none !important; }
 .subrow { flex-wrap: nowrap !important; gap: .8rem !important; } .subrow .chip { white-space: nowrap; padding-left: 1.4rem !important; padding-right: 1.4rem !important; font-size: 2.3rem !important; }
+#devGiftBtn { position: fixed; left: 12rem; top: 9.6rem; z-index: 96; padding: .5rem 1.4rem; font-size: 2.4rem; border-radius: 1.2rem; color: #fff; background: linear-gradient(#ffd86a, #f08a12); border: .3rem solid #14123a; box-shadow: 0 .4rem 0 #8a4a00; font-family: inherit; }
+body.in-match #devGiftBtn { display: none; }

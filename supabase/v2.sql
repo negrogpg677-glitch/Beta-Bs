@@ -18,7 +18,7 @@ end $$;
 create or replace function public.profiles_guard() returns trigger
 language plpgsql as $$
 begin
-  if coalesce(auth.role(), '') <> 'service_role' then
+  if current_user not in ('service_role', 'postgres', 'supabase_admin') and coalesce(auth.role(), '') <> 'service_role' then
     if new.username is distinct from old.username then raise exception 'Le pseudo se change depuis le jeu (délai et prix contrôlés par le serveur)'; end if;
     if new.handle is distinct from old.handle or new.handle_changes is distinct from old.handle_changes or new.handle_unlock is distinct from old.handle_unlock
       or new.name_changed_at is distinct from old.name_changed_at or new.name_changes is distinct from old.name_changes

@@ -119,3 +119,10 @@ Le serveur de jeu se connecte à Supabase avec la clé secrète (variable Render
 - **Mode classé ELO** : 5 modes, matchmaking par ELO (fenêtre qui s'élargit avec l'attente, bots si nécessaire), gains/pertes selon l'écart de niveau (K = 48 pour les 10 premières parties, puis 32), 7 rangs × 3 divisions, historique, classement ; **ouverture le 26/11/2026 à 11 h (Paris)** contrôlée par le serveur, **accès anticipé** pour le compte développeur (`DEV_EMAILS`).
 - **Cadeaux de brawlers** (développeur uniquement) : recherche par identifiant, vérification « déjà possédé », réception immédiate ou à la reconnexion, notification.
 Tests : `tools/test-social.js` (35/35, serveur réel + base imitée), `tools/test-social-ui.js` (12/12, 2 téléphones à travers l'interface), serveur 44/44, comptes 20/20.
+
+## v3.4 — menu développeur lié au compte
+- Le menu DEV (outils de triche hors-ligne + bouton « 🎁 Joueurs ») s'active automatiquement dès que le serveur reconnaît le compte développeur (`DEV_EMAILS`), sur toutes les versions (APK normal, site/iPhone) ; `js/devtools.js`.
+- Réglages : état du mode développeur, avec l'e-mail exact du compte si ce n'est pas reconnu (diagnostic de `DEV_EMAILS`).
+- Cadeaux / déblocage : recherche par identifiant **ou par pseudo**, envoi par identifiant interne (plus robuste), message clair si le joueur ne s'est pas encore connecté avec la nouvelle version.
+- Base : déclencheur de protection plus robuste avec la clé secrète (`supabase/v2b.sql`) ; la connexion n'échoue plus si la création d'identifiant est refusée (message de diagnostic).
+Tests : `tools/test-social-ui.js` 16/16, `tools/test-social.js` 35/35, serveur 44/44.
