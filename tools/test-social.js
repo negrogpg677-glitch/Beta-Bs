@@ -1,0 +1,97 @@
+/* Test de bout en bout des comptes côté serveur (base Supabase imitée, clé secrète de test) :
+   identifiants en lettres, 1 modification à vie + déblocage développeur, demandes d'amis, présence, invitations,
+   pseudo (délai 31 j + gemmes), mode classé (ouverture programmée, accès anticipé dev, ELO), cadeaux de brawlers.
+   Usage : node tools/test-social.js */
+'use strict';
+const { spawn } = require('child_process'); const path = require('path');
+const MOCK = 54390;
+process.env.SUPABASE_URL = 'http://127.0.0.1:' + MOCK; process.env.SUPABASE_SECRET = 'service-test-key';
+process.env.DEV_EMAILS = 'dev@test.fr'; process.env.RANKED_AT = new Date(Date.now() + 3600e3).toISOString(); process.env.FILL_WAIT = '1';
+process.env.DATA_DIR = path.join(require('os').tmpdir(), 'brsoc' + Date.now());
+const WebSocket = require('../server/node_modules/ws');
+let fails = 0; const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) fails++; };
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const api = async (p, o) => { o = o || {}; const r = await fetch('http://127.0.0.1:' + MOCK + p, { method: o.method || 'GET', headers: Object.assign({ apikey: o.key || 'anon-test-key', 'content-type': 'application/json' }, o.h || {}), body: o.body ? JSON.stringify(o.body) : undefined }); const t = await r.text(); return t ? JSON.parse(t) : null; };
+const svc = (p, o) => api(p, Object.assign({ key: 'service-test-key' }, o));
+class Cl {
+  constructor(name) { this.name = name; this.msgs = []; this.w = []; }
+  open(url) { return new Promise((res) => { this.ws = new WebSocket(url); this.ws.on('open', () => this.ws.send(JSON.stringify({ t: 'hello', name: this.name }))); this.ws.on('message', (raw) => { const m = JSON.parse(raw); if (m.t === 'snap') return; this.msgs.push(m); if (m.t === 'welcome') { this.pid = m.pid; res(); } this.w = this.w.filter((x) => { if (x.t === m.t && (!x.f || x.f(m))) { x.r(m); return false; } return true; }); }); }); }
+  send(o) { this.ws.send(JSON.stringify(o)); }
+  wait(t, f, ms = 5000) { return new Promise((r, j) => { const to = setTimeout(() => j(new Error('délai : ' + t)), ms); this.w.push({ t, f, r: (m) => { clearTimeout(to); r(m); } }); }); }
+  last(t) { return [...this.msgs].reverse().find((m) => m.t === t); }
+  clear() { this.msgs = []; }
+}
+(async () => {
+  const mock = spawn('node', [path.join(__dirname, 'supabase-mock.js'), String(MOCK)], { stdio: 'ignore' }); await sleep(700);
+  const S = require('../server/server.js'); await new Promise((r) => S.server.listen(0, r)); const url = 'ws://127.0.0.1:' + S.server.address().port;
+  const signup = async (email, username) => (await api('/auth/v1/signup', { method: 'POST', body: { email, password: 'secret123', data: { username } } })).access_token;
+  const tok = { dev: await signup('dev@test.fr', 'DevBoss'), al: await signup('alice@test.fr', 'Alice'), bo: await signup('bob@test.fr', 'Bob') };
+  const D = new Cl('Dev'), A = new Cl('Alice'), B = new Cl('Bob');
+  for (const [c, t] of [[D, tok.dev], [A, tok.al], [B, tok.bo]]) { await c.open(url); const w = c.wait('me'); c.send({ t: 'auth', token: t }); c.me = await w; }
+  // --- identifiants
+  const hs = [D.me.handle, A.me.handle, B.me.handle];
+  ok(hs.every((h) => /^[A-Z]{4,16}$/.test(h)) && new Set(hs).size === 3, 'identifiants générés : uniquement des lettres, uniques (' + hs.join(', ') + ')');
+  ok(D.me.dev === true && A.me.dev === false, 'compte développeur reconnu par le serveur (e-mail), pas les autres');
+  let w = A.wait('me'); A.send({ t: 'handle_set', handle: 'Tigrébleu' }); let m = await w;
+  ok(m.handle === 'TIGREBLEU' && m.canHandle === false, 'modification de l\'identifiant (accents retirés, majuscules) : ' + m.handle + ', puis verrouillé');
+  w = A.wait('error'); A.send({ t: 'handle_set', handle: 'DRAGONVERT' }); ok((await w).code === 'handle_locked', 'seconde modification refusée par le serveur (à vie)');
+  w = B.wait('error'); B.send({ t: 'handle_set', handle: 'BOB7X' }); ok((await w).code === 'handle_bad', 'identifiant avec chiffre refusé');
+  w = B.wait('error'); B.send({ t: 'handle_set', handle: 'tigrebleu' }); ok((await w).code === 'handle_taken', 'identifiant déjà pris refusé');
+  w = B.wait('error'); B.send({ t: 'dev_unlock_handle', handle: 'TIGREBLEU' }); ok((await w).code === 'forbidden', 'déblocage réservé au compte développeur');
+  w = D.wait('toast'); D.send({ t: 'dev_unlock_handle', handle: 'TIGREBLEU' }); await w; w = A.wait('me'); A.send({ t: 'me' });
+  ok((await w).canHandle === true, 'le développeur autorise Alice à modifier une nouvelle fois');
+  w = A.wait('me'); A.send({ t: 'handle_set', handle: 'PHENIXDORE' }); m = await w; ok(m.handle === 'PHENIXDORE' && !m.canHandle, 'nouvelle modification puis re-verrouillage');
+  w = D.wait('toast'); D.send({ t: 'dev_unlock_handle', all: true }); await w; w = B.wait('me'); B.send({ t: 'me' }); ok((await w).canHandle === true, 'déblocage global (tous les joueurs)');
+  w = D.wait('toast'); D.send({ t: 'dev_unlock_handle', all: false }); await w;
+  // --- amis
+  const bh = B.me.handle;
+  let wb = B.wait('fr_new'); w = A.wait('fr', (x) => x.outgoing.length === 1); A.send({ t: 'fr_req', handle: bh.toLowerCase() }); await w; await wb;
+  ok(B.last('fr') && true, 'demande d\'ami envoyée par identifiant (notification reçue par Bob)');
+  await sleep(200); ok((B.last('fr').incoming[0] || {}).name === 'Alice', 'Bob voit la demande reçue ; Alice la voit dans « envoyées »');
+  w = A.wait('fr', (x) => !x.outgoing.length); A.send({ t: 'fr_cancel', uid: B.me.uid }); await w; await sleep(150); ok(!B.last('fr').incoming.length, 'annulation d\'une demande envoyée');
+  w = B.wait('fr', (x) => x.incoming.length === 1); A.send({ t: 'fr_req', handle: bh }); await w;
+  w = B.wait('fr', (x) => !x.incoming.length); B.send({ t: 'fr_decline', uid: A.me.uid }); await w; ok(true, 'refus d\'une demande reçue');
+  w = B.wait('fr', (x) => x.incoming.length === 1); A.send({ t: 'fr_req', handle: bh }); await w;
+  w = A.wait('fr', (x) => x.friends.length === 1); B.send({ t: 'fr_accept', uid: A.me.uid }); m = await w;
+  ok(m.friends[0].name === 'Bob' && m.friends[0].status === 'menu' && m.friends[0].pid === B.pid, 'demande acceptée : amis, statut « en ligne » visible');
+  w = A.wait('error'); A.send({ t: 'fr_req', handle: bh }); ok((await w).code === 'fr_dup', 'pas de doublon de demande');
+  // invitation entre amis du compte
+  w = B.wait('invited'); A.send({ t: 'invite', pid: B.pid, mode: 'gemgrab' }); ok((await w).from === 'Alice', 'invitation entre amis du compte');
+  // présence : Bob se déconnecte
+  w = A.wait('fr', (x) => x.friends[0] && x.friends[0].status === 'off'); B.ws.close(); m = await w;
+  ok(m.friends[0].lastSeen > Date.now() - 10000, '« hors ligne depuis » : dernière connexion enregistrée');
+  await B.open(url); w = B.wait('me'); B.send({ t: 'auth', token: tok.bo }); await w;
+  // carte d'un joueur
+  w = A.wait('player'); A.send({ t: 'player_find', handle: bh }); m = await w; ok(m.card && m.card.name === 'Bob' && m.card.friend === 'yes' && m.card.rank, 'profil d\'un joueur trouvé par identifiant (rang, statut d\'amitié)');
+  // --- pseudo : délai 31 j + gemmes
+  w = A.wait('error'); A.send({ t: 'name_set', name: 'AliceNew' }); ok((await w).code === 'name_wait', 'pseudo : changement refusé avant 31 jours');
+  const old = new Date(Date.now() - 40 * 864e5).toISOString();
+  await svc('/rest/v1/profiles?id=eq.' + A.me.uid, { method: 'PATCH', body: { created_at: old, save: { gems: 15, rev: 1 } } });
+  w = A.wait('error'); A.send({ t: 'name_set', name: 'AliceNew' }); ok((await w).code === 'name_gems', 'pseudo : refusé sans les 20 gemmes');
+  await svc('/rest/v1/profiles?id=eq.' + A.me.uid, { method: 'PATCH', body: { save: { gems: 100, rev: 1 } } });
+  w = A.wait('error'); A.send({ t: 'name_set', name: 'bob' }); ok((await w).code === 'name_taken', 'pseudo déjà pris refusé');
+  w = A.wait('name_ok'); A.send({ t: 'name_set', name: 'AliceNew' }); m = await w; ok(m.gems === 80 && m.price === 20, 'pseudo changé contre 20 gemmes (reste ' + m.gems + ')');
+  w = A.wait('error'); A.send({ t: 'name_set', name: 'Alice3' }); ok((await w).code === 'name_wait', 'nouveau délai de 31 jours après le changement');
+  await svc('/rest/v1/profiles?id=eq.' + A.me.uid, { method: 'PATCH', body: { name_changed_at: old } }); w = A.wait('me'); A.send({ t: 'me' }); ok((await w).namePrice === 40, 'prix qui augmente après un changement récent (40 gemmes)');
+  // --- classé
+  w = A.wait('error'); A.send({ t: 'party_create', mode: 'gemgrab' }); await sleep(150); A.send({ t: 'party_start', kind: 'ranked', mode: 'gemgrab' }); ok((await w).code === 'ranked_locked', 'classé fermé avant l\'heure d\'ouverture (contrôle serveur)');
+  D.send({ t: 'party_create', mode: 'bounty' }); await sleep(150); w = D.wait('match', null, 9000); D.send({ t: 'party_start', kind: 'ranked', mode: 'bounty' });
+  const mt = await w; ok(mt && mt.mode === 'bounty', 'accès anticipé : le développeur lance une partie classée');
+  const mm = [...S.matches.values()].find((x) => x.id === mt.id); ok(mm && mm.ranked, 'la partie est marquée « classée » côté serveur');
+  await sleep(500); const meIdx = mt.you, team = mm.M.ents[meIdx].team;
+  w = D.wait('end', null, 12000); mm.M.state = 'play'; mm.M.left = 0.05; mm.M.score = team === 0 ? [5, 0] : [0, 5]; mm.M.bounty = mm.M.score;
+  m = await w; ok(m.ranked && typeof m.ranked.delta === 'number' && m.delta === 0, 'fin de partie classée : ELO ' + (m.ranked.delta >= 0 ? '+' : '') + m.ranked.delta + ' → ' + m.ranked.elo + ' (' + (m.ranked.rank && m.ranked.rank.name) + '), trophées inchangés');
+  await sleep(400); w = D.wait('ranked'); D.send({ t: 'ranked_info' }); const ri = await w;
+  ok(ri.games === 1 && ri.hist.length === 1 && ri.elo === m.ranked.elo && ri.top.length >= 1, 'historique classé + classement enregistrés en base');
+  // --- cadeaux
+  w = A.wait('error'); A.send({ t: 'dev_gift', handle: bh, brawler: 'yeti' }); ok((await w).code === 'forbidden', 'cadeau refusé à un joueur ordinaire');
+  wb = B.wait('gift'); w = D.wait('toast'); D.send({ t: 'dev_gift', handle: bh, brawler: 'yeti' }); const g = await wb; await w;
+  ok(g.brawler === 'yeti' && g.from === 'DevBoss', 'Bob (en ligne) reçoit immédiatement le brawler offert');
+  B.send({ t: 'gift_ack', id: g.id }); await sleep(250); const gr = await svc('/rest/v1/gifts?id=eq.' + g.id); ok(gr[0].claimed === true, 'cadeau marqué « reçu » en base');
+  await svc('/rest/v1/profiles?id=eq.' + B.me.uid, { method: 'PATCH', body: { save: { unlocked: ['sherry', 'rex', 'yeti'] } } });
+  w = D.wait('error'); D.send({ t: 'dev_gift', handle: bh, brawler: 'yeti' }); ok((await w).code === 'dev_owned', 'cadeau refusé si le joueur possède déjà le brawler');
+  A.ws.close(); await sleep(200); w = D.wait('toast'); D.send({ t: 'dev_gift', handle: 'PHENIXDORE', brawler: 'luna' }); await w;
+  await A.open(url); const wg = A.wait('gift'); A.send({ t: 'auth', token: tok.al }); ok((await wg).brawler === 'luna', 'joueur hors ligne : le cadeau arrive à la reconnexion');
+  console.log(fails ? '\n' + fails + ' ÉCHEC(S)' : '\nTOUS LES TESTS COMPTES/SOCIAL/CLASSÉ PASSENT');
+  mock.kill(); process.exit(fails ? 1 : 0);
+})().catch((e) => { console.error('ERREUR', e.message); process.exit(2); });

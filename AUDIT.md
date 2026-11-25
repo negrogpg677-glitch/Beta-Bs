@@ -110,3 +110,12 @@ Tests : `tools/test-team.js` (2 téléphones + serveur : 9/9), serveur 43/43, ta
 - Écran VS pendant le compte à rebours : cartes des joueurs (personnages 3D), « VS », « Début dans 3 ».
 - Correctif : l'écran VS n'intercepte plus les touchers ; le toucher qui ouvre la discussion n'envoie plus d'émote par erreur.
 Tests : tactile 11/11, visée 4/4 (≤ 2°), serveur 44/44, équipe en ligne 9/9.
+
+## v3.3 — comptes côté serveur : identifiants, amis, pseudo, classé, développeur
+Le serveur de jeu se connecte à Supabase avec la clé secrète (variable Render `SUPABASE_SECRET`, jamais dans l'application) et vérifie chaque joueur avec son jeton de session. Toutes les règles sont appliquées côté serveur (module `server/accounts.js`, base : `supabase/v2.sql`).
+- **Identifiant unique en lettres** (ex. `PHENIXDORE`) généré automatiquement, consultable/copiable, recherche de joueurs ; **une seule modification à vie** (contrainte serveur + déclencheur SQL qui interdit aux joueurs de toucher ce champ), déblocage par joueur ou global depuis le compte développeur.
+- **Amis avec demandes** (reçues / envoyées, accepter, refuser, annuler, retirer), statut en direct (disponible, dans le salon, en partie) et « hors ligne depuis … », invitations entre amis du compte.
+- **Pseudo** : premier changement 31 jours après la création, puis 31 jours entre deux changements ; prix 20 💎, doublé à chaque changement des 12 derniers mois (max 640) ; gemmes débitées par le serveur.
+- **Mode classé ELO** : 5 modes, matchmaking par ELO (fenêtre qui s'élargit avec l'attente, bots si nécessaire), gains/pertes selon l'écart de niveau (K = 48 pour les 10 premières parties, puis 32), 7 rangs × 3 divisions, historique, classement ; **ouverture le 26/11/2026 à 11 h (Paris)** contrôlée par le serveur, **accès anticipé** pour le compte développeur (`DEV_EMAILS`).
+- **Cadeaux de brawlers** (développeur uniquement) : recherche par identifiant, vérification « déjà possédé », réception immédiate ou à la reconnexion, notification.
+Tests : `tools/test-social.js` (35/35, serveur réel + base imitée), `tools/test-social-ui.js` (12/12, 2 téléphones à travers l'interface), serveur 44/44, comptes 20/20.

@@ -86,7 +86,7 @@
       case 'match': Net.lobby = null; Net.queue = null; Net.matchId = m.id; break;
       case 'lb': Net.lb = m; break;
       case 'kicked': Net.party = null; break;
-      case 'friends': Net.friends = m; break;
+      case 'friends': if (!Net.me) Net.friends = m; break; // compte connecté : la liste vient de la base (message « fr »)
       case 'club': Net.club = m.club; break;
       case 'club_list': Net.clubList = m.list; break;
       case 'error': Net.lastErr = m.msg; break;

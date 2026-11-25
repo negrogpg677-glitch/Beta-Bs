@@ -197,7 +197,7 @@
         <div class="modepanel" data-act="modes" style="--mc:${mode.color}"><div class="mi">${ic(MODE_ICON[mode.icon])}</div>
           <div class="minfo"><div class="mn">${esc(mode.name)}</div><div class="mmap">${esc(G.MAPS[mapKey].name)}</div><div class="mt">Nouvelle carte dans ${minsLeft} min</div></div><div class="chev">›</div></div>
         <button class="btn big yellow play" data-act="playMain">JOUER<small>${online ? 'en ligne' : 'contre des bots'}</small></button>
-        <div class="subrow"><button class="chip" data-act="play">🤖 Bots</button><button class="chip" data-act="onlinePlay">🌍 En ligne</button><button class="chip" data-act="team">👥 Équipe</button></div>
+        <div class="subrow"><button class="chip" data-act="play">🤖 Bots</button><button class="chip" data-act="onlinePlay">🌍 En ligne</button><button class="chip" data-act="team">👥 Équipe</button><button class="chip rk-chip" data-act="ranked">🏆 Classé</button></div>
       </div>`;
     const avId = G.BRAWLER[sv.avatar] ? sv.avatar : id;
     G.Render.portrait($('.prof canvas', home), avId, skinOf(avId), 0, { aim: 0.4, zoom: 1.5, y: 0.95, shadow: false });
@@ -311,6 +311,7 @@
       return `<h2>Réglages</h2>${tg('sound', 'Effets sonores')}${tg('music', 'Musique')}${tg('vibrate', 'Vibrations')}${tg('aimAssist', 'Aide à la visée')}${tg('lefty', 'Mode gaucher')}
         <div class="setrow"><span>Personnages 3D (menus)</span><button class="btn small ${s.chars3d === false ? 'gray' : 'green'}" data-act="t3d">${s.chars3d === false ? 'Non' : 'Oui'}</button></div>
         <div class="setrow"><span>3D en combat (expérimental)</span><button class="btn small ${s.chars3dMatch ? 'green' : 'gray'}" data-act="t3dm">${s.chars3dMatch ? 'Oui' : 'Non'}</button></div>
+        ${G.Net && G.Net.me && G.Net.me.dev ? '<div class="setrow"><span>🔧 Compte développeur</span><button class="btn small green" data-act="devPanel">Panneau</button></div>' : ''}
         <div class="setrow"><span>Commandes (position, taille, transparence)</span><button class="btn small green" data-act="ctrlEdit">Personnaliser</button></div>
         <div class="setrow"><span>Taille des commandes</span><button class="btn small blue" data-act="ctrlSize">${(s.ctrlScale || 1) < 0.95 ? 'Petite' : (s.ctrlScale || 1) > 1.05 ? 'Grande' : 'Normale'}</button></div>
         <div class="setrow"><span>Qualité graphique</span><button class="btn small ${s.quality === 'high' ? 'green' : s.quality === 'medium' ? 'blue' : 'gray'}" data-act="quality">${s.quality === 'high' ? 'Haute' : s.quality === 'medium' ? 'Moyenne' : 'Économie'}</button></div>

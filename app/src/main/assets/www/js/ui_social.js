@@ -38,11 +38,12 @@
   };
   function whenOnline(fn) { if (Net.status === 'online') return fn(); const h = (st) => { if (st === 'online') { Net.off('status', h); fn(); } }; Net.on('status', h); setTimeout(() => Net.off('status', h), 12000); }
   ACT.socialTab = (a) => { UI.socialTab = a.dataset.k; G.Audio.sfx('ui'); $$('#social .tab').forEach((t) => t.classList.toggle('act', t.dataset.act === 'socialTab' && t.dataset.k === UI.socialTab)); if (UI.socialTab === 'club') { Net.send({ t: 'club_get' }); Net.clubList2(); } if (UI.socialTab === 'ranking') Net.getLeaderboard(); renderSocial(); };
+  UI.renderSocial = () => renderSocial();
   function renderSocial() {
     const b = $('#socBody'); if (!b || UI.screen !== 'social') return;
     if (!Net.serverUrl()) { b.innerHTML = '<div class="row" style="font-size:3rem;margin-top:6rem">Le mode en ligne n\'est pas disponible dans cette version.</div>'; return; }
     if (Net.status !== 'online') { b.innerHTML = '<div class="row" style="font-size:3.2rem;margin-top:6rem;flex-direction:column"><div class="spinner"></div><div>' + (Net.waking() ? 'Réveil du serveur… (jusqu’à 1 min)' : 'Connexion au serveur…') + '</div></div>'; return; }
-    if (UI.socialTab === 'friends') renderFriends(b); else if (UI.socialTab === 'club') renderClub(b); else renderRanking(b);
+    if (UI.socialTab === 'friends') { if (!(UI.friends2 && UI.friends2(b))) renderFriends(b); } else if (UI.socialTab === 'club') renderClub(b); else renderRanking(b);
   }
   function renderFriends(b) {
     const f = Net.friends || { code: Net.friendCode, list: [] };
@@ -106,7 +107,7 @@
     const o = UI.modal(`<h2 class="pf-title">Profil</h2><div class="pf">
       <div class="pf-left"><div class="pf-card"><div class="pc-glow"></div><canvas id="profCv" width="600" height="600"></canvas>
         <div class="pf-lv">${lvl.lvl || 1}</div><div class="pf-rank" style="background:${G.rankColor(rank)}">Rang ${rank}</div></div>
-        <div class="pf-name">${esc(sv.name)}</div><div class="pf-sub">${code ? 'Code ami : <b>' + esc(code) + '</b> · ' : ''}${hrs} h ${mins} min de jeu</div>
+        <div class="pf-name">${esc(sv.name)}</div><div class="pf-sub">${code && !(G.Net && G.Net.me) ? 'Code ami : <b>' + esc(code) + '</b> · ' : ''}${hrs} h ${mins} min de jeu</div>
         <div class="row" style="gap:1rem;margin-top:1rem"><button class="btn small blue" data-act="rename">Changer de pseudo</button><button class="btn small green" data-act="leaderboard">Classement</button></div></div>
       <div class="pf-right">
         <div class="pf-row3"><div class="pf-box"><span>Voie des trophées</span><b>${ic('trophy')} ${fmt(tot)}</b><small>Record : ${fmt(st.bestTr || tot)}</small></div>

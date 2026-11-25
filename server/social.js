@@ -79,7 +79,7 @@ module.exports = function (ctx) {
         markDirty(); pushFriends(pid); if (online(fid)) pushFriends(fid); return true;
       }
       case 'invite': {
-        const fid = msg.pid; if (!(p.friends || []).includes(fid)) return true;
+        const fid = msg.pid, tc0 = clients.get(fid); if (!(p.friends || []).includes(fid) && !(c.friendUids && tc0 && tc0.uid && c.friendUids.has(tc0.uid))) return true;
         const target = clients.get(fid); if (!target || !target.ws) { err(c, 'offline', 'Cet ami est hors ligne.'); return true; }
         let party = parties.get(c.party);
         if (!party) party = ctx.createParty(c, msg.mode || 'gemgrab');
@@ -89,7 +89,7 @@ module.exports = function (ctx) {
         return true;
       }
       case 'invite_cancel': { // l'expéditeur annule : la fenêtre se ferme chez l'invité
-        const t2 = clients.get(msg.pid); if (t2 && (p.friends || []).includes(msg.pid)) send(t2, { t: 'invite_cancelled', from: pid });
+        const t2 = clients.get(msg.pid); if (t2 && ((p.friends || []).includes(msg.pid) || (c.friendUids && t2.uid && c.friendUids.has(t2.uid)))) send(t2, { t: 'invite_cancelled', from: pid });
         return true;
       }
       case 'invite_decline': { // l'invité refuse : l'expéditeur voit « Refusée »

@@ -82,10 +82,18 @@ function removeTicket(p) { for (const m in queues) queues[m] = queues[m].filter(
 
 /* ---------- social : amis, invitations, clubs ---------- */
 social = require('./social.js')({ players, clients, parties, send, err, G, DATA_DIR, markDirty, createParty });
+const acc = require('./accounts.js')({ clients, send, err, G });
 
 /* ---------- matchmaking ---------- */
-function enqueue(p) {
+function enqueue(p, ranked) {
   const mode = G.MODES[p.mode];
+  if (ranked) {
+    if (p.members.length > 3) return 'Maximum 3 joueurs par équipe en classé.';
+    const elo = Math.round(p.members.reduce((s, pid) => s + ((clients.get(pid) || {}).elo || 1000), 0) / p.members.length);
+    p.state = 'queue'; const k = 'R:' + p.mode; (queues[k] = queues[k] || []).push({ party: p.code, since: Date.now(), elo });
+    for (const m of p.members) send(clients.get(m), { t: 'queue', mode: p.mode, state: 'searching', ranked: true });
+    pushParty(p); return null;
+  }
   const cap = mode.id === 'showdown' ? 10 : 3;
   if (mode.id !== 'showdown' && p.members.length > 3) return 'Maximum 3 joueurs par équipe pour ce mode.';
   p.state = 'queue';
@@ -96,10 +104,11 @@ function enqueue(p) {
 }
 function runMatchmaker() {
   const now = Date.now();
-  for (const modeId in queues) {
-    const q = queues[modeId];
+  for (const qk in queues) {
+    const q = queues[qk];
     if (!q.length) continue;
-    const mode = G.MODES[modeId];
+    if (qk.startsWith('R:')) { rankedMatch(qk, now); continue; }
+    const modeId = qk, mode = G.MODES[modeId];
     const tickets = q.map((t) => ({ t, p: parties.get(t.party) })).filter((x) => x.p && x.p.state === 'queue');
     queues[modeId] = tickets.map((x) => x.t);
     if (!tickets.length) continue;
@@ -131,10 +140,28 @@ function runMatchmaker() {
     }
   }
 }
+// classé : on regroupe les joueurs d'ELO proche (fenêtre qui s'élargit avec l'attente), puis on complète avec des bots
+function rankedMatch(qk, now) {
+  const modeId = qk.slice(2);
+  const tickets = queues[qk].map((t) => ({ t, p: parties.get(t.party) })).filter((x) => x.p && x.p.state === 'queue');
+  queues[qk] = tickets.map((x) => x.t); if (!tickets.length) return;
+  const first = tickets[0], wait = (now - first.t.since) / 1000, win = 150 + wait * 15;
+  const pool = tickets.filter((x) => Math.abs(x.t.elo - first.t.elo) <= win);
+  const teams = [[], []], used = [];
+  for (const x of pool) {
+    const sz = x.p.members.length, ti = teams[0].length + sz <= 3 && teams[0].length <= teams[1].length ? 0 : teams[1].length + sz <= 3 ? 1 : teams[0].length + sz <= 3 ? 0 : -1;
+    if (ti >= 0) { x.p.members.forEach((pid) => teams[ti].push(pid)); used.push(x.p); }
+  }
+  const total = teams[0].length + teams[1].length;
+  if (total >= 6 || (wait * 1000 >= FILL_WAIT * 1.5 && total >= 1)) {
+    const roster = []; teams.forEach((tm, ti) => tm.forEach((pid) => roster.push({ pid, team: ti })));
+    launchLobby(modeId, roster, used, true);
+  }
+}
 setInterval(runMatchmaker, 700);
 
 /* ---------- salle d'attente puis match ---------- */
-function launchLobby(modeId, roster, usedParties) {
+function launchLobby(modeId, roster, usedParties, ranked) {
   for (const p of usedParties) { removeTicket(p); p.state = 'lobby'; pushParty(p); }
   const id = rid(4);
   const mode = G.MODES[modeId];
@@ -144,7 +171,7 @@ function launchLobby(modeId, roster, usedParties) {
     const c = clients.get(r.pid);
     return { pid: r.pid, name: c.name, brawler: c.brawler, skin: c.skin, level: c.level, team: r.team, trophies: c.trophies };
   });
-  const m = { id, mode: modeId, mapKey, seed, slots, parties: usedParties.map((p) => p.code), state: 'lobby', M: null, startAt: Date.now() + LOBBY_SECS * 1000, lastT: 0, tick: 0, ended: false };
+  const m = { id, ranked: !!ranked, mode: modeId, mapKey, seed, slots, parties: usedParties.map((p) => p.code), state: 'lobby', M: null, startAt: Date.now() + LOBBY_SECS * 1000, lastT: 0, tick: 0, ended: false };
   matches.set(id, m);
   // aperçu de la composition (les bots sont ajoutés au démarrage et étiquetés)
   const preview = { t: 'lobby', id, mode: modeId, mapName: G.MAPS[mapKey].name, secs: LOBBY_SECS, slots: slots.map((s) => ({ name: s.name, brawler: s.brawler, skin: s.skin, team: s.team, bot: false })), need: modeId === 'showdown' ? 10 : modeId === 'boss' ? 3 : 6 };
@@ -163,7 +190,7 @@ function startMatch(m) {
   for (const b of m.M.ents) if (b.pid) sendInit(clients.get(b.pid), m);
 }
 function rosterOf(m) {
-  return m.M.ents.map((b) => ({ idx: b.idx, name: b.name, brawler: b.id, skin: b.skin, level: b.level, team: b.team, bot: !!b.isBot, pid: b.pid ? true : false, code: b.pid && social ? social.ensureCode(b.pid) : null }));
+  return m.M.ents.map((b) => ({ idx: b.idx, name: b.name, brawler: b.id, skin: b.skin, level: b.level, team: b.team, bot: !!b.isBot, pid: b.pid ? true : false, code: b.pid ? ((clients.get(b.pid) || {}).handle || (social ? social.ensureCode(b.pid) : null)) : null }));
 }
 function sendInit(c, m) {
   const M = m.M;
@@ -194,6 +221,10 @@ setInterval(() => {
 function endMatch(m, crashed) {
   m.ended = true; m.state = 'over';
   const M = m.M, r = M.result || { winnerTeam: -1, draw: true };
+  if (m.ranked && !crashed) acc.rankedEnd(m, M, r).then((rk) => sendEnds(m, M, r, crashed, rk)).catch(() => sendEnds(m, M, r, crashed, {}));
+  else sendEnds(m, M, r, crashed, {});
+}
+function sendEnds(m, M, r, crashed, rk) {
   for (const b of M.ents) {
     if (!b.pid) continue;
     const c = clients.get(b.pid); if (!c) continue;
@@ -205,10 +236,11 @@ function endMatch(m, crashed) {
     if (showdown) { delta = [10, 8, 6, 4, 2, 0, -1, -2, -3, -4][Math.min(10, place) - 1]; coins = [95, 75, 60, 48, 38, 30, 24, 18, 14, 10][Math.min(10, place) - 1]; }
     else if (win) { delta = 8; coins = 60; } else if (r.draw) { delta = 0; coins = 28; } else { delta = -Math.min(pl.trophies, G.clamp(Math.round(2 + pl.trophies / 70), 2, 8)); coins = 22; }
     if (crashed) { delta = 0; coins = 0; }
+    if (m.ranked) delta = 0; // en classé : l'ELO remplace les trophées
     coins += b.kills * 4;
     pl.trophies = Math.max(0, pl.trophies + delta); pl.matches++; if (win) pl.wins++; pl.kills += b.kills; dirty = true;
     c.trophies = pl.trophies;
-    c.lastEnd = { t: 'end', id: m.id, win, draw: !!r.draw, place, delta, coins, online: pl.trophies, kills: b.kills, damage: Math.round(b.st.damage), stats: b.st, crashed: !!crashed };
+    c.lastEnd = { t: 'end', id: m.id, win, draw: !!r.draw, place, delta, coins, online: pl.trophies, kills: b.kills, damage: Math.round(b.st.damage), stats: b.st, crashed: !!crashed, ranked: rk[b.pid] || (m.ranked ? { delta: 0 } : undefined) };
     send(c, c.lastEnd);
   }
   setTimeout(() => {
@@ -224,6 +256,7 @@ function onMessage(c, raw) {
   let msg; try { msg = JSON.parse(raw); } catch (e) { return; }
   if (!msg || typeof msg.t !== 'string') return;
   if (social.handle(c, msg)) return;
+  if (acc.handle(c, msg)) return;
   switch (msg.t) {
     case 'ping': send(c, { t: 'pong', ts: msg.ts }); break;
     case 'input': {
@@ -291,6 +324,13 @@ function onMessage(c, raw) {
       if (p.leader !== c.pid) return err(c, 'not_leader', 'Seul le chef d\'équipe peut lancer la partie.');
       if (p.state !== 'idle') return;
       if (msg.mode && G.MODES[msg.mode]) p.mode = msg.mode;
+      if (msg.kind === 'ranked') {
+        if (!acc.enabled) return err(c, 'no_db', 'Le mode classé nécessite la base de données du serveur.');
+        if (p.members.some((pid) => !(clients.get(pid) || {}).uid)) return err(c, 'login', 'Tous les membres de l\'équipe doivent être connectés à un compte.');
+        if (p.members.some((pid) => !acc.rankedOpen(clients.get(pid)))) return err(c, 'ranked_locked', 'Le mode classé ouvre le ' + new Date(acc.RANKED_AT).toLocaleString('fr-FR', { timeZone: 'Europe/Paris', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) + '.');
+        if (!acc.RANKED_MODES.includes(p.mode)) p.mode = 'gemgrab';
+        const e = enqueue(p, true); if (e) err(c, 'bad_party', e); break;
+      }
       if (msg.kind === 'private') {
         const mode = G.MODES[p.mode], mem = p.members.slice(0, mode.id === 'showdown' ? 10 : 6);
         const roster = mem.map((pid, i) => ({ pid, team: mode.id === 'showdown' ? i : mode.id === 'boss' ? 0 : (msg.split ? i % 2 : 0) }));
@@ -366,7 +406,7 @@ wss.on('connection', (ws) => {
     clearTimeout(hs);
     const c = clients.get(ws.pid);
     if (!c || c.ws !== ws) return;
-    c.ws = null; c.dropAt = Date.now(); social.notifyPresence(c.pid);
+    c.ws = null; c.dropAt = Date.now(); social.notifyPresence(c.pid); acc.onClose(c);
     const m = c.match && matches.get(c.match);
     if (m && m.M && m.state === 'play') { const b = m.M.ents[c.ent]; if (b) { b.isPlayer = false; b.disc = Date.now(); } }
     const p = parties.get(c.party); if (p) { if (p.state === 'queue') { /* reste en file */ } pushParty(p); }

@@ -46,3 +46,7 @@ Cela crée la table des profils, les **règles de sécurité** (chaque joueur ne
 ## Limites honnêtes
 - La sauvegarde est écrite par le téléphone du joueur : un tricheur expérimenté pourrait modifier sa propre progression. Pour un jeu compétitif, il faudra faire valider les récompenses par le serveur de jeu (prochaine étape possible).
 - Tests réalisés : 20 vérifications de bout en bout à travers la vraie interface (inscription, synchronisation, réouverture, autre téléphone, pseudo, erreurs, récupération, « rester connecté ») + 1 test d'expiration de session (`tools/test-session-refresh.js`) contre une imitation fidèle de l'API Supabase (`tools/supabase-mock.js`, `tools/test-accounts.js`). **Un test sur votre vrai projet Supabase reste à faire** dès que vous m'aurez donné l'URL et la clé `anon`.
+
+## Mise à jour v3.3 (à faire une fois)
+Supabase → **SQL Editor** → **New query** → collez tout le contenu de `supabase/v2.sql` → **Run** (« Success »).
+Render → service → **Environment** : `SUPABASE_URL`, `SUPABASE_SECRET` (clé secrète `sb_secret_…`), `DEV_EMAILS` (e-mail du compte développeur).
