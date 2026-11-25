@@ -62,3 +62,7 @@ grant execute on function public.username_available(text) to anon, authenticated
 create or replace view public.leaderboard as
   select username, avatar, trophies from public.profiles order by trophies desc limit 100;
 grant select on public.leaderboard to anon, authenticated;
+
+
+grant usage on schema public to anon, authenticated;
+grant select, insert, update on table public.profiles to authenticated;
