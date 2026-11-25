@@ -19,7 +19,7 @@
   Net.serverUrl = function () {
     const q = (location.search.match(/[?&]server=([^&]+)/) || [])[1];
     const saved = G.Save.data.settings.server || '';
-    let u = q ? decodeURIComponent(q) : saved || G.DEFAULT_SERVER || '';
+    let u = q ? decodeURIComponent(q) : G.DEFAULT_SERVER || saved || ''; // l'adresse intégrée à l'APK passe avant une ancienne adresse enregistrée
     if (!u && /^https?:$/.test(location.protocol)) u = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host;
     return Net.normalize(u);
   };
