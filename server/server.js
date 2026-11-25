@@ -235,8 +235,11 @@ function onMessage(c, raw) {
       b.ack = msg.seq | 0;
       if (typeof msg.face === 'number' && isFinite(msg.face)) b.face = msg.face;
       else if (l > 0.1) b.face = Math.atan2(my, mx);
-      if (msg.a) { const [ang, dist] = msg.a; if (isFinite(ang) && isFinite(dist)) Sim.tryAttack(m.M, b, ang, G.clamp(dist, 0, 900)); }
-      if (msg.s) { const [ang, dist] = msg.s; if (isFinite(ang) && isFinite(dist)) Sim.trySuper(m.M, b, ang, G.clamp(dist, 0, 900)); }
+      if (typeof msg.rtt === 'number' && isFinite(msg.rtt)) b.rtt = G.clamp(msg.rtt, 0, 300);
+      const comp = Math.min(0.1, (b.rtt || 0) / 2000); // compensation : la moitié du ping, 100 ms max
+      if (typeof msg.d === 'number' && isFinite(msg.d)) Sim.tryDodge(m.M, b, msg.d);
+      if (msg.a) { const [ang, dist] = msg.a; if (isFinite(ang) && isFinite(dist)) { const n0 = m.M.projs.length; if (Sim.tryAttack(m.M, b, ang, G.clamp(dist, 0, 900))) Sim.advanceProjs(m.M, n0, comp); } }
+      if (msg.s) { const [ang, dist] = msg.s; if (isFinite(ang) && isFinite(dist)) { const n0 = m.M.projs.length; if (Sim.trySuper(m.M, b, ang, G.clamp(dist, 0, 900))) Sim.advanceProjs(m.M, n0, comp); } }
       break;
     }
     case 'profile': { // brawler choisi (niveau borné pour limiter la triche)

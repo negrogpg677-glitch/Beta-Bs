@@ -295,6 +295,9 @@
         ai.dodgeDir = cross > 0 ? 1 : -1; ai.dodgeAng = Math.atan2(p.vy, p.vx); ai.dodgeT = 0.28; break;
       }
     }
+    if (ai.dodgeT > 0 && ai.dodgeDir && b.rollCd <= 0 && !ai.rolled && Math.random() < skill * 0.55) { ai.rolled = true; Sim.tryDodge(M, b, ai.dodgeAng + (Math.PI / 2) * ai.dodgeDir); }
+    if (ai.dodgeT <= 0) ai.rolled = false;
+    if (lowHp && tgt && tdist < 3 * T && b.rollCd <= 0 && Math.random() < dt * 2 * skill) Sim.tryDodge(M, b, Math.atan2(b.y - tgt.y, b.x - tgt.x)); // fuite en roulade
     if (ai.dodgeT > 0 && ai.dodgeDir) {
       const a = ai.dodgeAng + Math.PI / 2 * ai.dodgeDir;
       b.input.mx = Math.cos(a); b.input.my = Math.sin(a);

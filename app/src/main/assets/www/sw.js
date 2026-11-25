@@ -1,7 +1,7 @@
 /* Service worker : le jeu se charge instantanément et fonctionne hors-ligne (hors multijoueur). Passez VERSION pour forcer une mise à jour. */
-const VERSION = 'brawlrush-v3';
+const VERSION = 'brawlrush-v4';
 const FILES = ['./', 'index.html', 'css/style.css', 'fonts/LilitaOne.ttf', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png',
-  'js/flavor.js', 'js/util.js', 'js/data.js', 'js/maps.js', 'js/game.js', 'js/ai.js', 'js/render.js', 'js/chars.js', 'js/input.js', 'js/net.js', 'js/netmatch.js', 'js/ui.js', 'js/ui_online.js', 'js/ui_social.js', 'js/main.js', 'js/dev.js'];
+  'js/flavor.js', 'js/util.js', 'js/data.js', 'js/maps.js', 'js/game.js', 'js/ai.js', 'js/render.js', 'js/chars.js', 'js/world.js', 'js/input.js', 'js/net.js', 'js/netmatch.js', 'js/ui.js', 'js/ui_online.js', 'js/ui_social.js', 'js/main.js', 'js/dev.js'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(VERSION).then((c) => c.addAll(FILES).catch(() => {})).then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== VERSION).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', (e) => {

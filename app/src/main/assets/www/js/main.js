@@ -28,6 +28,7 @@
     let q = G.Save.data.settings.quality;
     if (q === 'eco') q = 'low';
     G.Render.q = q === 'high' ? 2 : q === 'medium' ? 1 : 0;
+    G.Render.dpr = Math.min(window.devicePixelRatio || 1, q === 'high' ? 2 : q === 'medium' ? 1.5 : 1);
     App.dpr = Math.min(window.devicePixelRatio || 1, q === 'high' ? 2 : q === 'medium' ? 1.5 : 1);
     App.W = window.innerWidth; App.H = window.innerHeight;
     const cv = App.canvas;

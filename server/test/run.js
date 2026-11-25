@@ -68,6 +68,14 @@ class Cl {
   const pos1 = A.last.e[ma.you];
   ok(pos0 && (Math.abs(pos1[0] - pos0[0]) > 30), 'déplacement du joueur A pris en compte par le serveur');
   ok(A.evs > 0, 'évènements (tirs/effets) diffusés (' + A.evs + ')');
+  // --- roulade d'esquive + compensation de latence ---
+  { let rolled = false, cd = 0; const idx = ma.you;
+    for (let i = 0; i < 250 && !rolled; i++) { // réessaie tant que le joueur est mort / en réapparition
+      if (i % 5 === 0 && A.last.s === 1) A.send({ t: 'input', seq: 9001 + i, mx: 0, my: 0, d: Math.PI / 2 }); // seulement en jeu (pas pendant un compte à rebours)
+      await sleep(30); const e = A.last.e[idx]; if (e[6] & 4096) { rolled = true; cd = e[16]; } }
+    ok(rolled && cd > 0, 'roulade d\'esquive synchronisée (drapeau + recharge ' + cd / 10 + ' s)');
+    A.send({ t: 'input', seq: 9002, mx: 0, my: 0, d: 0 }); await sleep(120);
+    ok(A.last.e[idx][16] > 10, 'pas de seconde roulade pendant la recharge'); }
   // --- reconnexion ---
   B.ws.close(); await sleep(400);
   const B2 = new Cl(url, 'Bob'); const w = await B2.connect({ pid: B.pid, token: B.token });

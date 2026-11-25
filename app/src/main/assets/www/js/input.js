@@ -23,6 +23,7 @@
       canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId);
       const L = G.Render.layout(In.W, In.H);
       const da = Math.hypot(x - L.atkX, y - L.atkY), ds = Math.hypot(x - L.supX, y - L.supY);
+      if (Math.hypot(x - L.dgX, y - L.dgY) < L.dgR * 1.45) { In.pending.push({ kind: 'dodge' }); In.dodgeFx = 0.15; return; }
       if (!In.sup.active && ds < L.supR * 1.5) { Object.assign(In.sup, { active: true, id: e.pointerId, dx: 0, dy: 0, len: 0, drag: false, sx: L.supX, sy: L.supY }); return; }
       if (!In.atk.active && da < L.atkR * 1.5) { Object.assign(In.atk, { active: true, id: e.pointerId, dx: 0, dy: 0, len: 0, drag: false, sx: L.atkX, sy: L.atkY }); return; }
       const lefty = G.Save.data.settings.lefty;
@@ -78,6 +79,7 @@
       if (!In.enabled) return;
       if (e.code === 'Space') In.pending.push({ kind: 'atk', key: true });
       if (e.code === 'ShiftLeft' || e.code === 'KeyE' || e.code === 'KeyQ') In.pending.push({ kind: 'sup', key: true });
+      if (e.code === 'KeyF' || e.code === 'ControlLeft') In.pending.push({ kind: 'dodge' });
       if (e.code === 'Escape' || e.code === 'KeyP') G.App.togglePause();
     });
     window.addEventListener('keyup', (e) => { In.keys[e.code] = false; });
@@ -140,6 +142,11 @@
     }
     for (const ev of In.pending.splice(0)) {
       if (!p.alive || M.state !== 'play') continue;
+      if (ev.kind === 'dodge') {
+        const ang = (mx || my) ? Math.atan2(my, mx) : p.face;
+        if (M.net) G.NetMatch.dodge(M, ang); else if (!G.Sim.tryDodge(M, p, ang)) G.Audio.sfx('error');
+        continue;
+      }
       const isSuper = ev.kind === 'sup';
       const a = ev.mouse ? aimFor(M, p, null, isSuper, true) : aimFor(M, p, ev, isSuper, false);
       if (M.net) { if (!G.NetMatch.attack(M, a.ang, a.dist, isSuper) && !isSuper && p.ammo < 1) G.Audio.sfx('error'); }

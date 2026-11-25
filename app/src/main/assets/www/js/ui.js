@@ -604,7 +604,8 @@
     const a = mk('Glissez pour vous déplacer', L.joyX, L.joyY - L.joyR * 1.5);
     const b = mk('Touchez pour tirer<br>Glissez pour viser', L.atkX, L.atkY - L.atkR * 1.6);
     const c = mk('Super : se charge en touchant vos cibles', L.supX + (left ? -1 : 1) * 24 * u, L.supY + L.supR * 0.2);
-    const rm = () => { [a, b, c].forEach((x) => x.remove()); S().tutorialDone = true; G.Save.commit(); };
+    const d = mk('Esquive : roulade invulnérable', L.dgX - 8 * u * (left ? 1 : -1), L.dgY - L.dgR * 1.4);
+    const rm = () => { [a, b, c, d].forEach((x) => x.remove()); S().tutorialDone = true; G.Save.commit(); };
     setTimeout(rm, 7000);
   };
 

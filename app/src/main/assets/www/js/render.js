@@ -279,9 +279,14 @@
       c.restore();
     }
     if (R.q > 0) { // vignette teintée par le thème
-      const vg = c.createRadialGradient(W / 2, H / 2, H * 0.45, W / 2, H / 2, Math.max(W, H) * 0.75);
-      vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, G.hexA ? G.hexA(th.fog, 0.55) : 'rgba(0,0,0,0.35)');
-      c.fillStyle = vg; c.fillRect(0, 0, W, H);
+      const vk = W + 'x' + H + th.fog;
+      if (!R._vig || R._vig.k !== vk) { // vignette pré-calculée (un seul dessin par image)
+        const cv = document.createElement('canvas'); cv.width = Math.ceil(W / 2); cv.height = Math.ceil(H / 2); const vc = cv.getContext('2d');
+        const vg = vc.createRadialGradient(cv.width / 2, cv.height / 2, cv.height * 0.45, cv.width / 2, cv.height / 2, Math.max(cv.width, cv.height) * 0.75);
+        vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, G.hexA(th.fog, 0.55)); vc.fillStyle = vg; vc.fillRect(0, 0, cv.width, cv.height);
+        R._vig = { k: vk, cv };
+      }
+      c.drawImage(R._vig.cv, 0, 0, W, H);
     }
     // éclat lumineux bref lors des grosses explosions proches
     let fl = 0; for (const r of M.rings) if (r.fill && r.dur <= 0.26 && r.t < 0.1) fl = Math.max(fl, 0.16 * (1 - r.t / 0.1));
@@ -483,32 +488,21 @@
     const x0 = Math.max(0, Math.floor((cx - vw / 2) / T) - 1), x1 = Math.min(M.w - 1, Math.ceil((cx + vw / 2) / T) + 1);
     const y0 = Math.max(0, Math.floor((cy - vh / 2) / T) - 1), y1 = Math.min(M.h - 1, Math.ceil((cy + vh / 2) / T) + 2);
     const tiles = M.map.tiles;
-    // sol + eau
+    // décor en cache : sol, eau, ombres, marquages, murs (voir world.js)
+    const view = { x0, y0, x1, y1 };
+    R.World.begin(M, sc, R.dpr || 1);
+    R.World.drawGround(c, M, view);
+    // reflets animés de l'eau / lave
+    c.strokeStyle = 'rgba(255,255,255,0.45)'; c.lineWidth = 2; c.lineCap = 'round';
     for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) {
-      const t = tiles[ty * M.w + tx];
-      if (t === 4) {
-        c.drawImage(S.water, tx * T, ty * T, T, T);
-        c.strokeStyle = 'rgba(255,255,255,0.45)'; c.lineWidth = 2; c.lineCap = 'round';
-        const ph = time * 1.5 + tx * 1.7 + ty * 0.9;
-        c.beginPath(); c.moveTo(tx * T + 8, ty * T + 20 + Math.sin(ph) * 3); c.quadraticCurveTo(tx * T + 22, ty * T + 14 + Math.sin(ph) * 3, tx * T + 36, ty * T + 20 + Math.sin(ph) * 3); c.stroke();
-        c.beginPath(); c.moveTo(tx * T + 22, ty * T + 42 + Math.cos(ph) * 3); c.quadraticCurveTo(tx * T + 36, ty * T + 36 + Math.cos(ph) * 3, tx * T + 50, ty * T + 42 + Math.cos(ph) * 3); c.stroke();
-        if (th.deco === 'ember') { c.fillStyle = 'rgba(255,230,120,' + (0.3 + 0.2 * Math.sin(ph * 2)) + ')'; c.fillRect(tx * T, ty * T, T, T); }
-        continue;
-      }
-      if (t === 1 && (tx === 0 || ty === 0 || tx === M.w - 1 || ty === M.h - 1)) { c.fillStyle = G.shade(th.border, -0.3); c.fillRect(tx * T, ty * T, T, T); continue; }
-      const v = ((tx * 7 + ty * 13) ^ (tx * ty)) & 3;
-      c.drawImage(S.ground[v], tx * T, ty * T, T, T);
+      if (tiles[ty * M.w + tx] !== 4) continue;
+      const ph = time * 1.5 + tx * 1.7 + ty * 0.9;
+      if (th.deco === 'ember') { c.fillStyle = 'rgba(255,230,120,' + (0.18 + 0.14 * Math.sin(ph * 2)) + ')'; c.fillRect(tx * T, ty * T, T, T); }
+      c.beginPath(); c.moveTo(tx * T + 8, ty * T + 20 + Math.sin(ph) * 3); c.quadraticCurveTo(tx * T + 22, ty * T + 14 + Math.sin(ph) * 3, tx * T + 36, ty * T + 20 + Math.sin(ph) * 3);
+      c.moveTo(tx * T + 22, ty * T + 42 + Math.cos(ph) * 3); c.quadraticCurveTo(tx * T + 36, ty * T + 36 + Math.cos(ph) * 3, tx * T + 50, ty * T + 42 + Math.cos(ph) * 3); c.stroke();
     }
-    if (R.q > 0) { // ombres portées des murs, caisses et buissons (lumière en haut à gauche)
-      c.fillStyle = 'rgba(0,0,0,0.2)';
-      for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) {
-        const t = tiles[ty * M.w + tx];
-        if (t === 1 || t === 2 || t === 6) { c.beginPath(); c.moveTo(tx * T + 4, ty * T + T - 4); c.lineTo(tx * T + T + 16, ty * T + T - 4); c.lineTo(tx * T + T + 16, ty * T + T + 12); c.lineTo(tx * T - 6, ty * T + T + 12); c.fill(); }
-        else if (t === 3) { ell(c, tx * T + T / 2 + 6, ty * T + T - 4, 30, 10, 0); c.fill(); }
-      }
-    }
-    drawFieldMarks(c, M, th);
-    // ombres au sol et zones
+    drawCaps(c, M);
+    // zones au sol
     for (const z of M.zones) { c.globalAlpha = 0.35 * Math.min(1, z.t / 0.6); circ(c, z.x, z.y, z.r); c.fillStyle = z.color; c.fill(); c.globalAlpha = 0.9 * Math.min(1, z.t / 0.6); c.strokeStyle = z.color; c.lineWidth = 3; c.setLineDash([10, 8]); c.lineDashOffset = -time * 20; c.stroke(); c.setLineDash([]); c.globalAlpha = 1; }
     for (const r of M.rings) {
       const k = r.t / r.dur, rad = G.lerp(r.r0, r.r1, G.easeOutCubic(k));
@@ -517,51 +511,29 @@
       c.globalAlpha = 1;
     }
     for (const s of M.strikes) { const k = Math.max(0, s.t / s.delay); if (s.t < 0) continue; c.globalAlpha = 0.25 + 0.3 * k; circ(c, s.x, s.y, s.spec.splash * T * (0.4 + 0.6 * k)); c.fillStyle = '#ff3b2b'; c.fill(); c.globalAlpha = 0.9; c.strokeStyle = '#ff3b2b'; c.lineWidth = 2; c.stroke(); c.globalAlpha = 1; }
-    // objets au sol (mine)
     if (M.map.mine) drawMine(c, M.map.mine, time);
-    // lignes de rendu par rangée
-    const rows = [];
-    for (let i = 0; i < M.h + 2; i++) rows.push(null);
-    const push = (ry, o) => { if (ry < 0) ry = 0; if (ry > M.h) ry = M.h; (rows[ry] || (rows[ry] = [])).push(o); };
-    const viewer = M.player;
+    // objets au sol (cachés sous les buissons, comme les cristaux)
+    for (const it of M.items) drawItem(c, it, time);
+    // buissons (en cache) : ils recouvrent le sol et les objets
+    R.World.drawBushes(c, M, view);
+    // personnages, ballon, coffres : triés par profondeur ; le haut des murs situés juste devant passe par-dessus
+    const viewer = M.player, front = [];
     for (const b of M.ents) {
       if (!b.alive && !(b.deathT >= 0 && b.deathT < 0.8)) continue;
       if (b.alive && b.team !== viewer.team && b.hidden && G.dist(viewer.x, viewer.y, b.x, b.y) > 2.7 * T) continue;
-      push(Math.floor(b.y / T), { k: 'b', e: b, y: b.y });
+      front.push({ k: 'b', e: b, y: b.y });
+      if (b.alive && b.moving && R.q > 0 && Math.random() < 0.08 && G.Sim.tileAt(M, b.x, b.y) === 3) M.parts.length < 480 && M.parts.push({ type: 'circle', x: b.x + G.rr(-16, 16), y: b.y - G.rr(0, 20), vx: G.rr(-40, 40), vy: G.rr(-60, -20), t: 0, dur: 0.5, r0: 3, r1: 0, color: th.bush, drag: 3 });
     }
-    for (const it of M.items) push(Math.floor(it.y / T), { k: 'i', e: it, y: it.y });
-    for (const p of M.projs) push(Math.floor((p.y) / T), { k: 'p', e: p, y: p.y });
-    if (M.ball) push(Math.floor(M.ball.y / T), { k: 'ball', e: M.ball, y: M.ball.y + 10 });
-    for (const s of M.safes) push(Math.floor(s.y / T) + 1, { k: 's', e: s, y: s.y });
-    const ts = { c, S, th, time, M };
-    for (let ty = y0; ty <= y1; ty++) {
-      // murs / caisses de cette rangée
-      for (let tx = x0; tx <= x1; tx++) {
-        const t = tiles[ty * M.w + tx];
-        if (t === 1) c.drawImage(tx === 0 || ty === 0 || tx === M.w - 1 || ty === M.h - 1 ? S.border : S.wall, tx * T, ty * T - LIFT, T, T + LIFT);
-        else if (t === 2) c.drawImage(S.crate, tx * T, ty * T - LIFT, T, T + LIFT);
-        else if (t === 6) { const bob = Math.sin(time * 3 + tx) * 1.5; c.drawImage(S.box, tx * T, ty * T - LIFT + bob, T, T + LIFT); }
-      }
-      const row = rows[ty];
-      if (row) {
-        row.sort((a, b) => a.y - b.y);
-        for (const o of row) {
-          if (o.k === 'b') drawBrawler(c, M, o.e, time);
-          else if (o.k === 'i') drawItem(c, o.e, time);
-          else if (o.k === 'p') drawProj(c, o.e);
-          else if (o.k === 'ball') drawBall(c, o.e, time);
-          else if (o.k === 's') drawSafe(c, M, o.e, time);
-        }
-      }
-      // buissons après les personnages
-      for (let tx = x0; tx <= x1; tx++) {
-        if (tiles[ty * M.w + tx] === 3) {
-          const sway = Math.sin(time * 2 + tx * 1.3 + ty) * 1.8;
-          // secousse si un brawler est dedans
-          c.drawImage(S.bush, tx * T - 4 + sway * 0.5, ty * T - 8, T + 8, T + 8);
-        }
-      }
+    if (M.ball) front.push({ k: 'ball', e: M.ball, y: M.ball.y + 10 });
+    for (const sf of M.safes) front.push({ k: 's', e: sf, y: sf.y + 60 });
+    front.sort((a, b) => a.y - b.y);
+    for (const o of front) {
+      if (o.k === 'b') { drawBrawler(c, M, o.e, time); R.World.occlude(c, M, o.e, 30 * (o.e.big || 1)); }
+      else if (o.k === 'ball') drawBall(c, o.e, time);
+      else { drawSafe(c, M, o.e, time); R.World.occlude(c, M, o.e, 95); }
     }
+    // projectiles par-dessus tout (lisibilité des combats)
+    for (const p of M.projs) drawProj(c, p);
     // gaz toxique
     if (M.zone) drawPoison(c, M, time, x0, y0, x1, y1);
     // particules
@@ -594,6 +566,15 @@
     return R.lastCam;
   };
 
+  function drawCaps(c, M) {
+    for (const cp of M.caps) { // zones à capturer
+      const col = cp.state === 0 ? '60,140,255' : cp.state === 1 ? '255,70,70' : cp.state === 2 ? '255,210,31' : '255,255,255';
+      c.globalAlpha = 1; circ(c, cp.x, cp.y, cp.r); c.fillStyle = 'rgba(' + col + ',0.22)'; c.fill();
+      c.strokeStyle = 'rgba(' + col + ',0.95)'; c.lineWidth = 6; c.setLineDash([26, 16]); c.lineDashOffset = -performance.now() / 40; c.stroke(); c.setLineDash([]);
+      circ(c, cp.x, cp.y, 14); c.fillStyle = 'rgba(' + col + ',0.8)'; c.fill();
+    }
+  }
+  R._fieldMarks = (c, M, th) => drawFieldMarks(c, M, th);
   function drawFieldMarks(c, M, th) {
     if (M.mode === 'brawlball') {
       c.strokeStyle = 'rgba(255,255,255,0.55)'; c.lineWidth = 5; const mx = (M.w / 2) * T, my = (M.h / 2) * T;
@@ -606,12 +587,6 @@
         for (let y = g.y0; y < g.y1; y += 15) { c.beginPath(); c.moveTo(g.x0, y); c.lineTo(g.x1, y); c.stroke(); }
         c.strokeStyle = g.team === 0 ? '#3c8cff' : '#ff4646'; c.lineWidth = 5; c.strokeRect(g.x0, g.y0, g.x1 - g.x0, g.y1 - g.y0);
       }
-    }
-    for (const cp of M.caps) { // zones à capturer
-      const col = cp.state === 0 ? '60,140,255' : cp.state === 1 ? '255,70,70' : cp.state === 2 ? '255,210,31' : '255,255,255';
-      c.globalAlpha = 1; circ(c, cp.x, cp.y, cp.r); c.fillStyle = 'rgba(' + col + ',0.22)'; c.fill();
-      c.strokeStyle = 'rgba(' + col + ',0.95)'; c.lineWidth = 6; c.setLineDash([26, 16]); c.lineDashOffset = -performance.now() / 40; c.stroke(); c.setLineDash([]);
-      circ(c, cp.x, cp.y, 14); c.fillStyle = 'rgba(' + col + ',0.8)'; c.fill();
     }
     if (M.mode !== 'showdown') {
       // zones d'apparition
@@ -695,7 +670,8 @@
       pose = M.mode === 'showdown' ? (b.place === 1 || (b === M.player && M.result.win) ? 'win' : 'lose') : (wt === b.team ? 'win' : wt === -1 ? null : 'lose');
     }
     const o = { x: b.x, y: b.y, sc: 1.08 * (b.big || 1), aim: b.ang, t: time + b.idx * 1.7, seed: b.idx * 0.9, walk: b.walkT, moving: b.moving, flash: b.flash, recoil: b.recoil, z: b.z || 0,
-      alpha: b.invuln > 0 && !b.jump ? 0.6 + Math.sin(time * 30) * 0.2 : (inBush && isMe ? 0.7 : 1), frozen: b.freeze > 0, angry: M.state === 'play',
+      roll: b.roll ? b.roll.t / b.roll.dur : (b.rollT >= 0 && b.rollT < 0.3 ? b.rollT / 0.3 : undefined),
+      alpha: b.invuln > 0 && !b.jump && !b.roll && !(b.rollT >= 0 && b.rollT < 0.3) ? 0.6 + Math.sin(time * 30) * 0.2 : (inBush && isMe ? 0.7 : 1), frozen: b.freeze > 0, angry: M.state === 'play',
       lean: b.moving ? Math.sign(Math.cos(b.face)) : 0, superReady: b.superCharge >= 1 && b.alive, deathT: b.alive ? undefined : b.deathT, deathAng: b.deathAng !== undefined ? b.deathAng : b.face, pose };
     if (!b.alive) { // animation d'élimination : le brawler tombe et s'efface
       R.drawChar(c, b.id, b.skin, Object.assign(o, { shadow: true }));
@@ -919,6 +895,7 @@
       joyX: (lefty ? W - 19 * u : 19 * u), joyY: H - 21 * u, joyR: 12.5 * u,
       atkX: (lefty ? 20 * u : W - 20 * u), atkY: H - 22 * u, atkR: 11.5 * u,
       supX: (lefty ? 37 * u : W - 37 * u), supY: H - 11 * u, supR: 7 * u,
+      dgX: (lefty ? 9 * u : W - 9 * u), dgY: H - 40 * u, dgR: 6 * u,
     };
     return L;
   };
@@ -946,6 +923,14 @@
       if (f > 0) { c.beginPath(); c.arc(0, 0, L.atkR * 1.18, a0, a0 + (a1 - a0) * f); c.strokeStyle = f >= 1 ? '#ffb21a' : '#c98a1a'; c.lineWidth = 5; c.stroke(); }
     }
     c.restore();
+    // esquive
+    { const cd = p.roll ? 1 : (p.rollCd || 0) / G.Sim.DODGE.cd, ok = cd <= 0 && p.alive;
+      c.save(); c.translate(L.dgX, L.dgY);
+      circ(c, 0, 0, L.dgR * (input.dodgeFx > 0 ? 0.88 : 1)); const gd = c.createRadialGradient(0, -L.dgR * 0.3, 2, 0, 0, L.dgR); gd.addColorStop(0, ok ? '#9ff6ff' : '#6a7090'); gd.addColorStop(1, ok ? '#2a9ad6' : '#3a3f5a'); c.fillStyle = gd; c.fill(); c.strokeStyle = OUT; c.lineWidth = 4; c.stroke();
+      if (!ok) { c.beginPath(); c.arc(0, 0, L.dgR * 1.18, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - Math.min(1, cd))); c.strokeStyle = '#7df9ff'; c.lineWidth = 4; c.stroke(); }
+      c.strokeStyle = '#fff'; c.lineWidth = L.dgR * 0.16; c.lineCap = 'round'; c.beginPath(); c.arc(0, 0, L.dgR * 0.45, -2.6, 1.2); c.stroke();
+      c.beginPath(); c.moveTo(L.dgR * 0.62, L.dgR * 0.02); c.lineTo(L.dgR * 0.2, L.dgR * 0.48); c.lineTo(L.dgR * 0.05, L.dgR * 0.02); c.stroke();
+      c.restore(); if (input.dodgeFx > 0) input.dodgeFx -= 0.016; }
     // super
     const s = input.sup, ready = p.superCharge >= 1;
     c.save(); c.translate(L.supX, L.supY);

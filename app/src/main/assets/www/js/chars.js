@@ -141,6 +141,10 @@
     const jit = X.jitter ? (Math.random() - 0.5) * 1.2 : 0;
 
     c.translate(jit + winDX, -bob - jump + (slump ? 3 : 0));
+    if (o.roll !== undefined) { // roulade : rotation complète + écrasement
+      const rk = G.clamp(o.roll, 0, 1), sq2 = Math.sin(rk * Math.PI);
+      c.translate(0, -6 - sq2 * 8); c.rotate((Math.cos(aim) >= 0 ? 1 : -1) * rk * TAU); c.scale(1 - sq2 * 0.12, 1 - sq2 * 0.22); c.translate(0, 6);
+    }
     if (winRot) { c.translate(0, 8); c.rotate(winRot); c.translate(0, -8); }
     if (winSX !== 1) c.scale(winSX, 1);
     if (dying) { c.translate(0, 12); c.rotate(-k * 1.35 * (Math.cos(o.deathAng || 0) >= 0 ? 1 : -1)); c.translate(0, -12 + k * 4); }

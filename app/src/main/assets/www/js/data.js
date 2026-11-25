@@ -151,10 +151,10 @@
   ];
   G.BRAWLER = {};
   // le boss n'est pas jouable : il n'apparaît pas dans la liste des brawlers
-  G.BOSS = { id: 'robot', name: 'Mégabot', role: 'Boss', rarity: 'legend', price: 0, hp: 70000, speed: 2.9, superCost: 5000, desc: 'Un robot géant.', aiRange: 5.2, noHpScale: true,
+  G.BOSS = { id: 'robot', name: 'Mégabot', role: 'Boss', rarity: 'legend', price: 0, hp: 115000, speed: 2.9, superCost: 5000, desc: 'Un robot géant.', aiRange: 5.2, noHpScale: true,
     look: { skin: '#9fb0c8', body: '#59657e', body2: '#303a52', hair: '#ff4a55', accent: '#ff4a55', hat: 'robot', weapon: 'bigshotgun' },
-    atk: { name: 'Salve', n: 7, spread: 64, range: 6.4, speed: 12, dmg: 330, r: 9, reload: 1.7, shape: 'bolt', color: '#ff6a6a', sfx: 'shotgun' },
-    sup: { name: 'Onde de choc', type: 'aura', radius: 3.8, dmg: 1300, stun: 0.9, color: '#ff6a6a', sfx: 'zap' } };
+    atk: { name: 'Salve', n: 7, spread: 64, range: 6.4, speed: 12, dmg: 240, r: 9, reload: 1.7, shape: 'bolt', color: '#ff6a6a', sfx: 'shotgun' },
+    sup: { name: 'Onde de choc', type: 'aura', radius: 3.8, dmg: 900, stun: 0.7, color: '#ff6a6a', sfx: 'zap' } };
   G.HP_SCALE = 2.1; // équilibrage : combats plus longs et plus lisibles
   G.BRAWLERS.forEach((b) => { if (!b.voice) b.voice = 1; b.hp = Math.round(b.hp * G.HP_SCALE / 50) * 50; G.BRAWLER[b.id] = b; });
   G.BRAWLER.robot = G.BOSS;

@@ -89,7 +89,7 @@
     return {
       id: def.id, def, team, name, level, skin, isPlayer: isP, idx, x: pos.x, y: pos.y, r: 21, vx: 0, vy: 0, kx: 0, ky: 0,
       maxhp: def.hp * mul, hp: def.hp * mul, dmgMul: mul, ammo: 3, reload: 0, superCharge: 0, ang: team === 1 ? Math.PI : 0, face: team === 1 ? Math.PI : 0,
-      deathT: -1, alive: true, respawn: 0, stun: 0, freeze: 0, slowF: 1, slowT: 0, poison: 0, poisonDps: 0, poisonBy: null, poisonAcc: 0, boostF: 1, boostT: 0, invuln: 0,
+      deathT: -1, roll: null, rollCd: 0, rtt: 0, alive: true, respawn: 0, stun: 0, freeze: 0, slowF: 1, slowT: 0, poison: 0, poisonDps: 0, poisonBy: null, poisonAcc: 0, boostF: 1, boostT: 0, invuln: 0,
       revealT: 0, hidden: false, atkCd: 0, queue: [], dash: null, jump: null, gems: 0, hasBall: false, cubes: 0, kills: 0, deaths: 0, dmgDealt: 0,
       bounty: 0, flash: 0, recoil: 0, walkT: Math.random() * 6, moving: false, supers: 0, input: { mx: 0, my: 0 }, ai: { t: Math.random() * 0.3 }, popObj: null, popT: 0,
       st: { damage: 0, kills: 0, supers: 0, heal: 0, gems: 0, goals: 0 }, pid: null, human: false, px: pos.x, py: pos.y, spawn: pos, lastHitBy: null, z: 0, superReadyFx: false, place: 0, emote: 0, emoteT: 0, shield: 0,
@@ -200,7 +200,10 @@
     if (fx.poison) { e.poison = Math.max(e.poison, fx.poison.t); e.poisonDps = fx.poison.dps; e.poisonBy = src; }
     if (fx.stun) e.stun = Math.max(e.stun, fx.stun);
     if (fx.freeze) { e.freeze = Math.max(e.freeze, fx.freeze); Sim.burst(M, e.x, e.y, '#bff0ff', 8, 120, 5, 0.6); }
-    if (fx.knock && fx.ang !== undefined) { const v = fx.knock * 7; e.kx += Math.cos(fx.ang) * v; e.ky += Math.sin(fx.ang) * v; }
+    if (fx.knock && fx.ang !== undefined) { // recul : même distance, poussée plus douce, et plafonnée (les plombs d'une rafale ne s'additionnent plus)
+      const v = fx.knock * 4.2; e.kx += Math.cos(fx.ang) * v; e.ky += Math.sin(fx.ang) * v;
+      const m = Math.hypot(e.kx, e.ky), cap = Math.max(fx.knock * 4.2, 700); if (m > cap) { e.kx *= cap / m; e.ky *= cap / m; }
+    }
   }
   Sim.damageTile = function (M, tx, ty, amt, force) {
     const k = ty * M.w + tx, t = M.map.tiles[k];
@@ -273,7 +276,7 @@
       if (M.mode === 'knockout') { b.respawn = 1e9; checkKnockout(M); }
       if (M.mode === 'boss') {
         if (b.isBoss) { Sim.burst(M, b.x, b.y, '#ff6a6a', 60, 500, 12, 1.4); Sim.shake(M, 18); finish(M, 0); }
-        else { b.respawn = 1e9; if (!M.ents.some((e) => e.team === 0 && e.alive)) finish(M, 1); }
+        else { b.respawn = 6; if (!M.ents.some((e) => e.team === 0 && e.alive)) finish(M, 1); } // réapparition après 6 s ; défaite si toute l'équipe tombe
       }
       if (M.mode === 'bounty' && killer && killer.team !== b.team) {
         M.score[killer.team] += 1 + b.bounty;
@@ -318,8 +321,35 @@
   }
 
   /* ---------- attaques ---------- */
+  /* ---------- roulade d'esquive (mécanique originale) ---------- */
+  Sim.DODGE = { cd: 3.2, dist: 2.7, dur: 0.3, iframes: 0.24 };
+  Sim.tryDodge = function (M, b, ang) {
+    if (!b.alive || M.state !== 'play' || b.stun > 0 || b.freeze > 0 || b.dash || b.jump || b.roll || b.rollCd > 0) return false;
+    if (!isFinite(ang)) ang = b.face;
+    const D = Sim.DODGE;
+    b.roll = { ax: Math.cos(ang), ay: Math.sin(ang), t: 0, dur: D.dur, speed: (D.dist * T) / D.dur };
+    b.rollCd = D.cd; b.invuln = Math.max(b.invuln, D.iframes); b.face = ang; b.revealT = Math.max(b.revealT, 0.3);
+    Sim.sfx(M, 'dash', b.x, b.y, 1.5);
+    Sim.burst(M, b.x, b.y + 12, '#e8dcc0', 6, 110, 6, 0.4, 'smoke');
+    if (M.online) M.evq.push(['rl', b.idx]);
+    return true;
+  };
+  /* compensation de latence : on fait avancer les projectiles d'un tireur distant du temps de trajet de sa commande */
+  Sim.advanceProjs = function (M, from, dt) {
+    if (!(dt > 0)) return;
+    for (let i = from; i < M.projs.length; i++) {
+      const p = M.projs[i]; if (p.lob || p.dead) continue;
+      const n = Math.max(1, Math.ceil((p.speed * dt) / 10));
+      for (let s = 0; s < n; s++) {
+        const nx = p.x + (p.vx * dt) / n, ny = p.y + (p.vy * dt) / n;
+        if (G.isBulletTile(Sim.tileAt(M, nx, ny))) break;
+        p.x = nx; p.y = ny; p.travelled += (p.speed * dt) / n;
+      }
+      for (let k = M.evq.length - 1; k >= 0; k--) { const e = M.evq[k]; if (e[0] === 'p' && e[1] === p.id) { e[4] = Math.round(p.x); e[5] = Math.round(p.y); break; } }
+    }
+  };
   Sim.tryAttack = function (M, b, ang, dist) {
-    if (!b.alive || M.state !== 'play' || b.stun > 0 || b.freeze > 0 || b.dash || b.jump) return false;
+    if (!b.alive || M.state !== 'play' || b.stun > 0 || b.freeze > 0 || b.dash || b.jump || b.roll) return false;
     if (b.ammo < 1 || b.atkCd > 0) return false;
     b.ammo -= 1; b.atkCd = 0.3; b.face = ang; b.ang = ang;
     if (b.hasBall) { kickBall(M, b, ang); return true; }
@@ -327,7 +357,7 @@
     return true;
   };
   Sim.trySuper = function (M, b, ang, dist) {
-    if (!b.alive || M.state !== 'play' || b.stun > 0 || b.freeze > 0 || b.dash || b.jump) return false;
+    if (!b.alive || M.state !== 'play' || b.stun > 0 || b.freeze > 0 || b.dash || b.jump || b.roll) return false;
     if (b.superCharge < 1) return false;
     b.superCharge = 0; b.superReadyFx = false; b.supers++; b.face = ang; b.ang = ang;
     b.st.supers++;
@@ -602,7 +632,7 @@
     b.boostT -= dt; if (b.boostT <= 0) b.boostF = 1;
     b.rageT = Math.max(0, (b.rageT || 0) - dt);
     b.stun = Math.max(0, b.stun - dt); b.freeze = Math.max(0, b.freeze - dt); b.invuln = Math.max(0, b.invuln - dt);
-    b.revealT = Math.max(0, b.revealT - dt); b.atkCd = Math.max(0, b.atkCd - dt);
+    b.revealT = Math.max(0, b.revealT - dt); b.atkCd = Math.max(0, b.atkCd - dt); b.rollCd = Math.max(0, b.rollCd - dt);
     const tl = Sim.tileAt(M, b.x, b.y);
     b.hidden = tl === 3 && b.revealT <= 0 && !b.jump;
     if (b.poison > 0) {
@@ -632,6 +662,16 @@
         b.revealT = 0.8;
       }
       b.px = b.x; b.py = b.y; return;
+    }
+    // roulade
+    if (b.roll) {
+      const r = b.roll; r.t += dt;
+      const step = r.speed * dt * (r.t > r.dur * 0.7 ? 0.55 : 1);
+      tryMove(M, b, r.ax * step, r.ay * step);
+      b.walkT += dt * 18; b.moving = true;
+      if (r.t >= r.dur) b.roll = null;
+      b.vx = (b.x - b.px) / Math.max(dt, 1e-4); b.vy = (b.y - b.py) / Math.max(dt, 1e-4); b.px = b.x; b.py = b.y;
+      return;
     }
     // charge
     if (b.dash) {
@@ -667,7 +707,7 @@
     b.moving = ml > 0.1 && !blockedMove;
     if (b.moving) { b.walkT += dt * 12 * (spd / 240); if (!M.online && Math.random() < dt * 7) Sim.burst(M, b.x, b.y + 14, '#d8d0b8', 1, 30, 5, 0.45, 'smoke'); }
     const vx = mx * spd + b.kx, vy = my * spd + b.ky;
-    b.kx *= Math.exp(-8 * dt); b.ky *= Math.exp(-8 * dt);
+    b.kx *= Math.exp(-4.2 * dt); b.ky *= Math.exp(-4.2 * dt);
     if (vx || vy) tryMove(M, b, vx * dt, vy * dt);
     b.ang += G.angDiff(b.ang, b.face) * Math.min(1, dt * 16);
     b.vx = (b.x - b.px) / Math.max(dt, 1e-4); b.vy = (b.y - b.py) / Math.max(dt, 1e-4);
@@ -1023,11 +1063,11 @@
   const STATE_CODE = { countdown: 0, play: 1, goal: 2, end: 3 };
   Sim.snapshot = function (M) {
     const e = M.ents.map((b) => {
-      const f = (b.alive ? 1 : 0) | (b.hidden ? 2 : 0) | (b.stun > 0 ? 4 : 0) | (b.freeze > 0 ? 8 : 0) | (b.poison > 0 ? 16 : 0) | (b.slowT > 0 && b.slowF < 1 ? 32 : 0) | (b.boostT > 0 ? 64 : 0) | (b.invuln > 0 ? 128 : 0) | (b.hasBall ? 256 : 0) | (b.dash ? 512 : 0) | (b.moving ? 1024 : 0) | (b.revealT > 0 ? 2048 : 0);
-      return [Math.round(b.x), Math.round(b.y), +b.ang.toFixed(2), +b.face.toFixed(2), Math.round(b.hp), Math.round(b.maxhp), f, Math.round(b.ammo * 10), Math.round(b.superCharge * 100), b.gems, b.cubes, b.bounty, Math.round(b.z || 0), +Math.max(0, b.respawn).toFixed(1), b.kills, b.dash ? +Math.atan2(b.dash.ay, b.dash.ax).toFixed(2) : 0];
+      const f = (b.alive ? 1 : 0) | (b.hidden ? 2 : 0) | (b.stun > 0 ? 4 : 0) | (b.freeze > 0 ? 8 : 0) | (b.poison > 0 ? 16 : 0) | (b.slowT > 0 && b.slowF < 1 ? 32 : 0) | (b.boostT > 0 ? 64 : 0) | (b.invuln > 0 ? 128 : 0) | (b.hasBall ? 256 : 0) | (b.dash ? 512 : 0) | (b.moving ? 1024 : 0) | (b.revealT > 0 ? 2048 : 0) | (b.roll ? 4096 : 0);
+      return [Math.round(b.x), Math.round(b.y), +b.ang.toFixed(2), +b.face.toFixed(2), Math.round(b.hp), Math.round(b.maxhp), f, Math.round(b.ammo * 10), Math.round(b.superCharge * 100), b.gems, b.cubes, b.bounty, Math.round(b.z || 0), +Math.max(0, b.respawn).toFixed(1), b.kills, b.dash ? +Math.atan2(b.dash.ay, b.dash.ax).toFixed(2) : 0, Math.round(b.rollCd * 10)];
     });
     const snap = {
-      tm: +M.t.toFixed(2), s: STATE_CODE[M.state], cd: +M.cd.toFixed(1), left: +M.left.toFixed(1), sc: M.score, e,
+      tm: +M.t.toFixed(3), s: STATE_CODE[M.state], cd: +M.cd.toFixed(1), left: +M.left.toFixed(1), sc: M.score, e,
       it: M.items.map((i) => [i.type === 'gem' ? 0 : 1, Math.round(i.x), Math.round(i.y)]),
     };
     if (M.mode === 'gemgrab') snap.gg = [M.gg.active[0] ? 1 : 0, +M.gg.t[0].toFixed(1), M.gg.active[1] ? 1 : 0, +M.gg.t[1].toFixed(1)];

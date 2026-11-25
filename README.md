@@ -28,8 +28,8 @@ Test en réseau local : `cd server && npm start`, puis l'adresse `192.168.x.x:80
 Le serveur sert aussi le jeu dans un navigateur à `http://adresse/` et expose `/health`.
 
 ## Contrôles
-Joystick à gauche pour bouger · bouton jaune : toucher = tir automatique, glisser = viser · éclair = super.
-(PC : ZQSD/flèches, clic = tir, Espace, Maj/E = super, Échap = pause.)
+Joystick à gauche pour bouger · bouton jaune : toucher = tir automatique, glisser = viser · éclair = super · bouton bleu (en haut à droite) = **roulade d'esquive** (invulnérable un instant).
+(PC : ZQSD/flèches, clic = tir, Espace, Maj/E = super, F = esquive, Échap = pause.)
 
 ## Recompiler l'APK
 - **Sans rien installer** : sur GitHub, onglet *Actions* → « Compiler l'APK » → *Run workflow* → téléchargez l'artefact `BrawlRush-APK`.
@@ -44,3 +44,6 @@ Application séparée « Brawl Rush DEV » (s'installe à côté de la normale, 
 - **Mods** : 8 mods intégrés (vampires, turbo, supers express, géants, minis, pluie de cristaux, balles rapides, régénération) + **vos propres mods en JavaScript** (crochets `onMatchStart`, `onUpdate`, `onDamage`, `speedMul`), sauvegardés et activables.
 - **Console** JavaScript (`G`, `M`, `P`).
 En ligne, les outils de combat sont sans effet : le serveur reste seul juge. Pour compiler : `./build-apk.sh` produit les deux APK (`assembleDevRelease` pour la seule édition DEV).
+
+## Audit technique
+Voir `AUDIT.md` : problèmes mesurés, corrections, capacité du serveur et limites connues.

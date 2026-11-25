@@ -48,7 +48,7 @@
     const ack = s.ak ? s.ak[idx] : 0, f = a[6];
     me._srvAlive = !!(f & 1);
     if (!me._srvAlive) return;
-    const forced = (f & (4 | 8 | 512)) || a[12] > 0 || s.s !== 1;
+    const forced = (f & (4 | 8 | 512 | 4096)) || a[12] > 0 || s.s !== 1;
     const P = { x: a[0], y: a[1], r: me.r };
     if (!forced) {
       const spd = me.def.speed * T * (f & 32 ? 0.5 : 1) * (f & 64 ? 1.35 : 1) * (f & 256 ? 0.93 : 1);
@@ -86,7 +86,7 @@
       if (!wasAlive && b.alive) { b.deathT = -1; b.spawnT = 0; }
       b.hidden = !!(f & 2); b.stun = f & 4 ? 1 : 0; b.freeze = f & 8 ? 1 : 0; b.poison = f & 16 ? 1 : 0; b.slowT = f & 32 ? 1 : 0; b.slowF = f & 32 ? 0.5 : 1;
       b.boostT = f & 64 ? 1 : 0; b.invuln = f & 128 ? 1 : 0; b.hasBall = !!(f & 256); b.dash = f & 512 ? { ax: Math.cos(a[15]), ay: Math.sin(a[15]) } : null;
-      b.moving = !!(f & 1024); b.revealT = f & 2048 ? 1 : 0;
+      b.moving = !!(f & 1024); b.revealT = f & 2048 ? 1 : 0; b.rollCd = (a[16] || 0) / 10;
       b.ammo = a[7] / 10; b.superCharge = a[8] / 100; b.gems = a[9]; b.cubes = a[10]; b.bounty = a[11]; b.z = a[12]; b.respawn = a[13]; b.kills = a[14];
       if (first || (b.alive && !wasAlive)) { b.x = a[0]; b.y = a[1]; if (b === me) { NM.P = { x: a[0], y: a[1], r: 21, forced: true }; } }
     });
@@ -127,6 +127,7 @@
       }
       case 's': if (e[2] < 0 || !me || G.dist(me.x, me.y, e[2], e[3]) < 1100) G.Audio.sfx(e[1], e[4]); break;
       case 'sr': if (me && M.ents[e[1]] === me) G.Audio.sfx('superReady'); break;
+      case 'rl': { const r = M.ents[e[1]]; if (r && r !== me) r.rollT = 0; break; }
       case 'p': {
         const owner = M.ents[e[13]], def = G.BRAWLER[e[2]], spec = e[3] ? def.sup : def.atk;
         const p = { id: e[1], x: e[4], y: e[5], vx: e[6], vy: e[7], ang: e[8], speed: Math.hypot(e[6], e[7]), range: (spec.range || 8) * T + 40, travelled: 0, r: spec.r || 6, shape: spec.shape || 'pellet', color: spec.color || '#fff',
@@ -158,12 +159,13 @@
     while (q.length && q[0].tm <= NM.tr) { const s = q.shift(); NM.prev = NM.A; NM.A = s; NM.apply(M, s); }
     const A = NM.A, B = q[0] || null;
     let k = 0;
-    if (A && B) k = G.clamp((NM.tr - A.tm) / Math.max(0.001, B.tm - A.tm), 0, 1);
+    if (A && B) k = B.tm - A.tm < 0.004 ? 1 : G.clamp((NM.tr - A.tm) / (B.tm - A.tm), 0, 1);
     const ex = A && !B ? G.clamp(NM.tr - A.tm, 0, 0.12) : 0; // sous-alimentation : extrapolation brève
     M.ents.forEach((e, i) => {
       if (!e) return;
       e.popT -= dt; e.flash = Math.max(0, e.flash - dt); e.recoil = Math.max(0, e.recoil - dt * 6);
       if (e.deathT >= 0) e.deathT += dt;
+      if (e.rollT >= 0) { e.rollT += dt; if (e.rollT > 0.4) e.rollT = -1; }
       if (e.moving && e.alive && Math.random() < dt * 7) Sim.burst(M, e.x, e.y + 14, '#d8d0b8', 1, 30, 5, 0.45, 'smoke');
       if (e.spawnT !== undefined) e.spawnT += dt;
       if (e === me || !A) return;
@@ -172,7 +174,12 @@
       const dx = b[0] - a[0], dy = b[1] - a[1];
       if (Math.hypot(dx, dy) > 260 || (a[6] & 1) !== (b[6] & 1)) { nx = a[0]; ny = a[1]; } // téléportation (réapparition) : pas d'interpolation
       else if (B) { nx = a[0] + dx * k; ny = a[1] + dy * k; }
-      else { const pv = NM.prev && NM.prev.e[i]; const vx = pv ? (a[0] - pv[0]) / Math.max(0.001, A.tm - NM.prev.tm) : 0, vy = pv ? (a[1] - pv[1]) / Math.max(0.001, A.tm - NM.prev.tm) : 0; nx = a[0] + vx * ex; ny = a[1] + vy * ex; }
+      else { // extrapolation brève et bornée (jamais plus vite qu'un brawler qui court)
+        const pv = NM.prev && NM.prev.e[i], dtp = NM.prev ? A.tm - NM.prev.tm : 0;
+        let vx = 0, vy = 0;
+        if (pv && dtp > 0.015) { vx = (a[0] - pv[0]) / dtp; vy = (a[1] - pv[1]) / dtp; const sp = Math.hypot(vx, vy); if (sp > 600) { vx *= 600 / sp; vy *= 600 / sp; } }
+        nx = a[0] + vx * ex; ny = a[1] + vy * ex;
+      }
       e.vx = (nx - e.x) / Math.max(dt, 0.001); e.vy = (ny - e.y) / Math.max(dt, 0.001);
       e.x = nx; e.y = ny; e.z = a[12] + (b[12] - a[12]) * k;
       e.ang = angLerp(a[2], b[2], k); e.face = angLerp(a[3], b[3], k);
@@ -229,6 +236,13 @@
     const o = Object.assign({ t: 'input', seq: NM.seq, mx: +me.input.mx.toFixed(3), my: +me.input.my.toFixed(3), face: +me.face.toFixed(2) }, extra || {});
     G.Net.send(o); NM.lastIn = { mx: me.input.mx, my: me.input.my, face: me.face };
   };
+  NM.dodge = function (M, ang) {
+    const me = M.player;
+    if (!me.alive || M.state !== 'play' || (me.rollCd || 0) > 0 || me.rollT >= 0) { G.Audio.sfx('error'); return false; }
+    me.rollT = 0; me.rollCd = G.Sim.DODGE.cd; me.face = ang; G.Audio.sfx('dash', 1.5);
+    NM.sendInput(M, { d: +ang.toFixed(3) });
+    return true;
+  };
   NM.attack = function (M, ang, dist, isSuper) {
     const me = M.player;
     if (!me.alive || M.state !== 'play') return false;
@@ -246,7 +260,7 @@
       }
     }
     if (spec.sfx || isSuper) G.Audio.sfx(isSuper ? 'super' : spec.sfx);
-    NM.sendInput(M, isSuper ? { s: [+ang.toFixed(3), Math.round(dist)] } : { a: [+ang.toFixed(3), Math.round(dist)] });
+    NM.sendInput(M, isSuper ? { s: [+ang.toFixed(3), Math.round(dist)], rtt: G.Net.ping } : { a: [+ang.toFixed(3), Math.round(dist)], rtt: G.Net.ping });
     if (!isSuper) { me.ammo = Math.max(0, me.ammo - 1); NM.lock = 0.3; }
     me.recoil = 1;
     return true;

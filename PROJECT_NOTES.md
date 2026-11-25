@@ -36,3 +36,9 @@ Product flavors Gradle `prod`/`dev` (dimension `edition`, `.dev` en suffixe d'ap
 - UI : Social (amis/club/classement), profil détaillé, bannière d'événement, résultats animés, effets tactiles, rotation/PWA.
 - Bugs corrigés : téléportations en ligne (désynchronisation état/position), double dégâts des projectiles à explosion, anti-blocage dans les murs, remise en place du Duel d'élite.
 - À faire / limites : serveur non déployé (compte+jeton requis), pas de test sur vrai téléphone/iPhone, pas de compensation de latence côté serveur pour les tirs, graphismes vectoriels (pas d'artiste).
+
+## v4
+- `js/world.js` : décor en blocs mis en cache (×20 sur le rendu). `R.World.occlude` fait passer le haut des murs devant les personnages.
+- Roulade d'esquive (`Sim.tryDodge`, drapeau 4096, champ 16 de l'instantané = recharge ×10, message `input.d`).
+- Compensation de latence : `Sim.advanceProjs` + `input.rtt`.
+- Corrections réseau (extrapolation bornée, horodatage ms) et recul (×4,2, plafonné). Détails : `AUDIT.md`.
