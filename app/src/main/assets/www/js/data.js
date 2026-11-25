@@ -171,7 +171,7 @@
   G.EMOTES = ['😂', '😡', '👍', '😭', '🔥', '👋', '🤝', '💀'];
   /* comptes joueurs (Supabase) : URL du projet + clé publique « anon ». Voir COMPTES.md */
   G.SUPABASE = { url: '', key: '' };
-  G.DEFAULT_SERVER = ''; // adresse du serveur par défaut (ex. 'mon-jeu.onrender.com') ; modifiable dans Réglages
+  G.DEFAULT_SERVER = 'beta-bs.onrender.com'; // adresse du serveur par défaut (ex. 'mon-jeu.onrender.com') ; modifiable dans Réglages
 
   /* skins : décalage de teinte global + doré */
   G.SKINS = [
