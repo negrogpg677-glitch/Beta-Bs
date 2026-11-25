@@ -584,7 +584,7 @@
   function drawFieldMarks(c, M, th) {
     if (M.mode === 'brawlball') {
       c.strokeStyle = 'rgba(255,255,255,0.55)'; c.lineWidth = 5; const mx = (M.w / 2) * T, my = (M.h / 2) * T;
-      c.beginPath(); c.moveTo(mx, T); c.lineTo(mx, (M.h - 1) * T); c.stroke();
+      c.beginPath(); if (M.h > M.w) { c.moveTo(T, my); c.lineTo((M.w - 1) * T, my); } else { c.moveTo(mx, T); c.lineTo(mx, (M.h - 1) * T); } c.stroke();
       circ(c, mx, my, T * 2.1); c.stroke(); circ(c, mx, my, 8); c.fillStyle = 'rgba(255,255,255,0.6)'; c.fill();
       for (const g of M.map.goals) {
         c.fillStyle = g.team === 0 ? 'rgba(60,140,255,0.38)' : 'rgba(255,70,70,0.38)'; c.fillRect(g.x0, g.y0, g.x1 - g.x0, g.y1 - g.y0);

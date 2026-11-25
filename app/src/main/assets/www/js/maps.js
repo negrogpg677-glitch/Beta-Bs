@@ -27,7 +27,23 @@
   G.isSolidTile = (t) => t === 1 || t === 2 || t === 4 || t === 5 || t === 6; // bloque les déplacements
   G.isBulletTile = (t) => t === 1 || t === 2 || t === 5 || t === 6; // bloque les projectiles
 
-  G.genMap = function (def, seedOverride) {
+  // VUE VERTICALE : la carte générée (équipes à gauche/droite) est tournée d'un quart de tour : l'équipe bleue (0) est en bas,
+  // l'équipe rouge (1) en haut, on attaque vers le haut. Tout (tuiles, apparitions, buts, coffres, zones) tourne ensemble.
+  G.VERTICAL = true;
+  G.faceOf = (team) => (G.VERTICAL ? (team === 0 ? -Math.PI / 2 : Math.PI / 2) : (team === 0 ? 0 : Math.PI)); // regard vers l'ennemi
+  function rotate(m) {
+    const w = m.w, h = m.h, Wp = w * T, nt = new Uint8Array(w * h), nh = new Uint16Array(w * h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const j = (w - 1 - x) * h + y, i = y * w + x; nt[j] = m.tiles[i]; nh[j] = m.hp[i]; }
+    const P = (p) => { if (p && typeof p.x === 'number') { const x = p.x; p.x = p.y; p.y = Wp - x; } return p; };
+    const each = (a) => { if (Array.isArray(a)) a.forEach((v) => (Array.isArray(v) ? each(v) : P(v))); };
+    m.tiles = nt; m.hp = nh; m.w = h; m.h = w;
+    each(m.spawns); each(m.safes); each(m.caps); P(m.mine); P(m.ball); P(m.center);
+    (m.goals || []).forEach((g) => { const x0 = g.x0, x1 = g.x1; g.x0 = g.y0; g.x1 = g.y1; g.y0 = Wp - x1; g.y1 = Wp - x0; });
+    m.vertical = true;
+    return m;
+  }
+  G.genMap = function (def, seedOverride) { const m = genMapH(def, seedOverride); return m && G.VERTICAL ? rotate(m) : m; };
+  function genMapH(def, seedOverride) {
     const baseSeed = seedOverride != null ? seedOverride : def.seed;
     for (let attempt = 0; attempt < 40; attempt++) {
       const rng = G.mulberry32(baseSeed * 977 + attempt * 7919 + 13);

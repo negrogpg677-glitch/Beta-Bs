@@ -11,7 +11,7 @@ class Cl {
   connect(creds) {
     return new Promise((res) => {
       this.ws = new WebSocket(this.url);
-      this.ws.on('open', () => this.ws.send(JSON.stringify(Object.assign({ t: 'hello', name: this.name }, creds || {}))));
+      this.ws.on('open', () => this.ws.send(JSON.stringify(Object.assign({ t: 'hello', name: this.name, v: 3 }, creds || {}))));
       this.ws.on('message', (raw) => {
         const m = JSON.parse(raw);
         if (this.on) this.on(m);

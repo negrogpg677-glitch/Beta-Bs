@@ -160,3 +160,12 @@ Tests : `tools/test-duel.js` 7/7, modes simulés jusqu'au bout (11 modes), serve
 **Limites connues** : la progression hors ligne (contre les bots) reste calculée par l'appareil ; `supabase/v3.sql` (facultatif) limite la vitesse de montée des trophées pour protéger le classement.
 
 **Tests** : serveur 61 · comptes 53 · interface comptes/dev 33 · v3.6 iPhone émulé 19 · équipe, duel, toucher, visée.
+
+## v3.7 — vue verticale (comme sur la photo de référence)
+- Les cartes sont tournées d'un quart de tour **dans les données** (pas une image tournée) : tuiles, points d'apparition, buts, coffres, zones, ballon, mine de cristaux. L'équipe bleue est en bas et attaque vers le haut ; la caméra défile verticalement et regarde un peu vers l'avant ; mini-carte et aperçus des cartes au format portrait.
+- Joystick et tirs : la direction du doigt est la direction dans le monde (haut = vers l'adversaire), aucune conversion.
+- IA réécrite dans un repère « vers l'ennemi / sur le côté » (valable dans les deux orientations) ; le porteur du ballon vise le but adverse réel.
+- Brawlers tournés vers l'adversaire à l'apparition ; ligne médiane du foot horizontale.
+- Protocole 2 : le serveur refuse les parties aux anciennes versions (cartes horizontales) avec le message « mettez le jeu à jour ».
+- Vérifié : les 11 modes simulés 3 fois jusqu'à la fin, sans erreur (buts et coffres dans les deux sens).
+- Reste à faire : pour l'équipe rouge (en haut), la vue n'est pas encore retournée (elle attaque vers le bas).

@@ -57,7 +57,7 @@
     if (mp && def && def.override && def.override.length === mp.tiles.length) for (let i = 0; i < mp.tiles.length; i++) { const t = def.override[i]; mp.tiles[i] = t; mp.hp[i] = t === 2 ? 2400 : t === 6 ? 3600 : 0; }
     return mp;
   };
-  const ME = { base: null, tiles: null, w: 0, h: 0, tool: 1, lock: null, saved: LS.get('br_dev_maps', {}) };
+  const ME = { base: null, tiles: null, w: 0, h: 0, tool: 1, lock: null, saved: LS.get('br_dev_maps2', {}) };
   const TCOL = { 0: '#86c96a', 1: '#6b4f36', 2: '#c98a4a', 3: '#2f8f3a', 4: '#3a8ad6', 5: '#ffd21f', 6: '#d9a24a' };
   function meLoad(key) {
     const def = G.MAPS[key]; if (!def) return; const mp = baseGen(def);
@@ -69,7 +69,7 @@
   }
   function meDraw() {
     const cv = DP.panel && DP.panel.querySelector('#meCv'); if (!cv || !ME.tiles) return;
-    const s = Math.max(4, Math.floor(Math.min(720 / ME.w, 420 / ME.h))); cv.width = ME.w * s; cv.height = ME.h * s; const c = cv.getContext('2d');
+    const s = Math.max(4, Math.floor(Math.min(720 / ME.w, 520 / ME.h))); cv.width = ME.w * s; cv.height = ME.h * s; const c = cv.getContext('2d');
     for (let y = 0; y < ME.h; y++) for (let x = 0; x < ME.w; x++) { const i = y * ME.w + x; c.fillStyle = TCOL[ME.tiles[i]] || '#86c96a'; c.fillRect(x * s, y * s, s, s); if (ME.lock[i]) { c.fillStyle = 'rgba(0,0,0,.18)'; c.fillRect(x * s, y * s, s, s); } }
     c.strokeStyle = 'rgba(0,0,0,.08)'; for (let x = 0; x <= ME.w; x++) { c.beginPath(); c.moveTo(x * s, 0); c.lineTo(x * s, ME.h * s); c.stroke(); }
     cv._s = s;
@@ -78,7 +78,7 @@
     const cv = e.currentTarget, r = cv.getBoundingClientRect(), s = cv._s || 8;
     const x = Math.floor(((e.clientX - r.left) / r.width) * cv.width / s), y = Math.floor(((e.clientY - r.top) / r.height) * cv.height / s);
     if (x < 0 || y < 0 || x >= ME.w || y >= ME.h) return; const i = y * ME.w + x; if (ME.lock[i]) return;
-    const sym = ME.w - 1 - x, j = y * ME.w + sym; // symétrie miroir : la carte reste équitable
+    const j = ME.h > ME.w ? (ME.h - 1 - y) * ME.w + x : y * ME.w + (ME.w - 1 - x); // symétrie miroir (haut/bas en vue verticale) : la carte reste équitable
     ME.tiles[i] = ME.tool; if (DP.mirror && !ME.lock[j]) ME.tiles[j] = ME.tool; meDraw();
   }
 
@@ -311,8 +311,8 @@
       else if (a === 'privTest') { Net.send({ t: 'dv_sim', act: 'join', mode: 'gemgrab' }); Net.send({ t: 'dv_sim', act: 'join' }); setTimeout(() => Net.send({ t: 'party_start', kind: 'private', mode: 'gemgrab' }), 500); close(); return; }
       else if (a === 'ceReset') { delete CE()[DP.char || G.Save.data.selected]; save(); }
       else if (a === 'ceTest') { G.Save.data.selected = DP.char || G.Save.data.selected; G.Save.commit(); close(); Dev.startMatch(G.Save.data.mode && G.Save.data.mode !== 'showdown' ? G.Save.data.mode : 'gemgrab', ''); return; }
-      else if (a === 'meSave') { ME.saved[ME.base] = ME.tiles.slice(); LS.set('br_dev_maps', ME.saved); G.UI.toast('Carte enregistrée'); }
-      else if (a === 'meReset') { delete ME.saved[ME.base]; LS.set('br_dev_maps', ME.saved); meLoad(ME.base); }
+      else if (a === 'meSave') { ME.saved[ME.base] = ME.tiles.slice(); LS.set('br_dev_maps2', ME.saved); G.UI.toast('Carte enregistrée'); }
+      else if (a === 'meReset') { delete ME.saved[ME.base]; LS.set('br_dev_maps2', ME.saved); meLoad(ME.base); }
       else if (a === 'mePlay') { const b = G.MAPS[ME.base]; G.MAPS.dev_custom = Object.assign({}, b, { name: b.name + ' (perso)', override: ME.tiles.slice() }); close(); Dev.startMatch(b.mode || 'gemgrab', 'dev_custom'); return; }
       else if (a === 'report') exportReport();
       else if (a === 'clearErr') DP.errs.length = 0;

@@ -26,7 +26,7 @@ const CFG_LIM = { afkSec: [10, 600], reconnectSec: [15, 900] };
 function setCfg(o) { for (const k in CFG_LIM) if (o && isFinite(+o[k])) CFG[k] = Math.round(Math.min(CFG_LIM[k][1], Math.max(CFG_LIM[k][0], +o[k]))); return CFG; }
 const RECON = () => CFG.reconnectSec * 1000;
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
-const PROTOCOL = 1;
+const PROTOCOL = 2; // 2 = cartes verticales (v3.7)
 
 /* ---------- persistance (profils + classement) ---------- */
 let players = {};
@@ -266,6 +266,7 @@ function onMessage(c, raw) {
   if (social.handle(c, msg)) return;
   if (acc.handle(c, msg)) return;
   if (devsrv.handle(c, msg)) return;
+  if (c.v < 3 && (msg.t === 'party_start' || msg.t === 'resume' || msg.t === 'party_join')) return err(c, 'update', 'Nouvelle version de Brawl Rush disponible : mettez le jeu à jour pour jouer en ligne.');
   switch (msg.t) {
     case 'ping': send(c, { t: 'pong', ts: msg.ts }); break;
     case 'input': {
@@ -399,7 +400,7 @@ function handshake(ws, msg) {
   if (c && c.ws && c.ws !== ws) { try { c.ws.close(4000, 'replaced'); } catch (e) { /* ignore */ } }
   const resumed = !!c;
   if (!c) { c = { pid, party: null, match: null, ent: null, ready: false, brawler: 'sherry', skin: 'classic', level: 1, trophies: pl.trophies }; clients.set(pid, c); }
-  c.ws = ws; ws.pid = pid; c.name = pl.name; c.trophies = pl.trophies; c.lastSeen = Date.now(); c.dropAt = 0;
+  c.ws = ws; ws.pid = pid; c.v = msg.v | 0; c.name = pl.name; c.trophies = pl.trophies; c.lastSeen = Date.now(); c.dropAt = 0;
   if (msg.name) { c.name = pl.name = cleanName(msg.name); dirty = true; }
   send(c, { t: 'welcome', pid, token: pl.token, name: c.name, proto: PROTOCOL, trophies: pl.trophies, online: wss.clients.size, resumed, friendCode: social.ensureCode(pid), club: social.clubView(pid) });
   social.pushFriends(pid); social.pushClub(pid); social.notifyPresence(pid);

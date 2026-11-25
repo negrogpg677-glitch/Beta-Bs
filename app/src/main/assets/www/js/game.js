@@ -88,7 +88,7 @@
     const mul = G.levelMul(level);
     return {
       id: def.id, def, team, name, level, skin, isPlayer: isP, idx, x: pos.x, y: pos.y, r: 21, vx: 0, vy: 0, kx: 0, ky: 0,
-      maxhp: def.hp * mul, hp: def.hp * mul, dmgMul: mul, ammo: 3, reload: 0, superCharge: 0, ang: team === 1 ? Math.PI : 0, face: team === 1 ? Math.PI : 0,
+      maxhp: def.hp * mul, hp: def.hp * mul, dmgMul: mul, ammo: 3, reload: 0, superCharge: 0, ang: G.faceOf(team), face: G.faceOf(team),
       deathT: -1, roll: null, rollCd: 0, gadgets: 3, gadgetCd: 0, sprintT: 0, emoteCd: 0, rtt: 0, alive: true, respawn: 0, stun: 0, freeze: 0, slowF: 1, slowT: 0, poison: 0, poisonDps: 0, poisonBy: null, poisonAcc: 0, boostF: 1, boostT: 0, invuln: 0,
       revealT: 0, hidden: false, atkCd: 0, queue: [], dash: null, jump: null, gems: 0, hasBall: false, cubes: 0, kills: 0, deaths: 0, dmgDealt: 0,
       bounty: 0, flash: 0, recoil: 0, walkT: Math.random() * 6, moving: false, supers: 0, input: { mx: 0, my: 0 }, ai: { t: Math.random() * 0.3 }, popObj: null, popT: 0,
@@ -835,7 +835,7 @@
   function respawn(M, b) {
     const sp = M.map.spawns[b.team][b.spawnIdx || 0] || M.map.spawns[b.team][0];
     b.deathT = -1; b.alive = true; b.hp = b.maxhp; b.x = sp.x; b.y = sp.y; b.px = sp.x; b.py = sp.y; b.ammo = 3; b.invuln = 1.6;
-    b.kx = b.ky = 0; b.slowF = 1; b.boostF = 1; b.face = b.team === 0 ? 0 : Math.PI; b.ang = b.face;
+    b.kx = b.ky = 0; b.slowF = 1; b.boostF = 1; b.face = G.faceOf(b.team); b.ang = b.face;
     b.input.mx = b.input.my = 0; b.hasBall = false; b.gems = 0; b.superCharge = Math.min(b.superCharge, 0.3);
     Sim.ring(M, b.x, b.y, 10, 90, 0.5, '#fff', true);
     Sim.burst(M, b.x, b.y, '#fff', 14, 220, 6, 0.6);
@@ -1053,7 +1053,7 @@
       const sp = M.map.spawns[b.team][b.spawnIdx];
       b.x = sp.x; b.y = sp.y; b.px = b.x; b.py = b.y; b.alive = true; b.hp = b.maxhp; b.ammo = 3; b.respawn = 0; b.kx = b.ky = 0;
       b.stun = b.freeze = 0; b.hasBall = false; b.dash = null; b.jump = null; b.queue.length = 0; b.poison = 0; b.invuln = 1;
-      b.face = b.team === 0 ? 0 : Math.PI; if (b.ai) b.ai.path = null;
+      b.face = G.faceOf(b.team); if (b.ai) b.ai.path = null;
     }
     if (M.ball) { M.ball.x = M.map.ball.x; M.ball.y = M.map.ball.y; M.ball.vx = M.ball.vy = 0; M.ball.owner = null; M.ball.cd = {}; }
     M.state = 'countdown'; M.cd = 2.2; M.cdLast = 3;

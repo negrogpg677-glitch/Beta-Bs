@@ -156,6 +156,7 @@
     if (M.state === 'goal' && M.ball) { tx = M.ball.x; ty = M.ball.y; }
     else if (p.alive) {
       tx = p.x + p.input.mx * 46; ty = p.y + p.input.my * 36;
+      if (M.map.vertical && M.mode !== 'showdown') ty += (p.team === 0 ? -1 : 1) * G.T * 1.4; // regard vers l'avant (l'adversaire)
       const prev = G.Input.aimPreview(M);
       if (prev && !prev.sup) { tx += Math.cos(prev.ang) * 50; ty += Math.sin(prev.ang) * 40; }
     } else {

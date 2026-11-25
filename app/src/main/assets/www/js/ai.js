@@ -112,15 +112,18 @@
   function objective(M, b) {
     const ai = b.ai, my = b.team, enemy = 1 - my;
     const allies = alliesOf(M, b);
-    const ownSide = my === 0 ? 1 : -1; // direction vers l'ennemi en x
+    const ownSide = my === 0 ? 1 : -1; // direction vers l'ennemi (carte horizontale)
     const mw = M.w * T, mh = M.h * T;
+    // repère de l'équipe : e = vers l'ennemi, l = sur le côté (carte verticale : l'ennemi est en haut pour les bleus)
+    const V = !!M.map.vertical, ex = V ? 0 : ownSide, ey = V ? (my === 0 ? -1 : 1) : 0, lx = V ? 1 : 0, ly = V ? 0 : 1;
+    const P = (x0, y0, f, l) => ({ x: G.clamp(x0 + ex * f + lx * l, 1.5 * T, mw - 1.5 * T), y: G.clamp(y0 + ey * f + ly * l, 1.5 * T, mh - 1.5 * T) });
     switch (M.mode) {
       case 'gemgrab': {
         const mine = M.map.mine, mg = Sim.teamGems(M, my), eg = Sim.teamGems(M, enemy);
         if (mg >= 10) { // protéger : se replier si porteur, sinon escorter
-          if (b.gems > 0) { const bx = mine.x - ownSide * 6.5 * T; return { x: bx, y: mine.y + (b.spawnIdx - 1) * 2 * T, kind: 'retreat' }; }
+          if (b.gems > 0) return Object.assign(P(mine.x, mine.y, -6.5 * T, (b.spawnIdx - 1) * 2 * T), { kind: 'retreat' });
           const carrier = allies.find((a) => a.gems > 0);
-          if (carrier) return { x: carrier.x + ownSide * 1.2 * T, y: carrier.y, kind: 'guard' };
+          if (carrier) return Object.assign(P(carrier.x, carrier.y, 1.2 * T, 0), { kind: 'guard' });
         }
         if (eg >= 10) { // chasser le porteur ennemi
           let tgt = null; for (const e of M.ents) if (e.alive && e.team === enemy && (!tgt || e.gems > tgt.gems)) tgt = e;
@@ -130,23 +133,24 @@
         let best = null, bd = 12 * T;
         for (const it of M.items) if (it.type === 'gem') { const d = G.dist(b.x, b.y, it.x, it.y); if (d < bd && (b.spawnIdx !== 2 || d < 6 * T)) { bd = d; best = it; } }
         if (best) return { x: best.x, y: best.y, kind: 'gem' };
-        if (b.spawnIdx === 0) return { x: mine.x + ownSide * -1.5 * T, y: mine.y, kind: 'mine' };
-        return { x: mine.x - ownSide * 2.2 * T, y: mine.y + (b.spawnIdx === 1 ? -3 : 3) * T, kind: 'hold' };
+        if (b.spawnIdx === 0) return Object.assign(P(mine.x, mine.y, -1.5 * T, 0), { kind: 'mine' });
+        return Object.assign(P(mine.x, mine.y, -2.2 * T, (b.spawnIdx === 1 ? -3 : 3) * T), { kind: 'hold' });
       }
       case 'brawlball': {
-        const B = M.ball, gx = my === 0 ? mw - 2.2 * T : 2.2 * T, ownGx = my === 0 ? 2.2 * T : mw - 2.2 * T, gy = mh / 2;
-        if (b.hasBall) return { x: gx, y: gy, kind: 'score' };
+        const B = M.ball, gc = (g) => ({ x: (g.x0 + g.x1) / 2, y: (g.y0 + g.y1) / 2 });
+        const EG = gc(M.map.goals.find((g) => g.team !== my) || M.map.goals[0]), OG = gc(M.map.goals.find((g) => g.team === my) || M.map.goals[1]);
+        if (b.hasBall) return { x: EG.x, y: EG.y, kind: 'score' };
         const mate = allies.find((a) => a.hasBall);
-        if (mate) return { x: Math.max(1.5 * T, Math.min(mw - 1.5 * T, mate.x + ownSide * 3 * T)), y: mate.y + (b.spawnIdx === 1 ? -2 : 2) * T, kind: 'escort' };
+        if (mate) return Object.assign(P(mate.x, mate.y, 3 * T, (b.spawnIdx === 1 ? -2 : 2) * T), { kind: 'escort' });
         if (B.owner && B.owner.team !== my) {
-          if (b.spawnIdx === 2) return { x: ownGx + ownSide * 3 * T, y: gy + G.clamp(B.owner.y - gy, -2.5 * T, 2.5 * T), kind: 'keeper' };
+          if (b.spawnIdx === 2) return Object.assign(P(OG.x, OG.y, 3 * T, G.clamp(V ? B.owner.x - OG.x : B.owner.y - OG.y, -2.5 * T, 2.5 * T)), { kind: 'keeper' });
           return { x: B.owner.x, y: B.owner.y, kind: 'chase' };
         }
         // balle libre : les deux plus proches y vont
         const mine = [b].concat(allies).filter((a) => !a.hasBall).sort((a, c) => G.dist(a.x, a.y, B.x, B.y) - G.dist(c.x, c.y, B.x, B.y));
         const rank = mine.indexOf(b);
         if (rank === 0 || (rank === 1 && b.spawnIdx !== 2)) return { x: B.x, y: B.y, kind: 'ball' };
-        return { x: G.lerp(ownGx, B.x, 0.35), y: G.lerp(gy, B.y, 0.5), kind: 'defend' };
+        return { x: G.lerp(OG.x, B.x, V ? 0.5 : 0.35), y: G.lerp(OG.y, B.y, V ? 0.35 : 0.5), kind: 'defend' };
       }
       case 'heist': {
         const es = M.safes[enemy], os = M.safes[my];
@@ -154,16 +158,16 @@
         let threat = null;
         for (const e of M.ents) if (e.alive && e.team === enemy && G.dist(e.x, e.y, os.x, os.y) < 7.5 * T) { if (!threat || G.dist(e.x, e.y, os.x, os.y) < G.dist(threat.x, threat.y, os.x, os.y)) threat = e; }
         if (threat && (b.spawnIdx === 2 || G.dist(b.x, b.y, os.x, os.y) < 9 * T)) return { x: threat.x, y: threat.y, kind: 'defend' };
-        if (b.spawnIdx === 2 && !(M.safes[my].hp < M.safes[enemy].hp * 0.5)) return { x: os.x + ownSide * 5 * T, y: os.y + G.rr(-1, 1) * 0, kind: 'guard' };
+        if (b.spawnIdx === 2 && !(M.safes[my].hp < M.safes[enemy].hp * 0.5)) return Object.assign(P(os.x, os.y, 5 * T, 0), { kind: 'guard' });
         const want = Math.min(b.def.aiRange, 6) * T * 0.9;
         const off = (b.spawnIdx - 1) * 1.6 * T;
-        return { x: es.x - ownSide * (want + 80), y: es.y + off, kind: 'attack' };
+        return Object.assign(P(es.x, es.y, -(want + 80), off), { kind: 'attack' });
       }
       case 'hotzone': {
         // aller vers la zone non contrôlée la plus proche (ou aider à défendre)
         let best = null, bs = 1e9;
         for (const c of M.caps) { const d = G.dist(b.x, b.y, c.x, c.y) + (c.state === my ? 5 * T : 0) - (c.state === 2 ? 3 * T : 0); if (d < bs) { bs = d; best = c; } }
-        if (b.hp < b.maxhp * 0.3) return { x: M.map.spawns[my][1].x + ownSide * 3 * T, y: M.map.spawns[my][1].y, kind: 'retreat' };
+        if (b.hp < b.maxhp * 0.3) return Object.assign(P(M.map.spawns[my][1].x, M.map.spawns[my][1].y, 3 * T, 0), { kind: 'retreat' });
         return best ? { x: best.x + (b.spawnIdx - 1) * 20, y: best.y + (b.spawnIdx - 1) * 25, kind: 'zone2' } : { x: mw / 2, y: mh / 2, kind: 'center' };
       }
       case 'boss': {
@@ -191,9 +195,9 @@
       case 'bounty': {
         let near = null, nd = 1e9;
         for (const e of M.ents) if (e.alive && e.team === enemy) { const d = G.dist(b.x, b.y, e.x, e.y); if (d < nd) { nd = d; near = e; } }
-        if (b.hp < b.maxhp * 0.4) return { x: M.map.spawns[my][1].x + ownSide * 3 * T, y: M.map.spawns[my][1].y, kind: 'retreat' };
+        if (b.hp < b.maxhp * 0.4) return Object.assign(P(M.map.spawns[my][1].x, M.map.spawns[my][1].y, 3 * T, 0), { kind: 'retreat' });
         if (near && nd < 11 * T) return { x: near.x, y: near.y, kind: 'hunt' };
-        return { x: mw / 2 + (b.spawnIdx - 1) * 2 * T * 0 - ownSide * 1 * T, y: mh / 2 + (b.spawnIdx - 1) * 4 * T, kind: 'center' };
+        return Object.assign(P(mw / 2, mh / 2, -1 * T, (b.spawnIdx - 1) * 4 * T), { kind: 'center' });
       }
       case 'showdown': {
         const z = M.zone, m = 2.2 * T;
@@ -335,11 +339,11 @@
     };
     if (b.hasBall) {
       // kick vers le but quand l'angle est bon ou sous pression
-      const gx = b.team === 0 ? M.w * T - 2.2 * T : 2.2 * T, gy = M.h * T / 2;
-      const dgx = Math.abs(gx - b.x);
+      const eg = M.map.goals.find((g) => g.team !== b.team) || M.map.goals[0], gx = (eg.x0 + eg.x1) / 2, gy = (eg.y0 + eg.y1) / 2;
+      const dgx = M.map.vertical ? Math.abs(gy - b.y) : Math.abs(gx - b.x);
       const pressured = enemiesOf(M, b).some((e) => G.dist(e.x, e.y, b.x, b.y) < 2.4 * T);
       if (ai.fireT <= 0 && b.ammo >= 1 && ((dgx < 9 * T && Sim.lineClear(M, b.x, b.y, gx, gy, true)) || (pressured && dgx < 13 * T && Sim.lineClear(M, b.x, b.y, gx, gy, true)))) {
-        Sim.tryAttack(M, b, aimTo(gx, gy + G.rr(-1, 1) * T * 0.8), 0);
+        Sim.tryAttack(M, b, M.map.vertical ? aimTo(gx + G.rr(-1, 1) * T * 0.8, gy) : aimTo(gx, gy + G.rr(-1, 1) * T * 0.8), 0);
         ai.fireT = 0.5;
       }
     } else if (ai.fireT <= 0) {
