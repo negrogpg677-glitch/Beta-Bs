@@ -124,6 +124,17 @@ class Cl {
   D.clear(); E.send({ t: 'invite', pid: D.pid, mode: 'bounty' }); const inv = await D.wait('invited');
   ok(/^[A-Z0-9]{5}$/.test(inv.code) && inv.from === 'Eli', 'invitation reçue avec le code d\'équipe');
   D.send({ t: 'party_join', code: inv.code }); await sleep(250); ok(D.lastOf('party').party.members.length === 2, 'rejoindre via l\'invitation');
+  ok(inv.fromPid === E.pid && typeof inv.brawler === 'string' && E.lastOf('invite_sent') && E.lastOf('invite_sent').pid === D.pid, 'invitation : carte de l\'expéditeur (brawler, trophées) + confirmation d\'envoi');
+  // chat d'équipe en temps réel
+  D.clear(); E.clear(); E.send({ t: 'party_chat', text: 'Salut <b>équipe</b> !' }); const cm = await D.wait('party_chat');
+  ok(cm.name === 'Eli' && cm.text === 'Salut béquipe/b !' && !/[<>]/.test(cm.text), 'chat d\'équipe reçu en temps réel (texte nettoyé : « ' + cm.text + ' »)');
+  E.send({ t: 'party_chat', text: 'spam' }); await sleep(150); ok(!D.msgs.some((m) => m.t === 'party_chat' && m.text === 'spam'), 'anti-spam du chat');
+  await sleep(700); E.send({ t: 'party_chat', text: 'GG !', q: 1 }); await D.wait('party_chat'); await sleep(100);
+  D.send({ t: 'party_get' }); await sleep(200); const hist = (D.lastOf('party').party.chat || []).map((m) => m.text);
+  ok(hist.includes('GG !'), 'historique du chat transmis avec l\'équipe (' + hist.length + ' messages)');
+  // refus et annulation d'invitation
+  E.clear(); D.send({ t: 'invite_decline', pid: E.pid }); ok((await E.wait('invite_declined')).pid === D.pid, 'refus d\'invitation signalé à l\'expéditeur');
+  D.clear(); E.send({ t: 'invite_cancel', pid: D.pid }); ok((await D.wait('invite_cancelled')).from === E.pid, 'annulation d\'invitation signalée à l\'invité');
   D.send({ t: 'party_leave' }); E.send({ t: 'party_leave' });
   D.clear(); E.clear(); D.send({ t: 'club_create', name: 'Les Tests', tag: 'TST' }); const cl = await D.wait('club'); ok(cl.club && cl.club.tag === 'TST', 'création de club');
   E.send({ t: 'club_list' }); const cll = await E.wait('club_list'); ok(cll.list.some((x) => x.name === 'Les Tests'), 'liste des clubs');

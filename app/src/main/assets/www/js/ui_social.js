@@ -88,12 +88,7 @@
   Net.on('toast', (m) => UI.toast(m.msg, 3000));
 
   /* ---------- invitations reçues ---------- */
-  Net.on('invited', (m) => {
-    if (G.App.state === 'match') return;
-    G.Audio.sfx('go'); G.vibrate(40);
-    const o = el(`<div class="invite"><div><b>${esc(m.from)}</b> vous invite à jouer !<br><small>${esc((G.MODES[m.mode] || {}).name || '')}</small></div><button class="btn small green" data-act="invAccept" data-code="${esc(m.code)}">Rejoindre</button><button class="btn small gray" data-act="invClose">✕</button></div>`);
-    $('#ui').appendChild(o); setTimeout(() => o.remove(), 20000);
-  });
+  Net.on('invited', (m) => { if (UI.showInvite) UI.showInvite(m); });
   ACT.invAccept = (a) => { const code = a.dataset.code; a.closest('.invite').remove(); Net.sendProfile(); Net.joinParty(code); setTimeout(() => ACT.team && ACT.team(), 200); };
   ACT.invClose = (a) => a.closest('.invite').remove();
 

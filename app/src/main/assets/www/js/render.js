@@ -674,7 +674,7 @@
       const wt = M.result.winnerTeam;
       pose = M.mode === 'showdown' ? (b.place === 1 || (b === M.player && M.result.win) ? 'win' : 'lose') : (wt === b.team ? 'win' : wt === -1 ? null : 'lose');
     }
-    const o = { x: b.x, y: b.y, sc: 1.08 * (b.big || 1), aim: b.ang, t: time + b.idx * 1.7, seed: b.idx * 0.9, walk: b.walkT, moving: b.moving, flash: b.flash, recoil: b.recoil, z: b.z || 0,
+    const o = { key: b.idx, x: b.x, y: b.y, sc: 1.08 * (b.big || 1), aim: b.ang, t: time + b.idx * 1.7, seed: b.idx * 0.9, walk: b.walkT, moving: b.moving, flash: b.flash, recoil: b.recoil, z: b.z || 0,
       roll: b.roll ? b.roll.t / b.roll.dur : (b.rollT >= 0 && b.rollT < 0.3 ? b.rollT / 0.3 : undefined),
       alpha: b.invuln > 0 && !b.jump && !b.roll && !(b.rollT >= 0 && b.rollT < 0.3) ? 0.6 + Math.sin(time * 30) * 0.2 : (inBush && isMe ? 0.7 : 1), frozen: b.freeze > 0, angry: M.state === 'play',
       lean: b.moving ? Math.sign(Math.cos(b.face)) : 0, superReady: b.superCharge >= 1 && b.alive, deathT: b.alive ? undefined : b.deathT, deathAng: b.deathAng !== undefined ? b.deathAng : b.face, pose };

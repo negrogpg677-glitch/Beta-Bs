@@ -184,9 +184,11 @@
         <button class="mbtn sm" data-act="boxes">${ic('chest')}<span>Coffres</span>${sv.boxes ? '<span class="badge">' + sv.boxes + '</span>' : ''}</button>
       </div>
       <div class="stage2">
-        <button class="tslot l" data-act="team" aria-label="Inviter">+</button>
-        <canvas class="hero" width="640" height="640" data-act="pokeHero"></canvas>
-        <button class="tslot r" data-act="team" aria-label="Inviter">+</button>
+        <div class="teambar" hidden>Code d'équipe : <b></b><button class="btn small red" data-act="teamLeaveHome">Quitter l'équipe</button></div>
+        <div class="mate l"><button class="tslot" data-act="invitePanel" aria-label="Inviter un ami">+</button></div>
+        <canvas class="hero" width="640" height="640" data-act="pokeHero"></canvas><div class="hero-bubble"></div>
+        <div class="mate r"><button class="tslot" data-act="invitePanel" aria-label="Inviter un ami">+</button></div>
+        <button class="chatbtn" data-act="chatOpen" hidden aria-label="Chat d'équipe">💬<span class="badge" hidden></span></button>
         <button class="hanger" data-act="goBrawlers" aria-label="Apparences">${HANGER}</button>
         <div class="hplate" data-act="goBrawlers"><span class="lvl">${sv.levels[id] || 1}</span><b>${def.name}</b><span class="ht">${ic('trophy')} ${fmt(sv.trophies[id] || 0)}</span></div>
       </div>
@@ -201,6 +203,8 @@
     G.Render.portrait($('.prof canvas', home), avId, skinOf(avId), 0, { aim: 0.4, zoom: 1.5, y: 0.95, shadow: false });
     if (UI.updateNetDot) UI.updateNetDot();
     animate($('.hero', home), id, skinOf(id), { zoom: 0.95, y: 0.76, aim: -0.35, idleShow: true });
+    if (G.Char3D) G.Char3D.bindRotate($('.hero', home));
+    setTimeout(() => { if (UI.renderMates) UI.renderMates(); }, 0);
   };
   function nav(active) {
     const items = [['shop', 'bag', 'Boutique'], ['brawlers', 'user', 'Brawlers'], ['home', 'home', 'Accueil'], ['road', 'flag', 'Trophées'], ['social', 'friends', 'Social']];
@@ -211,7 +215,7 @@
 
   /* ---------- actions ---------- */
   const ACT = {};
-  ACT.pokeHero = (a) => { if (G.Char3D && G.Char3D.ok) { G.Char3D.poke(a); G.Audio.sfx('pickup', 1.2); G.vibrate(15); } };
+  ACT.pokeHero = (a) => { if (a._dragged) { a._dragged = false; return; } if (G.Char3D && G.Char3D.ok) { G.Char3D.poke(a); G.Audio.sfx('pickup', 1.2); G.vibrate(15); } };
   ACT.playMain = (a) => { if (G.Net && G.Net.serverUrl() && G.Net.status === 'online') ACT.onlinePlay(a); else ACT.play(a); };
   ACT.goClub = () => { G.Audio.sfx('ui'); UI.socialTab = 'club'; UI.show('social'); };
   ACT.nav = (a) => { G.Audio.sfx('ui'); UI.show(a.dataset.to); };

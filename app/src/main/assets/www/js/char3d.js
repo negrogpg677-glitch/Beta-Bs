@@ -158,11 +158,120 @@
   const rim = new THREE.DirectionalLight(0xa8d8ff, 0.8); rim.position.set(3, 2, -4); scene.add(rim);
   const camP = new THREE.PerspectiveCamera(26, 1, 0.1, 50), camM = new THREE.OrthographicCamera(-1.6, 1.6, 1.6, -1.6, 0.1, 50);
   let cur = null;
-  function show(m) { if (cur === m.root) return; if (cur) scene.remove(cur); scene.add(m.root); cur = m.root; }
+  function show(m) { if (cur === m.root) return; // m = modèle généré ou instance animée
+ if (cur) scene.remove(cur); scene.add(m.root); cur = m.root; }
   function draw(w, h, cam) { const r = renderer(); r.setViewport(0, 0, w, h); r.setScissor(0, 0, w, h); r.clear(); r.render(scene, cam); }
+
+  /* ---------- vrais modèles animés (squelette + animations), chargés à la demande ---------- */
+  const RIG = { sherry: 'adventurer', rex: 'soldier', taurus: 'orc_brute', boomer: 'dino', luna: 'astronaut', spiky: 'mushroom_king', corbeau: 'rogue', frost: 'hooded_adventurer', pyro: 'demon', volt: 'robot_gunner', maree: 'demon_blue', nimbus: 'alien_big', grimm: 'skeleton_crew', tictac: 'monarch', zen: 'ninja_brute', scarab: 'mech', bumper: 'mech_heavy', jongleur: 'pirate', yeti: 'yeti', robot: 'robot_large' };
+  C3.RIG = RIG;
+  const rigs = {};
+  function loadRig(name) {
+    if (rigs[name]) return rigs[name];
+    const r = (rigs[name] = { state: 'loading' });
+    const go = () => {
+      try {
+        const b64 = window.G3M && window.G3M[name]; if (!b64 || !THREE.GLTFLoader) { r.state = 'error'; return; }
+        const bin = atob(b64), buf = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+        const ld = new THREE.GLTFLoader(); if (window.MeshoptDecoder) ld.setMeshoptDecoder(window.MeshoptDecoder);
+        ld.parse(buf.buffer, '', (g) => {
+          g.scene.updateMatrixWorld(true); const box = skBox(g.scene), sz = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3());
+          g.norm = { s: 2.25 / Math.max(0.01, sz.y), cx: c.x, cz: c.z, minY: box.min.y }; r.gltf = g; r.state = 'ready'; delete window.G3M[name];
+        }, () => { r.state = 'error'; });
+      } catch (e) { r.state = 'error'; }
+    };
+    if (window.G3M && window.G3M[name]) go();
+    else { const sc = document.createElement('script'); sc.src = 'models/' + name + '.js'; sc.onload = go; sc.onerror = () => { r.state = 'error'; }; document.head.appendChild(sc); }
+    return r;
+  }
+  // boîte englobante réelle (os appliqués : la géométrie seule est exprimée dans l'espace du squelette)
+  function skBox(root) {
+    const box = new THREE.Box3(), v = new THREE.Vector3();
+    root.traverse((o) => {
+      if (o.isSkinnedMesh) { const pos = o.geometry.attributes.position; for (let i = 0; i < pos.count; i += 3) { v.fromBufferAttribute(pos, i); o.boneTransform(i, v); v.applyMatrix4(o.matrixWorld); box.expandByPoint(v); } }
+      else if (o.isMesh) box.expandByObject(o);
+    });
+    return box;
+  }
+  C3.preload = (ids) => ids.forEach((id) => RIG[id] && loadRig(RIG[id]));
+  const PICK = { idle: ['Idle_Neutral', 'Idle', 'idle', 'Flying_Idle'], run: ['Run_Gun', 'Run', 'sprint', 'Walk', 'walk'], shoot: ['Gun_Shoot', 'Idle_Gun_Shoot', 'Idle_Shoot', 'Shoot', 'Shoot_Small', 'Dagger_Attack', 'Punch', 'Attack', 'Weapon', 'Sword'],
+    win: ['Wave', 'Dance', 'Hello', 'Yes', 'emote-yes', 'Jump'], lose: ['No', 'emote-no', 'HitReact', 'HitRecieve'], death: ['Death', 'die', 'Dead'], roll: ['Roll', 'Duck', 'Jump'], poke: ['Wave', 'Hello', 'Yes', 'Dance', 'Jump'] };
+  const findClip = (anims, keys) => { for (const k of keys) { const c = anims.find((a) => a.name.split('|').pop() === k); if (c) return c; } for (const k of keys) { const c = anims.find((a) => a.name.split('|').some((x) => x === k || x.startsWith(k))); if (c) return c; } return null; };
+  function tint(m, sk, id) {
+    if (sk.hue) m.color.offsetHSL(sk.hue / 360, 0, 0);
+    if (sk.gold) { m.color.lerp(new THREE.Color(0xf5c518), 0.55); if ('metalness' in m) { m.metalness = 0.6; m.roughness = 0.35; } }
+    if (sk.fx === 'ghost') { m.transparent = true; m.opacity = 0.6; }
+    if (sk.fx === 'crystal' && m.emissive) m.emissive.setRGB(0.05, 0.22, 0.28);
+  }
+  function makeInst(r, id, skin) {
+    const g = r.gltf, model = THREE.SkeletonUtils.clone(g.scene), sk = G.SKIN[skin] || {};
+    model.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; o.material = Array.isArray(o.material) ? o.material.map((x) => x.clone()) : o.material.clone(); (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => { tint(m, sk, id); m.userData.em = m.emissive ? m.emissive.clone() : null; }); } });
+    const n = g.norm, root = new THREE.Group(); model.scale.setScalar(n.s); model.position.set(-n.cx * n.s, -n.minY * n.s, -n.cz * n.s); root.add(model);
+    if (id === 'robot') root.scale.setScalar(1.25);
+    const clips = {}; for (const k in PICK) clips[k] = findClip(g.animations, PICK[k]);
+    return { root, model, mixer: new THREE.AnimationMixer(model), clips, cur: null, act: null, last: performance.now(), id, skin, fx: sk.fx || null };
+  }
+  function play(inst, key, once) {
+    const clip = inst.clips[key] || inst.clips.idle; if (!clip) return;
+    if (inst.cur === key && !once) return;
+    const a = inst.mixer.clipAction(clip); a.reset(); a.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity); a.clampWhenFinished = !!once; a.enabled = true;
+    if (inst.act && inst.act !== a) a.crossFadeFrom(inst.act, 0.18, false); a.play(); inst.act = a; inst.cur = key; inst.once = !!once; inst.onceT = once ? clip.duration : 0;
+  }
+  const insts = new WeakMap(), ents = new Map();
+  function getInst(key, map, id, skin) {
+    const name = RIG[id]; if (!name) return null; const r = loadRig(name); if (r.state !== 'ready') return null;
+    let i = map.get(key); if (!i || i.id !== id || i.skin !== skin) { i = makeInst(r, id, skin); map.set(key, i); play(i, 'idle'); }
+    return i;
+  }
+  function stepInst(i, want, t) {
+    const now = performance.now(), dt = Math.min(0.1, (now - i.last) / 1000); i.last = now;
+    if (i.once) { i.onceT -= dt; if (i.onceT <= 0.05 && want.k !== 'death') i.once = false; }
+    if (!i.once || want.force) { if (want.once) play(i, want.k, true); else play(i, want.k); }
+    i.mixer.update(dt * (want.speed || 1));
+    const fl = want.flash || 0;
+    i.model.traverse((o) => { if (o.isMesh) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => { if (!m.emissive || !m.userData.em) return; if (fl > 0) m.emissive.setRGB(fl, fl, fl); else if (i.fx === 'inferno') m.emissive.setRGB(0.3 + Math.sin(t * 12) * 0.1, 0.08, 0); else if (i.fx === 'rainbow') m.emissive.setHSL((t * 0.25) % 1, 0.8, 0.15); else if (want.frozen) m.emissive.setRGB(0.1, 0.3, 0.5); else m.emissive.copy(m.userData.em); }); });
+  }
+  // rotation du personnage au doigt (salon) : on glisse pour tourner, il revient de face quand on lâche
+  C3.bindRotate = function (cv) {
+    if (!cv || cv._rot) return; cv._rot = { yaw: 0, drag: false, x: 0, moved: 0, rel: 0 };
+    cv.style.touchAction = 'none';
+    cv.addEventListener('pointerdown', (e) => { const r = cv._rot; r.drag = true; r.x = e.clientX; r.moved = 0; try { cv.setPointerCapture(e.pointerId); } catch (er) { /* rien */ } });
+    cv.addEventListener('pointermove', (e) => { const r = cv._rot; if (!r.drag) return; const dx = e.clientX - r.x; r.x = e.clientX; r.moved += Math.abs(dx); r.yaw += dx * 0.014; });
+    const up = () => { const r = cv._rot; if (!r.drag) return; r.drag = false; r.rel = performance.now(); cv._dragged = r.moved > 8; };
+    cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up); cv.addEventListener('lostpointercapture', up);
+  };
+  function rotYaw(cv) { const r = cv._rot; if (!r) return 0; if (!r.drag && performance.now() - r.rel > 900) { r.yaw = Math.atan2(Math.sin(r.yaw), Math.cos(r.yaw)) * 0.9; } return r.yaw; }
 
   // portrait animé (salon, profil, résultats) dans un canevas 2D
   C3.portrait = function (cv, id, skin, t, opts) {
+    opts = opts || {};
+    const inst = getInst(cv, insts, id, skin);
+    if (inst) return portraitRig(cv, inst, t, opts);
+    return portraitProc(cv, id, skin, t, opts);
+  };
+  function frame(cv, opts) {
+    const W = cv.width, H = cv.height, w = Math.min(S, W), h = Math.min(S, Math.round(w * H / W));
+    const z = opts.zoom || 1, ht = 3.2 / z;
+    camP.aspect = w / h; camP.fov = 26; camP.updateProjectionMatrix();
+    const dist = ht / (2 * Math.tan((camP.fov * Math.PI) / 360)), cy = 1.25 + (0.76 - (opts.y || 0.76)) * ht;
+    camP.position.set(0, cy + dist * 0.12, dist); camP.lookAt(0, cy, 0);
+    return { W, H, w, h };
+  }
+  function blit(cv, f, opts) {
+    draw(f.w, f.h, camP);
+    const c = cv.getContext('2d'); c.clearRect(0, 0, f.W, f.H);
+    c.save(); c.globalAlpha = 0.35; c.fillStyle = '#000'; c.beginPath(); c.ellipse(f.W / 2, f.H * (opts.y || 0.76) + f.H * 0.12, f.W * 0.2, f.W * 0.05, 0, 0, Math.PI * 2); c.fill(); c.restore();
+    c.drawImage(CV, 0, S - f.h, f.w, f.h, 0, 0, f.W, f.H);
+  }
+  function portraitRig(cv, inst, t, opts) {
+    const pk = C3.pokeId === cv ? (performance.now() - C3._pokeAt) / 1000 : -1;
+    let want = { k: opts.pose === 'win' ? 'win' : opts.pose === 'lose' ? 'lose' : 'idle' };
+    if (pk >= 0 && pk < 0.05) want = { k: 'poke', once: true, force: true };
+    stepInst(inst, want, t); show(inst);
+    inst.root.rotation.y = (opts.yaw !== undefined ? opts.yaw : -0.35) + rotYaw(cv) + (opts.spin ? t * 0.6 : 0);
+    blit(cv, frame(cv, opts), opts);
+  }
+  function portraitProc(cv, id, skin, t, opts) {
     opts = opts || {};
     const W = cv.width, H = cv.height, w = Math.min(S, W), h = Math.min(S, Math.round(w * H / W));
     const m = model(id, skin); show(m);
@@ -178,16 +287,25 @@
     // ombre au sol
     c.save(); c.globalAlpha = 0.35; c.fillStyle = '#000'; c.beginPath(); c.ellipse(W / 2, H * (opts.y || 0.76) + H * 0.12, W * 0.2, W * 0.05, 0, 0, Math.PI * 2); c.fill(); c.restore();
     c.drawImage(CV, 0, S - h, w, h, 0, 0, W, H);
-  };
+  }
   C3.poke = function (cv) { C3.pokeId = cv; C3.pokeT = performance.now() / 1000 - 0; C3._pokeAt = performance.now(); };
 
   // personnage en combat : rendu dans une tuile puis copié dans le canevas 2D (les murs passent ensuite par-dessus)
   const TILE = 200;
   C3.drawMatch = function (c, id, skin, o) {
+    const inst = o.key !== undefined ? getInst(o.key, ents, id, skin) : null;
+    if (inst) {
+      const fire = (o.recoil || 0) > (inst.rec || 0) + 0.2; inst.rec = o.recoil || 0;
+      const want = o.deathT !== undefined ? { k: 'death', once: true, force: inst.cur !== 'death' } : o.pose === 'win' ? { k: 'win' } : o.pose === 'lose' ? { k: 'lose' } : (o.roll !== undefined && o.roll >= 0 && o.roll < 1 && inst.cur !== 'roll') ? { k: 'roll', once: true, force: true } : fire ? { k: 'shoot', once: true, force: true } : { k: o.moving ? 'run' : 'idle', speed: o.moving ? 1.25 : 1 };
+      want.flash = (o.flash || 0) > 0 ? Math.min(1, o.flash * 8) : 0; want.frozen = o.frozen;
+      stepInst(inst, want, o.t); show(inst);
+      const a = o.deathT !== undefined ? o.deathAng : o.aim; inst.root.rotation.y = Math.atan2(Math.cos(a), Math.sin(a));
+    } else {
     const m = model(id, skin); show(m);
     pose(m, { t: o.t, seed: o.seed, moving: o.moving, walk: o.walk, recoil: o.recoil, flash: o.flash, frozen: o.frozen, angry: o.angry, roll: o.roll, deathT: o.deathT, pose: o.pose, look: false });
     const a = o.deathT !== undefined ? o.deathAng : o.aim;
     m.root.rotation.y = Math.atan2(Math.cos(a), Math.sin(a));
+    }
     camM.position.set(0, 1.1 + 6 * Math.sin(0.82), 6 * Math.cos(0.82)); camM.lookAt(0, 1.1, 0);
     draw(TILE, TILE, camM);
     const sz = 132 * (o.sc || 1), al = o.deathT !== undefined ? Math.max(0, 1 - o.deathT / 0.8) : (o.alpha === undefined ? 1 : o.alpha);

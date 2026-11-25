@@ -31,8 +31,8 @@
       if (Math.hypot(x - L.dgX, y - L.dgY) < L.dgR * 1.45) { In.pending.push({ kind: 'dodge' }); In.dodgeFx = 0.15; return; }
       // le bouton le plus proche gagne quand les zones de toucher se chevauchent
       const hitS = ds < L.supR * 1.6, hitA = da < L.atkR * 1.55; // un nouveau doigt reprend toujours le bouton (relâchement manqué = plus de blocage)
-      if (hitS && (!hitA || ds / L.supR < da / L.atkR)) { stickStart(In.sup, e.pointerId, L.supX, L.supY); return; }
-      if (hitA) { stickStart(In.atk, e.pointerId, L.atkX, L.atkY); return; }
+      if (hitS && (!hitA || ds / L.supR < da / L.atkR)) { stickStart(In.sup, e.pointerId, x, y); return; }
+      if (hitA) { stickStart(In.atk, e.pointerId, x, y); return; }
       const lefty = G.Save.data.settings.lefty;
       const onMoveSide = lefty ? x > In.W * 0.45 : x < In.W * 0.55;
       if (onMoveSide && (!In.joy.active || In.joy.id !== e.pointerId)) { // joystick flottant ; un nouveau doigt reprend la main : il apparaît sous le doigt (gardé entièrement à l'écran)
@@ -128,16 +128,7 @@
     } else if (b && b.drag) {
       ang = Math.atan2(b.dy, b.dx); const L = G.Render.layout(In.W, In.H);
       dist = G.clamp(b.len / (L.atkR * 1.5), 0.1, 1) * range; hasDrag = true;
-      if (G.Save.data.settings.aimAssist && !(spec.type === 'lobArea' || spec.type === 'barrage' || spec.lob)) {
-        let best = null, bd = 0.11;
-        for (const e of M.ents) {
-          if (!e.alive || e.team === p.team || !G.Sim.canSee(M, p, e)) continue;
-          const d = G.dist(p.x, p.y, e.x, e.y); if (d > range * 1.05) continue;
-          const da = Math.abs(G.angDiff(ang, Math.atan2(e.y - p.y, e.x - p.x))) * (1 + d / 900);
-          if (da < bd) { bd = da; best = e; }
-        }
-        if (best) { ang = Math.atan2(best.y - p.y, best.x - p.x); dist = Math.min(range, G.dist(p.x, p.y, best.x, best.y)); }
-      }
+      // visée manuelle : on tire exactement là où le doigt vise (l'aide à la visée ne s'applique qu'au tir automatique par simple toucher)
     }
     if (G.Dev && G.Dev.cfg && G.Dev.cfg.aim && !M.net) hasDrag = false; // DEV : aimbot
     if (!hasDrag) {

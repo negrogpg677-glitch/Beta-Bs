@@ -84,8 +84,25 @@ module.exports = function (ctx) {
         let party = parties.get(c.party);
         if (!party) party = ctx.createParty(c, msg.mode || 'gemgrab');
         c.lastInvite = Date.now();
-        send(target, { t: 'invited', from: p.name, code: party.code, mode: party.mode });
-        send(c, { t: 'toast', msg: 'Invitation envoyée à ' + players[fid].name });
+        send(target, { t: 'invited', from: p.name, fromPid: pid, trophies: c.trophies || p.trophies || 0, brawler: c.brawler || 'sherry', skin: c.skin || 'classic', code: party.code, mode: party.mode });
+        send(c, { t: 'invite_sent', pid: fid, name: players[fid].name });
+        return true;
+      }
+      case 'invite_cancel': { // l'expéditeur annule : la fenêtre se ferme chez l'invité
+        const t2 = clients.get(msg.pid); if (t2 && (p.friends || []).includes(msg.pid)) send(t2, { t: 'invite_cancelled', from: pid });
+        return true;
+      }
+      case 'invite_decline': { // l'invité refuse : l'expéditeur voit « Refusée »
+        const t2 = clients.get(msg.pid); if (t2) send(t2, { t: 'invite_declined', pid, name: p.name });
+        return true;
+      }
+      case 'party_chat': { // chat d'équipe en temps réel (texte nettoyé, limité en fréquence, 20 derniers messages conservés)
+        const party = parties.get(c.party); if (!party) return true;
+        const now = Date.now(); if (now - (c.lastPChat || 0) < 600) return true; c.lastPChat = now; // compteur distinct du chat de club
+        const text = String(msg.text || '').replace(/[\u0000-\u001f\u007f<>]/g, '').trim().slice(0, 140); if (!text) return true;
+        const m = { pid, name: p.name, text, ts: now, q: msg.q ? 1 : 0 };
+        (party.chat = party.chat || []).push(m); if (party.chat.length > 30) party.chat.shift();
+        for (const mem of party.members) { const cl = clients.get(mem); if (cl) send(cl, Object.assign({ t: 'party_chat' }, m)); }
         return true;
       }
       case 'club_list': {

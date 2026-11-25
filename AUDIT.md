@@ -90,3 +90,15 @@ Nouveau : carnet de combat (25 dernières parties, joueurs de chaque camp), fich
 - Salon : héros 3D au centre (on peut le toucher), fond animé, entrées animées des panneaux, bouton Jouer pulsant.
 - Profil complet (deux panneaux) : carte 3D, niveau, rang, code ami, trophées/record, victoires équipe/survie, meilleure série, collection de brawlers (changement de personnage animé), statistiques, accès au carnet de combat.
 - 3D en combat : option « expérimental » (désactivée par défaut) — un rendu 3D par personnage et par image est coûteux sur Android ; à optimiser (atlas en une passe) avant de l'activer par défaut.
+
+## v3.1 — tirs précis, vrais personnages animés, équipe dans le salon, invitations, chat
+| Problème | Correction |
+|---|---|
+| Tirs « incontrôlables » : direction calculée depuis le centre du bouton (pas depuis le doigt) | Visée mesurée depuis le point où le doigt se pose |
+| L'aide à la visée détournait le tir manuel vers l'ennemi voisin (et changeait de cible) | Visée manuelle = exactement la direction du doigt ; l'aide ne sert qu'au tir par simple toucher |
+Test `tools/test-aim.js` : 4 brawlers (tir droit, fusil à pompe, cloche, rafale), 8 directions, doigt hors centre, ennemis à côté de la ligne → écart ≤ 2° (le tremblement simulé).
+- **Vrais personnages 3D animés** : 20 modèles avec squelette et animations (attente, course, tir, victoire, défaite, mort, roulade) issus de `@netforge/asset-library-files` (MIT, modèles déclarés CC0, voir `www/models/LICENCE.txt`), chargés à la demande ; décodeur meshopt + GLTFLoader (three.js r149, MIT) convertis en scripts classiques. Rotation du personnage au doigt dans le salon.
+- **Équipe dans le salon** : les coéquipiers apparaissent en 3D à côté de son personnage (synchronisé par le serveur), carte « INVITATION » en attente avec annulation, bandeau code d'équipe / quitter.
+- **Invitations** : liste d'amis avec statut + INVITER, fenêtre « Invitation d'équipe » (carte du joueur en 3D, REFUSER / ACCEPTER, masquer 10 min), refus et annulation signalés en temps réel.
+- **Chat d'équipe en ligne** (serveur `party_chat`) : messages écrits, discussion rapide, émojis, bulles au-dessus des personnages, badge non lus, historique de 20 messages.
+Tests : `tools/test-team.js` (2 téléphones + serveur : 9/9), serveur 43/43, tactile 11/11.

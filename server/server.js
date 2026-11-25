@@ -55,7 +55,7 @@ let social = null; // initialisé plus bas (a besoin de createParty)
 /* ---------- équipes (parties) ---------- */
 function partyView(p) {
   return {
-    code: p.code, leader: p.leader, mode: p.mode, state: p.state, max: p.max,
+    code: p.code, leader: p.leader, mode: p.mode, state: p.state, max: p.max, chat: (p.chat || []).slice(-20),
     members: p.members.map((m) => { const c = clients.get(m); return { pid: m, name: c.name, brawler: c.brawler, skin: c.skin, level: c.level, trophies: c.trophies, ready: !!c.ready, online: !!c.ws }; }),
   };
 }
@@ -265,6 +265,7 @@ function onMessage(c, raw) {
       break;
     }
     case 'party_leave': if (c.party) leaveParty(c); break;
+    case 'party_get': { const pp = parties.get(c.party); if (pp) send(c, { t: 'party', party: partyView(pp) }); break; }
     case 'party_kick': {
       const p = parties.get(c.party); if (!p || p.leader !== c.pid || p.state !== 'idle') return;
       const k = clients.get(msg.pid); if (k && k.party === p.code && k.pid !== c.pid) { leaveParty(k); send(k, { t: 'kicked' }); }

@@ -1,0 +1,2 @@
+Modèles 3D : paquet npm @netforge/asset-library-files 0.2.0 (licence MIT, Copyright (c) 2026 NetNet Capital Management),
+qui déclare ses modèles CC0. Fichiers .glb d'origine encodés en base64 (un fichier par modèle, chargé à la demande).
