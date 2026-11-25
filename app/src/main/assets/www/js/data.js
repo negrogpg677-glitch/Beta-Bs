@@ -170,7 +170,7 @@
   G.BRAWLERS.forEach((b) => { b.gadget = G.GADGET_OF[b.id] || 'heal'; });
   G.EMOTES = ['😂', '😡', '👍', '😭', '🔥', '👋', '🤝', '💀'];
   /* comptes joueurs (Supabase) : URL du projet + clé publique « anon ». Voir COMPTES.md */
-  G.SUPABASE = { url: '', key: '' };
+  G.SUPABASE = { url: 'https://tsxglbzcfociwnfuebbc.supabase.co', key: 'sb_publishable_GlPtETUosacGitO-5XHFcg_zBL6KXOD' };
   G.DEFAULT_SERVER = 'beta-bs.onrender.com'; // adresse du serveur par défaut (ex. 'mon-jeu.onrender.com') ; modifiable dans Réglages
 
   /* skins : décalage de teinte global + doré */

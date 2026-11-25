@@ -48,7 +48,9 @@
     opt = opt || {};
     const cfg = A.config(); if (!cfg) throw fail('config', 'Les comptes en ligne ne sont pas configurés.');
     const h = Object.assign({ apikey: cfg.key, 'Content-Type': 'application/json' }, opt.headers || {});
-    h.Authorization = 'Bearer ' + (opt.auth !== false && A.session ? A.session.access_token : cfg.key);
+    // jeton du joueur si connecté ; sinon l'ancienne clé « anon » (JWT). Les nouvelles clés sb_publishable_… ne vont que dans « apikey ».
+    const bearer = opt.auth !== false && A.session ? A.session.access_token : (/^eyJ/.test(cfg.key) ? cfg.key : '');
+    if (bearer) h.Authorization = 'Bearer ' + bearer;
     let r;
     try {
       const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
