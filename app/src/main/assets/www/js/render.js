@@ -665,6 +665,7 @@
     rrect(c, s.x - 67, s.y - 101, 134 * k, 10, 5); c.fillStyle = col; c.fill();
   }
 
+  function charDraw(c, id, skin, o) { const C3 = G.Char3D; if (C3 && C3.enabled(true)) { try { C3.drawMatch(c, id, skin, o); return; } catch (e) { C3.failed = true; } } R.drawChar(c, id, skin, o); }
   function drawBrawler(c, M, b, time) {
     const isMe = b === M.player;
     const inBush = b.hidden || Sim_tileBush(M, b);
@@ -678,15 +679,15 @@
       alpha: b.invuln > 0 && !b.jump && !b.roll && !(b.rollT >= 0 && b.rollT < 0.3) ? 0.6 + Math.sin(time * 30) * 0.2 : (inBush && isMe ? 0.7 : 1), frozen: b.freeze > 0, angry: M.state === 'play',
       lean: b.moving ? Math.sign(Math.cos(b.face)) : 0, superReady: b.superCharge >= 1 && b.alive, deathT: b.alive ? undefined : b.deathT, deathAng: b.deathAng !== undefined ? b.deathAng : b.face, pose };
     if (!b.alive) { // animation d'élimination : le brawler tombe et s'efface
-      R.drawChar(c, b.id, b.skin, Object.assign(o, { shadow: true }));
+      charDraw(c, b.id, b.skin, Object.assign(o, { shadow: true }));
       return;
     }
     // anneau d'équipe au sol
     const tcol = isMe ? '#43e86a' : b.team === M.player.team ? '#3c9bff' : '#ff4a55';
     if (M.mode === 'showdown' && !isMe) c.strokeStyle = '#ff4a55'; else c.strokeStyle = tcol;
     c.globalAlpha = 0.9; c.lineWidth = 3.5; ell(c, b.x, b.y + 12, 25, 10, 0); c.stroke(); c.globalAlpha = 0.18; c.fillStyle = c.strokeStyle; c.fill(); c.globalAlpha = 1;
-    if (b.dash) { c.globalAlpha = 0.4; R.drawChar(c, b.id, b.skin, Object.assign({}, o, { x: b.x - b.dash.ax * 30, y: b.y - b.dash.ay * 30, shadow: false })); c.globalAlpha = 1; }
-    R.drawChar(c, b.id, b.skin, o);
+    if (b.dash) { c.globalAlpha = 0.4; charDraw(c, b.id, b.skin, Object.assign({}, o, { x: b.x - b.dash.ax * 30, y: b.y - b.dash.ay * 30, shadow: false })); c.globalAlpha = 1; }
+    charDraw(c, b.id, b.skin, o);
     if (b.stun > 0) { for (let i = 0; i < 3; i++) { const a = time * 6 + i * 2.1; c.fillStyle = '#ffe14a'; c.font = '16px sans-serif'; c.textAlign = 'center'; c.fillText('★', b.x + Math.cos(a) * 16, b.y - 46 + Math.sin(a) * 4); } }
     if (b.poison > 0) { circ(c, b.x + Math.sin(time * 5) * 8, b.y - 30 - ((time * 30) % 12), 3); c.fillStyle = '#c15bff'; c.fill(); }
     if (b.slowT > 0 && b.slowF < 1) { c.strokeStyle = 'rgba(160,230,255,0.8)'; c.lineWidth = 2; ell(c, b.x, b.y + 12, 28, 11, 0); c.stroke(); }

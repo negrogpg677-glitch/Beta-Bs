@@ -185,7 +185,7 @@
       </div>
       <div class="stage2">
         <button class="tslot l" data-act="team" aria-label="Inviter">+</button>
-        <canvas class="hero" width="640" height="640"></canvas>
+        <canvas class="hero" width="640" height="640" data-act="pokeHero"></canvas>
         <button class="tslot r" data-act="team" aria-label="Inviter">+</button>
         <button class="hanger" data-act="goBrawlers" aria-label="Apparences">${HANGER}</button>
         <div class="hplate" data-act="goBrawlers"><span class="lvl">${sv.levels[id] || 1}</span><b>${def.name}</b><span class="ht">${ic('trophy')} ${fmt(sv.trophies[id] || 0)}</span></div>
@@ -211,6 +211,7 @@
 
   /* ---------- actions ---------- */
   const ACT = {};
+  ACT.pokeHero = (a) => { if (G.Char3D && G.Char3D.ok) { G.Char3D.poke(a); G.Audio.sfx('pickup', 1.2); G.vibrate(15); } };
   ACT.playMain = (a) => { if (G.Net && G.Net.serverUrl() && G.Net.status === 'online') ACT.onlinePlay(a); else ACT.play(a); };
   ACT.goClub = () => { G.Audio.sfx('ui'); UI.socialTab = 'club'; UI.show('social'); };
   ACT.nav = (a) => { G.Audio.sfx('ui'); UI.show(a.dataset.to); };
@@ -304,6 +305,8 @@
       const s = S().settings;
       const tg = (k, label) => `<div class="setrow"><span>${label}</span><div class="toggle ${s[k] ? 'on' : ''}" data-act="toggle" data-k="${k}"></div></div>`;
       return `<h2>Réglages</h2>${tg('sound', 'Effets sonores')}${tg('music', 'Musique')}${tg('vibrate', 'Vibrations')}${tg('aimAssist', 'Aide à la visée')}${tg('lefty', 'Mode gaucher')}
+        <div class="setrow"><span>Personnages 3D (menus)</span><button class="btn small ${s.chars3d === false ? 'gray' : 'green'}" data-act="t3d">${s.chars3d === false ? 'Non' : 'Oui'}</button></div>
+        <div class="setrow"><span>3D en combat (expérimental)</span><button class="btn small ${s.chars3dMatch ? 'green' : 'gray'}" data-act="t3dm">${s.chars3dMatch ? 'Oui' : 'Non'}</button></div>
         <div class="setrow"><span>Taille des commandes</span><button class="btn small blue" data-act="ctrlSize">${(s.ctrlScale || 1) < 0.95 ? 'Petite' : (s.ctrlScale || 1) > 1.05 ? 'Grande' : 'Normale'}</button></div>
         <div class="setrow"><span>Qualité graphique</span><button class="btn small ${s.quality === 'high' ? 'green' : s.quality === 'medium' ? 'blue' : 'gray'}" data-act="quality">${s.quality === 'high' ? 'Haute' : s.quality === 'medium' ? 'Moyenne' : 'Économie'}</button></div>
         ${window.AndroidBridge ? '' : '<div class="setrow"><span>Installer le jeu (PWA)</span><button class="btn small blue" data-act="installApp">Installer</button></div>'}
@@ -324,6 +327,8 @@
     const o = UI.modals[UI.modals.length - 1]; if (!o || !UI._settingsRender) return;
     const m = o.querySelector('.modal'); const x = m.querySelector('.x'); m.innerHTML = ''; m.appendChild(x); m.insertAdjacentHTML('beforeend', UI._settingsRender());
   }
+  ACT.t3d = () => { const s = S().settings; s.chars3d = s.chars3d === false; G.Save.commit(); refreshSettings(); };
+  ACT.t3dm = () => { const s = S().settings; s.chars3dMatch = !s.chars3dMatch; G.Save.commit(); refreshSettings(); };
   ACT.ctrlSize = () => { const s = S().settings, v = s.ctrlScale || 1; s.ctrlScale = v < 0.95 ? 1 : v > 1.05 ? 0.88 : 1.14; G.Save.commit(); refreshSettings(); };
   ACT.quality = () => { const s = S().settings; s.quality = s.quality === 'high' ? 'medium' : s.quality === 'medium' ? 'low' : 'high'; G.Save.commit(); G.App.resize(); refreshSettings(); };
   ACT.rename = () => {

@@ -449,3 +449,37 @@ body.in-match #pauseBtn { display: block; }
 .blp { position: relative; width: 12.5rem; background: linear-gradient(#2f3478, #1d2050); border: .35rem solid var(--navy); border-radius: 1.4rem; padding: .6rem .4rem .8rem; color: #fff; font: inherit; display: flex; flex-direction: column; align-items: center; cursor: pointer; }
 .blp.me { border-color: #ffd21f; } .blp canvas { width: 9rem; height: 9rem; } .blp span { font-size: 1.9rem; max-width: 11.5rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .blp em { position: absolute; top: .4rem; right: .4rem; font-style: normal; font-size: 1.5rem; background: #6a7090; border-radius: .6rem; padding: 0 .5rem; }
+
+/* ---------- v3.0 : salon 3D, profil complet ---------- */
+#home .stage2 .hero { pointer-events: auto; cursor: pointer; filter: drop-shadow(0 1.4rem 1.2rem rgba(0,0,30,.45)); }
+#home .stage2::before { content: ''; position: absolute; left: 50%; top: 44%; width: 62rem; height: 62rem; transform: translate(-50%, -50%); pointer-events: none;
+  background: conic-gradient(from 0deg, rgba(255,255,255,.10) 0 18deg, transparent 18deg 36deg, rgba(255,255,255,.10) 36deg 54deg, transparent 54deg 72deg, rgba(255,255,255,.10) 72deg 90deg, transparent 90deg 108deg, rgba(255,255,255,.10) 108deg 126deg, transparent 126deg 144deg, rgba(255,255,255,.10) 144deg 162deg, transparent 162deg 180deg, rgba(255,255,255,.10) 180deg 198deg, transparent 198deg 216deg, rgba(255,255,255,.10) 216deg 234deg, transparent 234deg 252deg, rgba(255,255,255,.10) 252deg 270deg, transparent 270deg 288deg, rgba(255,255,255,.10) 288deg 306deg, transparent 306deg 324deg, rgba(255,255,255,.10) 324deg 342deg, transparent 342deg);
+  -webkit-mask: radial-gradient(circle, #000 25%, transparent 68%); mask: radial-gradient(circle, #000 25%, transparent 68%); animation: spin 40s linear infinite; z-index: 0; }
+#home .hm-left > *, #home .hm-right > * { animation: slideIn .45s cubic-bezier(.2,1.2,.4,1) both; }
+#home .hm-right > * { animation-name: slideInR; }
+#home .hm-left > *:nth-child(2), #home .hm-right > *:nth-child(2) { animation-delay: .05s; } #home .hm-left > *:nth-child(3), #home .hm-right > *:nth-child(3) { animation-delay: .1s; }
+#home .hm-right > *:nth-child(4) { animation-delay: .15s; } #home .hm-right > *:nth-child(5) { animation-delay: .2s; } #home .hm-right > *:nth-child(6) { animation-delay: .25s; }
+#home .stage2 { animation: fadeIn .5s ease both .08s; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+#home .btn.play { animation: playPulse 2.4s ease-in-out infinite; }
+@keyframes slideIn { from { transform: translateX(-6rem); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes slideInR { from { transform: translateX(6rem); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes popIn { from { transform: scale(.85); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes playPulse { 0%, 100% { box-shadow: 0 .8rem 0 #a86a00, 0 0 0 0 rgba(255,214,40,.0); } 50% { box-shadow: 0 .8rem 0 #a86a00, 0 0 3rem .6rem rgba(255,214,40,.45); } }
+.mbtn { background: linear-gradient(180deg, rgba(70,82,190,.92), rgba(38,44,120,.95)) !important; box-shadow: inset 0 .3rem 0 rgba(255,255,255,.18), 0 .6rem 0 #101340 !important; }
+.pf-title { margin-bottom: 1rem; }
+.pf { display: flex; gap: 2.4rem; align-items: stretch; }
+.pf-left { flex: 0 0 52rem; background: linear-gradient(160deg, #2f7dff, #2747c9); border: .5rem solid var(--navy); border-radius: 2.6rem; padding: 2rem; text-align: center; box-shadow: 0 .8rem 0 #101340; animation: slideIn .4s ease both; }
+.pf-card { position: relative; width: 44rem; height: 44rem; margin: 0 auto; border-radius: 2.4rem; overflow: hidden; background: radial-gradient(circle at 50% 62%, #8fd0ff 0%, #3e7af0 55%, #2238a8 100%); border: .4rem solid var(--navy); }
+.pf-card canvas { position: relative; width: 44rem; height: 44rem; } .pf-card canvas.swap { animation: popIn .4s cubic-bezier(.2,1.4,.4,1); }
+.pf-lv { position: absolute; left: 1.2rem; top: 1.2rem; width: 7rem; height: 7rem; display: grid; place-items: center; font-size: 3.6rem; background: linear-gradient(#5ab0ff, #2a5ad6); border: .4rem solid var(--navy); border-radius: 1.6rem; transform: rotate(-6deg); }
+.pf-rank { position: absolute; right: 1.2rem; top: 1.4rem; padding: .4rem 1.6rem; border: .35rem solid var(--navy); border-radius: 1.4rem; font-size: 2.4rem; }
+.pf-name { font-size: 5.6rem; margin-top: 1.4rem; text-shadow: 0 .4rem 0 #000; } .pf-sub { font-size: 2.2rem; opacity: .85; }
+.pf-right { flex: 1; min-width: 0; background: linear-gradient(160deg, #6a4ad8, #3b2a9e); border: .5rem solid var(--navy); border-radius: 2.6rem; padding: 2rem; box-shadow: 0 .8rem 0 #101340; max-height: 72vh; overflow-y: auto; animation: slideInR .4s ease both .05s; }
+.pf-row3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.4rem; margin-bottom: 1.6rem; }
+.pf-box { background: rgba(10,10,50,.35); border-radius: 1.8rem; padding: 1.4rem; text-align: center; display: flex; flex-direction: column; } .pf-box span { font-size: 2.2rem; opacity: .85; } .pf-box b { font-size: 4.4rem; color: #ffd21f; text-shadow: 0 .3rem 0 #000; } .pf-box small { font-size: 2rem; opacity: .8; } .pf-box .ic { width: 3.6rem; height: 3.6rem; vertical-align: middle; }
+.pf-sec { display: flex; justify-content: space-between; align-items: center; font-size: 3rem; margin: .6rem 0 1rem; } .pf-sec small { font-size: 2.2rem; opacity: .85; }
+.pf-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); gap: 1rem; margin-bottom: 1.6rem; }
+.pf-b { position: relative; background: linear-gradient(#e0703a, #a8402a); border: .35rem solid var(--navy); border-radius: 1.4rem; padding: .4rem; color: #fff; font: inherit; cursor: pointer; display: flex; flex-direction: column; align-items: center; animation: popIn .35s ease both; }
+.pf-b.on { background: linear-gradient(#ffd86a, #f08a12); } .pf-b canvas { width: 9rem; height: 9rem; } .pf-b span { font-size: 1.9rem; } .pf-b .ic { width: 2rem; height: 2rem; vertical-align: middle; }
+@media (max-aspect-ratio: 16/10) { .pf-left { flex-basis: 44rem; } .pf-card, .pf-card canvas { width: 36rem; height: 36rem; } }

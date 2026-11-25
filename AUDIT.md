@@ -84,3 +84,9 @@ Tests : `tools/test-touch.js` (11 vérifications tactiles), 37/37 serveur, 20/20
 | Direction fausse quand on pose le doigt près du bord | Direction calculée depuis le vrai point de contact (le cercle reste affiché à l'écran) |
 Test d'endurance : 400 séquences tactiles aléatoires dont 134 relâchements perdus → joystick actif 400/400, bonne direction 396/400 (4 glissements très courts légèrement sous le seuil d'intensité), aucune erreur.
 Nouveau : carnet de combat (25 dernières parties, joueurs de chaque camp), fiche de joueur animée (depuis le carnet et la liste d'amis : statut, trophées, club, ajout en ami, invitation), serveur `profile_get` + code public dans la composition, animations des menus (apparition des fenêtres, appui des boutons, listes).
+
+## v3.0 — personnages 3D, salon et profil refaits
+- **Vraie 3D (three.js r149, intégré à l'APK, hors-ligne)** : `js/char3d.js` génère pour chaque brawler un modèle chibi toon avec contours (couleurs, 20 chapeaux, 12 armes) et l'anime : attente (respiration, clignement, regard), course, tir, roulade, victoire, défaite, élimination, réaction au toucher. Repli 2D automatique si WebGL est indisponible.
+- Salon : héros 3D au centre (on peut le toucher), fond animé, entrées animées des panneaux, bouton Jouer pulsant.
+- Profil complet (deux panneaux) : carte 3D, niveau, rang, code ami, trophées/record, victoires équipe/survie, meilleure série, collection de brawlers (changement de personnage animé), statistiques, accès au carnet de combat.
+- 3D en combat : option « expérimental » (désactivée par défaut) — un rendu 3D par personnage et par image est coûteux sur Android ; à optimiser (atlas en une passe) avant de l'activer par défaut.

@@ -100,19 +100,39 @@
   /* ---------- profil détaillé ---------- */
   ACT.profile = () => {
     G.Audio.sfx('ui');
-    const sv = S(), st = sv.stats, tot = G.Save.totalTrophies(), rank = G.rankOf(tot);
-    const fav = Object.entries(sv.trophies).sort((a, b) => b[1] - a[1])[0], wr = st.matches ? Math.round((st.wins / st.matches) * 100) : 0;
-    const bm = st.byMode || {}, hrs = Math.floor((st.playTime || 0) / 3600), mins = Math.floor(((st.playTime || 0) % 3600) / 60);
-    const modes = G.MODE_ORDER.map((id) => { const e = bm[id] || { played: 0, wins: 0 }; return `<div class="mstat"><span>${esc(G.MODES[id].short)}</span><div class="bar o"><i style="width:${e.played ? (e.wins / e.played) * 100 : 0}%"></i></div><span>${e.wins}/${e.played}</span></div>`; }).join('');
-    const hist = (st.hist || []).slice(0, 8).map((h) => `<span class="hdot ${h.w > 0 ? 'w' : h.w < 0 ? 'l' : 'd'}" title="${esc((G.MODES[h.m] || {}).short || '')}">${h.w > 0 ? 'V' : h.w < 0 ? 'D' : '='}</span>`).join('');
-    const o = UI.modal(`<h2>Profil</h2><div class="row" style="align-items:flex-start;flex-wrap:nowrap;gap:3rem"><div style="text-align:center"><canvas id="profCv" width="300" height="300" style="width:24rem;height:24rem;border-radius:2rem;background:radial-gradient(#7a86ff,#3a3fb0);border:.3rem solid var(--navy)"></canvas>
-      <div class="rankbadge" style="background:${G.rankColor(rank)}">Rang ${rank}</div></div>
-      <div style="min-width:70rem"><div style="font-size:5rem;line-height:1">${esc(sv.name)}</div><div style="font-size:3.4rem;color:#ffd21f">${ic('trophy')} ${fmt(tot)} <small style="font-size:2.2rem;color:#c8d0ff">(record ${fmt(st.bestTr || tot)})</small></div>
-      <div style="font-size:2.4rem;color:#c8d0ff">Favori : ${fav ? G.BRAWLER[fav[0]].name : '—'} · ${sv.unlocked.length}/${G.BRAWLERS.length} brawlers · ${hrs} h ${mins} min de jeu</div>
-      <div class="statgrid" style="grid-template-columns:repeat(4,1fr)"><div><b>${st.matches}</b>Parties</div><div><b>${wr}%</b>Victoires</div><div><b>${st.kills}</b>Éliminations</div><div><b>${st.showdownWins}</b>Survies</div><div><b>${fmt(st.damage)}</b>Dégâts</div><div><b>${st.goals}</b>Buts</div><div><b>${st.gemsGrabbed}</b>Cristaux</div><div><b>${sv.ownedSkinsCount || Object.values(sv.ownedSkins).reduce((a, l) => a + l.length, 0)}</b>Skins</div></div>
-      <div style="font-size:2.4rem;margin:.6rem 0">Victoires par mode</div>${modes}<div style="font-size:2.4rem;margin:1rem 0 .4rem">Dernières parties</div><div class="row" style="justify-content:flex-start;gap:.6rem">${hist || '<span style="font-size:2.2rem;color:#9aa7c8">Aucune partie.</span>'}</div></div></div>
-      <div class="row" style="margin-top:1.6rem"><button class="btn small blue" data-act="rename">Changer de pseudo</button><button class="btn small green" data-act="leaderboard">Classement mondial</button></div>`, { style: 'min-width:115rem' });
-    animate($('#profCv', o), sv.selected, skinOf(sv.selected), { zoom: 0.95, y: 0.76, happy: true });
+    const sv = S(), st = sv.stats, tot = G.Save.totalTrophies(), rank = G.rankOf(tot), lvl = G.playerLevel ? G.playerLevel() : { lvl: 1 };
+    const wr = st.matches ? Math.round((st.wins / st.matches) * 100) : 0, bm = st.byMode || {};
+    const hrs = Math.floor((st.playTime || 0) / 3600), mins = Math.floor(((st.playTime || 0) % 3600) / 60);
+    let best = 0, cur = 0; (st.hist || []).slice().reverse().forEach((h) => { cur = h.w > 0 ? cur + 1 : 0; best = Math.max(best, cur); });
+    const sdW = st.showdownWins || 0, teamW = Math.max(0, (st.wins || 0) - sdW);
+    const owned = sv.unlocked.slice().sort((x, y) => (sv.trophies[y] || 0) - (sv.trophies[x] || 0));
+    const code = (G.Net && ((G.Net.friends && G.Net.friends.code) || G.Net.friendCode)) || '';
+    const hist = (st.hist || []).slice(0, 10).map((h) => `<span class="hdot ${h.w > 0 ? 'w' : h.w < 0 ? 'l' : 'd'}">${h.w > 0 ? 'V' : h.w < 0 ? 'D' : '='}</span>`).join('');
+    const o = UI.modal(`<h2 class="pf-title">Profil</h2><div class="pf">
+      <div class="pf-left"><div class="pf-card"><div class="pc-glow"></div><canvas id="profCv" width="600" height="600"></canvas>
+        <div class="pf-lv">${lvl.lvl || 1}</div><div class="pf-rank" style="background:${G.rankColor(rank)}">Rang ${rank}</div></div>
+        <div class="pf-name">${esc(sv.name)}</div><div class="pf-sub">${code ? 'Code ami : <b>' + esc(code) + '</b> · ' : ''}${hrs} h ${mins} min de jeu</div>
+        <div class="row" style="gap:1rem;margin-top:1rem"><button class="btn small blue" data-act="rename">Changer de pseudo</button><button class="btn small green" data-act="leaderboard">Classement</button></div></div>
+      <div class="pf-right">
+        <div class="pf-row3"><div class="pf-box"><span>Voie des trophées</span><b>${ic('trophy')} ${fmt(tot)}</b><small>Record : ${fmt(st.bestTr || tot)}</small></div>
+          <div class="pf-box"><span>Victoires en équipe</span><b>${fmt(teamW)}</b><small>${wr}% de victoires</small></div>
+          <div class="pf-box"><span>Survie</span><b>${fmt(sdW)}</b><small>Meilleure série : ${best}</small></div></div>
+        <div class="pf-sec"><span>Brawlers</span><small>Possédés : ${sv.unlocked.length} / ${G.BRAWLERS.length}</small></div>
+        <div class="pf-grid">${owned.map((id) => `<button class="pf-b ${id === sv.selected ? 'on' : ''}" data-act="pfPick" data-id="${id}"><i class="pfi" data-id="${id}"></i><span>${ic('trophy')}${fmt(sv.trophies[id] || 0)}</span></button>`).join('')}</div>
+        <div class="pf-row3"><div class="pf-box"><span>Éliminations</span><b>${fmt(st.kills)}</b></div><div class="pf-box"><span>Dégâts</span><b>${fmt(st.damage)}</b></div><div class="pf-box"><span>Parties</span><b>${fmt(st.matches)}</b></div></div>
+        <div class="pf-sec"><span>Dernières parties</span><button class="btn small blue" data-act="battleLog">Carnet de combat</button></div>
+        <div class="row" style="justify-content:flex-start;gap:.6rem">${hist || '<span style="font-size:2.2rem;color:#9aa7c8">Aucune partie.</span>'}</div>
+      </div></div>`, { style: 'width:min(176rem,98vw)' });
+    o.querySelectorAll('.pfi').forEach((v) => v.replaceWith(UI.h.portraitCanvas(v.dataset.id, skinOf(v.dataset.id), 120)));
+    animate($('#profCv', o), sv.selected, skinOf(sv.selected), { zoom: 0.9, y: 0.8, happy: true, yaw: -0.25 });
+    setTimeout(() => { const cv = $('#profCv', o); if (cv && G.Char3D) G.Char3D.poke(cv); }, 250);
+  };
+  ACT.pfPick = (a) => { // changer de personnage sur la carte : animation d'entrée
+    const o = UI.modals[UI.modals.length - 1], cv = o && $('#profCv', o); if (!cv) return;
+    G.Audio.sfx('ui'); UI.anim = UI.anim.filter((x) => x.cv !== cv);
+    animate(cv, a.dataset.id, skinOf(a.dataset.id), { zoom: 0.9, y: 0.8, happy: true, yaw: -0.25 });
+    o.querySelectorAll('.pf-b').forEach((x) => x.classList.toggle('on', x === a));
+    cv.classList.remove('swap'); void cv.offsetWidth; cv.classList.add('swap'); if (G.Char3D) G.Char3D.poke(cv);
   };
 
   /* ---------- écran de résultat spectaculaire ---------- */
