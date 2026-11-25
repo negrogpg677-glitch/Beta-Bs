@@ -64,7 +64,7 @@
     G.Audio.startMusic('battle');
     App.last = performance.now();
     if (G.Dev) G.Dev.onMatchStart(M);
-    if (!G.Save.data.tutorialDone) { G.UI.showTutorial(); }
+    if (!G.Save.data.tutorialDone) { G.UI.showTutorial(); } else if (G.UI.vsScreen) G.UI.vsScreen(M);
   };
   App.beginOnline = function (init) {
     G.UI.hideAll();

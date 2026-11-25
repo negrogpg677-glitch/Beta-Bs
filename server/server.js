@@ -264,6 +264,14 @@ function onMessage(c, raw) {
       p.members.push(c.pid); c.party = code; c.ready = false; pushParty(p);
       break;
     }
+    case 'mchat': { // message en partie, envoyé aux coéquipiers
+      const m = c.match && matches.get(c.match); if (!m || !m.M) break;
+      const b = m.M.ents[c.ent]; if (!b) break;
+      const now = Date.now(); if (now - (c.lastMChat || 0) < 1200) break; c.lastMChat = now;
+      const text = String(msg.text || '').replace(/[\u0000-\u001f\u007f<>]/g, '').trim().slice(0, 60); if (!text) break;
+      for (const e of m.M.ents) { if (!e.pid || e.team !== b.team) continue; const cl = clients.get(e.pid); if (cl && cl.match === m.id) send(cl, { t: 'mchat', idx: b.idx, name: b.name, text }); }
+      break;
+    }
     case 'party_leave': if (c.party) leaveParty(c); break;
     case 'party_get': { const pp = parties.get(c.party); if (pp) send(c, { t: 'party', party: partyView(pp) }); break; }
     case 'party_kick': {

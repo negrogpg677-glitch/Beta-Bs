@@ -693,6 +693,11 @@
     if (b.slowT > 0 && b.slowF < 1) { c.strokeStyle = 'rgba(160,230,255,0.8)'; c.lineWidth = 2; ell(c, b.x, b.y + 12, 28, 11, 0); c.stroke(); }
     if (b.hasBall) { /* la balle est dessinée à part */ }
     if (b.boostT > 0) { c.globalAlpha = 0.5; c.strokeStyle = '#ffd21f'; c.lineWidth = 3; c.beginPath(); c.arc(b.x, b.y - 4, 28, 0, TAU); c.stroke(); c.globalAlpha = 1; }
+    if (b.chatUntil && b.chatUntil > performance.now() && b.chatText) {
+      c.save(); c.font = '600 19px "Lilita One", sans-serif'; const tw = Math.min(260, c.measureText(b.chatText).width), bx = b.x, by = b.y - 108 - (b.emoteT > 0 ? 50 : 0);
+      rrect(c, bx - tw / 2 - 12, by - 18, tw + 24, 34, 12); c.fillStyle = b.team === M.player.team ? '#ffffff' : '#ffd6d6'; c.fill(); c.strokeStyle = OUT; c.lineWidth = 3; c.stroke();
+      c.beginPath(); c.moveTo(bx - 7, by + 15); c.lineTo(bx, by + 26); c.lineTo(bx + 7, by + 15); c.fill(); c.fillStyle = '#1a1530'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(b.chatText, bx, by, 260); c.restore();
+    }
     if (b.emoteT > 0 && b.emote) {
       const k = Math.min(1, (2 - b.emoteT) * 8, b.emoteT * 4), ey = b.y - 92 - (1 - b.emoteT / 2) * 8;
       c.save(); c.globalAlpha = Math.max(0, Math.min(1, k)); c.translate(b.x, ey); c.scale(0.6 + 0.4 * Math.min(1, k), 0.6 + 0.4 * Math.min(1, k));
@@ -866,7 +871,7 @@
     if (R.lastCam) drawOffscreen(c, M, W, H, u);
     // --- barre du joueur ---
     // supers / attaque / joystick
-    drawControls(c, M, W, H, input, u, time, text);
+    withAlpha(c, G.clamp(G.Save.data.settings.ctrlAlpha || 0.8, 0.25, 1), () => drawControls(c, M, W, H, input, u, time, text));
     // décompte & bannière
     if (M.state === 'countdown') {
       const n = Math.ceil(M.cd);
@@ -948,24 +953,30 @@
   }
 
   /* contrôles tactiles */
-  R.layout = function (W, H) {
-    const u = Math.min(Math.min(W, H) / 100, 5.4) * G.clamp(G.Save.data.settings.ctrlScale || 1, 0.8, 1.2); // taille plafonnée sur tablette
-    const lefty = G.Save.data.settings.lefty;
-    const L = {
-      u,
-      joyX: (lefty ? W - 21 * u : 21 * u), joyY: H - 23 * u, joyR: 14.5 * u,
-      atkX: (lefty ? 19 * u : W - 19 * u), atkY: H - 24 * u, atkR: 12 * u,
-      supX: (lefty ? 43 * u : W - 43 * u), supY: H - 12 * u, supR: 7.5 * u,
-      dgX: (lefty ? 8 * u : W - 8 * u), dgY: H - 46 * u, dgR: 6 * u,
-      gdX: (lefty ? 41 * u : W - 41 * u), gdY: H - 34 * u, gdR: 5.5 * u,
-      emX: (lefty ? 27 * u : W - 27 * u), emY: H - 48 * u, emR: 4.5 * u,
-    };
+  // positions par défaut (fractions de l'écran) et rayon (en unités) : joystick bas-gauche, gros tir à droite, super à sa gauche, gadget dessous, roulade au-dessus, chat « … » en haut à droite
+  R.CTRL_DEF = { joy: [0.14, 0.78, 14.5], atk: [0.85, 0.66, 12.5], sup: [0.70, 0.80, 7.5], gd: [0.81, 0.90, 5.5], dg: [0.73, 0.52, 6], em: [0.885, 0.43, 5] };
+  R.layout = function (W, H, over) {
+    const st = G.Save.data.settings, cp = over || st.ctrlPos || null;
+    const u = Math.min(Math.min(W, H) / 100, 5.4) * G.clamp(st.ctrlScale || 1, 0.8, 1.2); // taille plafonnée sur tablette
+    const L = { u };
+    for (const k in R.CTRL_DEF) {
+      const d = R.CTRL_DEF[k], c = cp && cp[k];
+      let fx = c ? c.x : d[0]; const fy = c ? c.y : d[1], r = d[2] * u * (c && c.s ? G.clamp(c.s, 0.6, 1.6) : 1);
+      if (!c && st.lefty) fx = 1 - fx;
+      L[k + 'X'] = G.clamp(fx * W, r + 4, W - r - 4); L[k + 'Y'] = G.clamp(fy * H, r + 4, H - r - 4); L[k + 'R'] = r;
+    }
     return L;
   };
   R.emoteSlots = function (W, H) {
     const u = Math.min(W, H) / 100, n = G.EMOTES.length;
     return G.EMOTES.map((e, i) => { const a = -Math.PI / 2 + (i * TAU) / n; return { x: W / 2 + Math.cos(a) * 19 * u, y: H / 2 + Math.sin(a) * 19 * u, r: 6.5 * u }; });
   };
+  const GA = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, 'globalAlpha');
+  function withAlpha(c, A, fn) {
+    if (A >= 0.999 || !GA) return fn();
+    c.save(); Object.defineProperty(c, 'globalAlpha', { configurable: true, get() { return GA.get.call(c) / A; }, set(v) { GA.set.call(c, Math.max(0, Math.min(1, v)) * A); } });
+    try { c.globalAlpha = 1; fn(); } finally { delete c.globalAlpha; c.restore(); }
+  }
   function drawControls(c, M, W, H, input, u, time, text) {
     const L = R.layout(W, H), p = M.player;
     const now = performance.now();
@@ -1027,15 +1038,12 @@
         c.restore(); if (input.gadgetFx > 0) input.gadgetFx -= 0.016;
       }
     }
-    // émotes
-    { c.save(); c.translate(L.emX, L.emY); circ(c, 0, 0, L.emR); c.fillStyle = input.emoteOpen ? 'rgba(255,210,31,0.95)' : 'rgba(20,24,48,0.55)'; c.fill(); c.strokeStyle = 'rgba(255,255,255,0.85)'; c.lineWidth = 3; c.stroke();
-      c.font = Math.round(L.emR * 1.1) + 'px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#fff'; c.fillText('😀', 0, 1); c.restore();
-      if (input.emoteOpen) {
-        c.save(); c.fillStyle = 'rgba(0,0,0,0.35)'; c.fillRect(0, 0, W, H); c.textAlign = 'center'; c.textBaseline = 'middle';
-        R.emoteSlots(W, H).forEach((s, i) => { circ(c, s.x, s.y, s.r); c.fillStyle = 'rgba(255,255,255,0.95)'; c.fill(); c.strokeStyle = OUT; c.lineWidth = 4; c.stroke(); c.font = Math.round(s.r * 1.15) + 'px sans-serif'; c.fillStyle = '#000'; c.fillText(G.EMOTES[i], s.x, s.y + 2); });
-        c.restore();
-      }
-    }
+    // chat rapide « … »
+    { c.save(); c.translate(L.emX, L.emY); const r = L.emR;
+      c.beginPath(); c.ellipse(0, 0, r * 1.25, r, 0, 0, TAU); c.moveTo(-r * 0.2, r * 0.9); c.lineTo(-r * 0.75, r * 1.45); c.lineTo(r * 0.25, r * 0.85);
+      c.fillStyle = input.chatOpen ? 'rgba(255,210,31,0.95)' : 'rgba(230,232,245,0.82)'; c.fill(); c.strokeStyle = 'rgba(26,21,48,0.8)'; c.lineWidth = 2.5; c.stroke();
+      for (let i = -1; i <= 1; i++) { circ(c, i * r * 0.42, 0, r * 0.13); c.fillStyle = '#4a4f6a'; c.fill(); }
+      c.restore(); }
     // super : même manette, jaune, avec jauge de charge
     const s = input.sup, ready = p.superCharge >= 1;
     if (!(s.active && s.drag)) {

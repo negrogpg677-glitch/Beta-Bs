@@ -102,3 +102,11 @@ Test `tools/test-aim.js` : 4 brawlers (tir droit, fusil à pompe, cloche, rafale
 - **Invitations** : liste d'amis avec statut + INVITER, fenêtre « Invitation d'équipe » (carte du joueur en 3D, REFUSER / ACCEPTER, masquer 10 min), refus et annulation signalés en temps réel.
 - **Chat d'équipe en ligne** (serveur `party_chat`) : messages écrits, discussion rapide, émojis, bulles au-dessus des personnages, badge non lus, historique de 20 messages.
 Tests : `tools/test-team.js` (2 téléphones + serveur : 9/9), serveur 43/43, tactile 11/11.
+
+## v3.2 — commandes d'après la photo de référence, éditeur, chat en partie, écran VS
+- Disposition : joystick bas-gauche, gros bouton de tir à droite, super à sa gauche, gadget dessous, roulade au-dessus, bouton « … » de discussion rapide ; commandes translucides (transparence réglable) pour ne pas masquer la map.
+- Éditeur de commandes (Réglages → Personnaliser) : déplacer au doigt, taille par bouton (60–160 %), transparence (25–100 %), chevauchements signalés et refusés, Enregistrer / Annuler / Réinitialiser ; positions gardées dans l'écran.
+- Discussion rapide en partie : 8 messages + 8 émotes ; en ligne, envoyée aux coéquipiers par le serveur (`mchat`, nettoyée, anti-spam) ; bulle au-dessus du personnage.
+- Écran VS pendant le compte à rebours : cartes des joueurs (personnages 3D), « VS », « Début dans 3 ».
+- Correctif : l'écran VS n'intercepte plus les touchers ; le toucher qui ouvre la discussion n'envoie plus d'émote par erreur.
+Tests : tactile 11/11, visée 4/4 (≤ 2°), serveur 44/44, équipe en ligne 9/9.

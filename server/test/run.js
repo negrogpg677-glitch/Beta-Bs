@@ -87,6 +87,8 @@ class Cl {
     A.send({ t: 'input', seq: 9300, mx: 0, my: 0, gd: 1 }); await sleep(120);
     ok(A.last.e[idx][17] === 2, 'pas de second gadget pendant la recharge');
     await sleep(100); ok(em, 'émote diffusée aux joueurs'); A.on = null; }
+  { let got = null; B.on = (m) => { if (m.t === 'mchat') got = m; }; A.send({ t: 'mchat', text: 'Attaquez <b>!' }); await sleep(300);
+    ok(got && got.idx === ma.you && got.text === 'Attaquez b!', 'discussion rapide en partie reçue par le coéquipier (« ' + (got && got.text) + ' »)'); B.on = null; }
   // --- reconnexion ---
   B.ws.close(); await sleep(400);
   const B2 = new Cl(url, 'Bob'); const w = await B2.connect({ pid: B.pid, token: B.token });

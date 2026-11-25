@@ -17,8 +17,7 @@
       G.Audio.unlock();
       const [x, y] = pos(e);
       { const L = G.Render.layout(In.W, In.H); // roue d'émotes, bouton d'émote, gadget
-        if (In.emoteOpen) { In.emoteOpen = false; const s = G.Render.emoteSlots(In.W, In.H).findIndex((q) => Math.hypot(x - q.x, y - q.y) < q.r * 1.25); if (s >= 0) In.pending.push({ kind: 'emote', i: s }); return; }
-        if (Math.hypot(x - L.emX, y - L.emY) < L.emR * 1.3) { In.emoteOpen = true; return; }
+        if (Math.hypot(x - L.emX, y - L.emY) < L.emR * 1.45) { if (G.UI.matchChat) G.UI.matchChat(); return; }
         if (Math.hypot(x - L.gdX, y - L.gdY) < L.gdR * 1.35) { In.pending.push({ kind: 'gadget' }); In.gadgetFx = 0.15; return; }
       }
       if (e.pointerType === 'mouse') {
@@ -92,8 +91,7 @@
       if (e.code === 'ShiftLeft' || e.code === 'KeyE' || e.code === 'KeyQ') In.pending.push({ kind: 'sup', key: true });
       if (e.code === 'KeyF' || e.code === 'ControlLeft') In.pending.push({ kind: 'dodge' });
       if (e.code === 'KeyG') In.pending.push({ kind: 'gadget' });
-      if (e.code === 'KeyT') In.emoteOpen = !In.emoteOpen;
-      if (In.emoteOpen && /^Digit[1-8]$/.test(e.code)) { In.pending.push({ kind: 'emote', i: +e.code.slice(5) - 1 }); In.emoteOpen = false; }
+      if (e.code === 'KeyT' && G.UI.matchChat) G.UI.matchChat();
       if (e.code === 'Escape' || e.code === 'KeyP') G.App.togglePause();
     });
     window.addEventListener('keyup', (e) => { In.keys[e.code] = false; });
