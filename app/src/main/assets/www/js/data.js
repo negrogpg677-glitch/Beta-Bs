@@ -224,7 +224,13 @@
     desc: 'Défi coopératif ! Unissez vos forces pour détruire le robot géant avant d\'être éliminés.', maps: ['usine', 'arene_boss'] };
   G.MODES.knockout = { id: 'knockout', name: 'Duel d\'élite', short: 'Duel', color: '#e8334a', icon: 'skull', teams: 2, per: 3, time: 150,
     desc: 'Sans réapparition ! Éliminez toute l\'équipe adverse. Premier à 2 manches.', maps: ['duel1', 'duel2'] };
-  G.MODE_ORDER = ['gemgrab', 'brawlball', 'heist', 'bounty', 'hotzone', 'knockout', 'boss', 'showdown'];
+  G.MODES.potato = { id: 'potato', name: 'Bombe-patate', short: 'Bombe', color: '#ff7a1a', icon: 'bomb', teams: 2, per: 3, time: 150, isNew: true, target: 3,
+    desc: 'Une bombe passe à l\'ennemi que vous touchez. Si vous éliminez son porteur, elle vous revient ! Quand elle explose, l\'équipe adverse marque. 3 points pour gagner.', maps: ['fete', 'petards'] };
+  G.MODES.eclipse = { id: 'eclipse', name: 'Éclipse', short: 'Éclipse', color: '#5a6aff', icon: 'moon', teams: 2, per: 3, time: 150, isNew: true, target: 10,
+    desc: 'La nuit est tombée : seul le phare tournant révèle les ennemis, et tirer vous trahit. 10 éliminations pour gagner.', maps: ['phare', 'abysse'] };
+  G.MODES.duel = { id: 'duel', name: 'Duel', short: 'Duel 1c1', color: '#ff4ab8', icon: 'skull', teams: 2, per: 1, time: 120, isNew: true, target: 3,
+    desc: 'Un contre un, sans coéquipier ni excuse. Le premier à 3 éliminations gagne. Idéal pour défier un ami !', maps: ['arene1', 'arene2'] };
+  G.MODE_ORDER = ['potato', 'eclipse', 'duel', 'gemgrab', 'brawlball', 'heist', 'bounty', 'hotzone', 'knockout', 'boss', 'showdown'];
   /* événements du jour : de vraies règles modifiées, identiques hors-ligne et en ligne */
   G.EVENTS = [
     { id: 'turbo', name: 'Journée Turbo', icon: '⚡', desc: 'Tout le monde court 20 % plus vite !' },
@@ -246,6 +252,12 @@
 
   /* définitions d'arènes (la génération est procédurale et déterministe via la graine) */
   G.MAPS = {
+    fete: { name: 'Fête foraine', mode: 'potato', theme: 'desert', seed: 327, w: 31, h: 21, density: 0.85, vmirror: true },
+    petards: { name: 'Usine à pétards', mode: 'potato', theme: 'volcano', seed: 341, w: 31, h: 21, density: 0.95, vmirror: true },
+    phare: { name: 'Phare des brumes', mode: 'eclipse', theme: 'night', seed: 353, w: 33, h: 21, density: 1.05, vmirror: true },
+    abysse: { name: 'Abysse gelé', mode: 'eclipse', theme: 'snow', seed: 367, w: 33, h: 21, density: 1.0, vmirror: true },
+    arene1: { name: 'Fosse des duellistes', mode: 'duel', theme: 'meadow', seed: 379, w: 23, h: 17, density: 0.8, vmirror: true },
+    arene2: { name: 'Toit de minuit', mode: 'duel', theme: 'night', seed: 383, w: 23, h: 17, density: 0.9, vmirror: true },
     mine: { name: 'Mine abandonnée', mode: 'gemgrab', theme: 'desert', seed: 11, w: 33, h: 21, density: 1.0, vmirror: true },
     glacier: { name: 'Cristaux gelés', mode: 'gemgrab', theme: 'snow', seed: 23, w: 33, h: 21, density: 1.1, vmirror: true },
     caverne: { name: 'Caverne lumineuse', mode: 'gemgrab', theme: 'night', seed: 35, w: 33, h: 21, density: 0.9, vmirror: false },

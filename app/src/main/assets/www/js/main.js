@@ -124,6 +124,7 @@
       }
       c.setTransform(App.dpr, 0, 0, App.dpr, 0, 0);
       G.Render.drawMatch(c, M, App.W, App.H, App.t);
+      if (G.Render.drawNight) G.Render.drawNight(c, M, App.W, App.H, App.t);
       const prev = G.Input.aimPreview(M);
       if (prev && !App.paused) {
         const cam = G.Render.lastCam;

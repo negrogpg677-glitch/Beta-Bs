@@ -55,7 +55,7 @@ let social = null; // initialisé plus bas (a besoin de createParty)
 /* ---------- équipes (parties) ---------- */
 function partyView(p) {
   return {
-    code: p.code, leader: p.leader, mode: p.mode, state: p.state, max: p.max, chat: (p.chat || []).slice(-20),
+    code: p.code, leader: p.leader, mode: p.mode, map: p.map || null, state: p.state, max: p.max, chat: (p.chat || []).slice(-20),
     members: p.members.map((m) => { const c = clients.get(m); return { pid: m, name: c.name, brawler: c.brawler, skin: c.skin, level: c.level, trophies: c.trophies, ready: !!c.ready, online: !!c.ws }; }),
   };
 }
@@ -95,7 +95,7 @@ function enqueue(p, ranked) {
     pushParty(p); return null;
   }
   const cap = mode.id === 'showdown' ? 10 : 3;
-  if (mode.id !== 'showdown' && p.members.length > 3) return 'Maximum 3 joueurs par équipe pour ce mode.';
+  if (mode.id !== 'showdown' && p.members.length > (mode.per || 3)) return mode.per === 1 ? 'Le duel se joue seul : utilisez « Défier » pour affronter un ami.' : 'Maximum 3 joueurs par équipe pour ce mode.';
   p.state = 'queue';
   queues[p.mode].push({ party: p.code, since: Date.now() });
   for (const m of p.members) send(clients.get(m), { t: 'queue', mode: p.mode, state: 'searching' });
@@ -126,14 +126,14 @@ function runMatchmaker() {
       for (const x of tickets) { if (team.length + x.p.members.length <= 3) { x.p.members.forEach((pid) => team.push(pid)); used.push(x.p); } }
       if (team.length >= 3 || (oldest >= FILL_WAIT && team.length >= 1)) launchLobby(modeId, team.map((pid) => ({ pid, team: 0 })), used);
     } else {
-      const teams = [[], []], used = [];
+      const teams = [[], []], used = [], PER = mode.per || 3;
       for (const x of tickets) {
         const sz = x.p.members.length;
-        const ti = teams[0].length <= teams[1].length ? (teams[0].length + sz <= 3 ? 0 : teams[1].length + sz <= 3 ? 1 : -1) : (teams[1].length + sz <= 3 ? 1 : teams[0].length + sz <= 3 ? 0 : -1);
+        const ti = teams[0].length <= teams[1].length ? (teams[0].length + sz <= PER ? 0 : teams[1].length + sz <= PER ? 1 : -1) : (teams[1].length + sz <= PER ? 1 : teams[0].length + sz <= PER ? 0 : -1);
         if (ti >= 0) { x.p.members.forEach((pid) => teams[ti].push(pid)); used.push(x.p); }
       }
       const total = teams[0].length + teams[1].length;
-      if (total >= 6 || (oldest >= FILL_WAIT && total >= 1)) {
+      if (total >= PER * 2 || (oldest >= FILL_WAIT && total >= 1)) {
         const roster = []; teams.forEach((tm, ti) => tm.forEach((pid) => roster.push({ pid, team: ti })));
         launchLobby(modeId, roster, used);
       }
@@ -165,7 +165,7 @@ function launchLobby(modeId, roster, usedParties, ranked) {
   for (const p of usedParties) { removeTicket(p); p.state = 'lobby'; pushParty(p); }
   const id = rid(4);
   const mode = G.MODES[modeId];
-  const mapKey = G.pick(mode.maps);
+  const pm = usedParties[0] && usedParties[0].map, mapKey = pm && mode.maps.includes(pm) ? pm : G.pick(mode.maps); // arène choisie par le chef (duel)
   const seed = mode.id === 'showdown' ? crypto.randomInt(1, 99999) : G.MAPS[mapKey].seed;
   const slots = roster.map((r) => {
     const c = clients.get(r.pid);
@@ -292,7 +292,7 @@ function onMessage(c, raw) {
       if (!p) return err(c, 'not_found', 'Code d\'équipe introuvable.');
       if (c.party === code) return pushParty(p);
       if (p.state !== 'idle') return err(c, 'busy', 'Cette équipe est déjà en recherche ou en match.');
-      if (p.members.length >= p.max) return err(c, 'full', 'Cette équipe est complète.');
+      if (p.members.length >= (p.mode === 'duel' ? 2 : p.max)) return err(c, 'full', p.mode === 'duel' ? 'Ce duel est déjà complet.' : 'Cette équipe est complète.');
       if (c.party) leaveParty(c);
       p.members.push(c.pid); c.party = code; c.ready = false; pushParty(p);
       break;
@@ -314,9 +314,16 @@ function onMessage(c, raw) {
     }
     case 'party_set': {
       const p = parties.get(c.party); if (!p) return;
-      if (msg.mode && G.MODES[msg.mode] && p.leader === c.pid && p.state === 'idle') p.mode = msg.mode;
+      if (msg.mode && G.MODES[msg.mode] && p.leader === c.pid && p.state === 'idle') { p.mode = msg.mode; p.map = null; }
+      if (msg.map && p.leader === c.pid && G.MODES[p.mode].maps.includes(msg.map)) p.map = msg.map;
       if (typeof msg.ready === 'boolean') c.ready = msg.ready;
-      pushParty(p); break;
+      pushParty(p);
+      // duel : la partie démarre toute seule quand les deux joueurs sont prêts
+      if (p.mode === 'duel' && p.state === 'idle' && p.members.length === 2 && p.members.every((m) => (clients.get(m) || {}).ready)) {
+        p.members.forEach((m) => { const mc = clients.get(m); if (mc) mc.ready = false; });
+        launchLobby('duel', p.members.map((pid, i) => ({ pid, team: i })), [p]);
+      }
+      break;
     }
     case 'party_start': {
       let p = parties.get(c.party);
@@ -333,7 +340,7 @@ function onMessage(c, raw) {
       }
       if (msg.kind === 'private') {
         const mode = G.MODES[p.mode], mem = p.members.slice(0, mode.id === 'showdown' ? 10 : 6);
-        const roster = mem.map((pid, i) => ({ pid, team: mode.id === 'showdown' ? i : mode.id === 'boss' ? 0 : (msg.split ? i % 2 : 0) }));
+        const roster = mem.map((pid, i) => ({ pid, team: mode.id === 'showdown' ? i : mode.id === 'boss' ? 0 : (msg.split || mode.per === 1 ? i % 2 : 0) }));
         launchLobby(p.mode, roster, [p]);
       } else { const e = enqueue(p); if (e) err(c, 'bad_party', e); }
       break;

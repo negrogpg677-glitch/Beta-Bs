@@ -83,6 +83,11 @@ module.exports = function (ctx) {
         const target = clients.get(fid); if (!target || !target.ws) { err(c, 'offline', 'Cet ami est hors ligne.'); return true; }
         let party = parties.get(c.party);
         if (!party) party = ctx.createParty(c, msg.mode || 'gemgrab');
+        if (msg.mode === 'duel') { // défi en duel : l'équipe passe en mode duel (2 joueurs maximum)
+          if (party.leader !== pid || party.state !== 'idle') { err(c, 'duel', 'Seul le chef d\'une équipe au repos peut lancer un défi.'); return true; }
+          if (party.members.length > 1) { err(c, 'duel', 'Quittez votre équipe pour défier un ami en duel.'); return true; }
+          party.mode = 'duel'; party.map = null;
+        }
         c.lastInvite = Date.now();
         send(target, { t: 'invited', from: p.name, fromPid: pid, trophies: c.trophies || p.trophies || 0, brawler: c.brawler || 'sherry', skin: c.skin || 'classic', code: party.code, mode: party.mode });
         send(c, { t: 'invite_sent', pid: fid, name: players[fid].name });

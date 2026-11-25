@@ -70,6 +70,7 @@
     const st = STATES[s.s];
     if (st !== M.state) { M.state = st; if (st === 'end') M.endT = 0; }
     M.cd = s.cd; M.left = s.left; M.score = s.sc; M.t = s.tm;
+    if (s.pt) M.potato = { holder: s.pt[0], t: s.pt[1] };
     if (s.gg) { M.gg.active = [!!s.gg[0], !!s.gg[2]]; M.gg.t = [s.gg[1], s.gg[3]]; }
     if (s.z && M.zone) { M.zone.x0 = s.z[0]; M.zone.y0 = s.z[1]; M.zone.x1 = s.z[2]; M.zone.y1 = s.z[3]; }
     if (s.sf) s.sf.forEach((hp, i) => { const sf = M.safes[i]; if (sf) { if (hp < sf.hp) sf.flash = 0.12; sf.hp = hp; } });

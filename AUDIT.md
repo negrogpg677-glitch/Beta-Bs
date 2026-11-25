@@ -126,3 +126,12 @@ Tests : `tools/test-social.js` (35/35, serveur réel + base imitée), `tools/tes
 - Cadeaux / déblocage : recherche par identifiant **ou par pseudo**, envoi par identifiant interne (plus robuste), message clair si le joueur ne s'est pas encore connecté avec la nouvelle version.
 - Base : déclencheur de protection plus robuste avec la clé secrète (`supabase/v2b.sql`) ; la connexion n'échoue plus si la création d'identifiant est refusée (message de diagnostic).
 Tests : `tools/test-social-ui.js` 16/16, `tools/test-social.js` 35/35, serveur 44/44.
+
+## v3.5 — rouleau des modes, 3 nouveaux modes, duel entre amis, session périmée
+- **Rouleau des événements** (`js/modesui.js`) : cartes animées en perspective qui défilent au doigt (aimantation au centre, son de cran), aperçu de la carte actuelle, personnage 3D, format (3c3 / 1c1 / solo / coop), badge « NOUVEAU », points de position.
+- **Bombe-patate** : la bombe passe à l'ennemi touché, revient au tueur de son porteur, explose au bout de 20 s (point pour l'équipe adverse, dégâts de zone) ; premier à 3. IA : le porteur chasse, les autres fuient la bombe.
+- **Éclipse** : nuit, seul le phare tournant (et la proximité) révèle les ennemis ; tirer trahit sa position ; 10 éliminations.
+- **Duel 1c1** : premier à 3 éliminations, deux arènes ; IA de traque ; matchmaking 1 contre 1.
+- **Défi en duel entre amis** : bouton « ⚔ Défier » (liste d'amis et invitations), fenêtre « DÉFI EN DUEL », salon face à face (cartes 3D), choix de l'arène par le chef, « PRÊT » des deux joueurs → lancement automatique côté serveur.
+- **Session périmée** (diagnostic serveur : « session_id … does not exist ») : le jeu renouvelle la session ou redemande la connexion au lieu de rester bloqué.
+Tests : `tools/test-duel.js` 7/7, modes simulés jusqu'au bout (11 modes), serveur 44/44, comptes 35/35, équipe 9/9, tactile, visée 4/4.

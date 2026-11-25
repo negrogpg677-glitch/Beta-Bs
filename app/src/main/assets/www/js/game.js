@@ -44,11 +44,11 @@
       const pool = G.shuffle(all.slice());
       let pi = 0;
       for (let team = 0; team < 2; team++) {
-        for (let k = 0; k < 3; k++) {
+        for (let k = 0, PER = mode.per || 3; k < PER; k++) {
           if (mode.id === 'boss' && team === 1 && k > 0) continue;
           const isP = team === 0 && k === 0;
           const def = isP ? G.BRAWLER[opts.brawlerId] : (mode.id === 'boss' && team === 1 ? G.BRAWLER.robot : pool[pi++ % pool.length]);
-          const b = mkBrawler(M, def, team, isP ? opts.name : names[pi + k + team * 3], isP ? lv : botLevel(), isP ? opts.skin : G.pick(G.SKINS).id, isP, map.spawns[team][k], team * 3 + k);
+          const b = mkBrawler(M, def, team, isP ? opts.name : names[pi + k + team * 3], isP ? lv : botLevel(), isP ? opts.skin : G.pick(G.SKINS).id, isP, map.spawns[team][k], team * (mode.per || 3) + k);
           b.spawnIdx = k;
           M.ents.push(b);
           if (isP) M.player = b;
@@ -185,6 +185,7 @@
     if (tgt === M.player) { G.vibrate(25); Sim.shake(M, 5); if (src && src !== tgt) M.dmgDir = { ang: Math.atan2(src.y - tgt.y, src.x - tgt.x), t: 0 }; }
     if (src && src === M.player && tgt !== src && !M.online) { M.hitmarks.push({ x: tgt.x, y: tgt.y - 12, t: 0, big: amt >= 1200 }); G.Audio.sfx('hitm'); }
     if (fx) applyFx(M, tgt, fx, src);
+    if (M.mode === 'potato' && src && M.potato) Sim.potatoPass(M, src, tgt);
     if (tgt.hp <= 0) die(M, tgt, src);
     return amt;
   };
@@ -284,6 +285,11 @@
         if (b.isBoss) { Sim.burst(M, b.x, b.y, '#ff6a6a', 60, 500, 12, 1.4); Sim.shake(M, 18); finish(M, 0); }
         else { b.respawn = 6; if (!M.ents.some((e) => e.team === 0 && e.alive)) finish(M, 1); } // réapparition après 6 s ; défaite si toute l'équipe tombe
       }
+      if ((M.mode === 'duel' || M.mode === 'eclipse') && killer && killer.team !== b.team) {
+        M.score[killer.team] += 1; b.respawn = M.mode === 'duel' ? 2.4 : 3;
+        if (M.score[killer.team] >= (M.modeDef.target || 3)) finish(M, killer.team);
+      }
+      if (M.mode === 'potato' && M.potato && M.potato.holder === b.idx && killer && killer.alive && killer.team !== b.team) { M.potato.holder = killer.idx; killer.potLock = 1; Sim.text(M, killer.x, killer.y - 90, '💣 Elle est pour toi !', '#ff7a1a', 24); }
       if (M.mode === 'bounty' && killer && killer.team !== b.team) {
         M.score[killer.team] += 1 + b.bounty;
         killer.bounty = Math.min(7, killer.bounty + 1);
@@ -605,10 +611,38 @@
       if (M.mode === 'showdown') updateShowdown(M, dt);
       if (M.mode === 'hotzone' && M.state === 'play') updateHotzone(M, dt);
       if (M.mode === 'bounty') { /* score géré à la mort */ }
+      if (M.mode === 'potato' && M.state === 'play') updatePotato(M, dt);
     }
     if (M.safes.length) for (const s of M.safes) if (s.flash > 0) s.flash -= dt;
   };
 
+  /* ---------- Bombe-patate ---------- */
+  function updatePotato(M, dt) {
+    const P = M.potato || (M.potato = { holder: -1, t: 20, wait: 1.5, next: Math.random() < 0.5 ? 0 : 1 });
+    for (const e of M.ents) if (e.potLock > 0) e.potLock -= dt;
+    let h = P.holder >= 0 ? M.ents[P.holder] : null;
+    if (!h || !h.alive) {
+      if (P.wait > 0) { P.wait -= dt; return; }
+      const cand = M.ents.filter((e) => e.alive && e.team === (h ? 1 - h.team : P.next));
+      const pool = cand.length ? cand : M.ents.filter((e) => e.alive); if (!pool.length) return;
+      h = G.pick(pool); P.holder = h.idx; h.potLock = 1;
+      Sim.text(M, h.x, h.y - 90, '💣 BOMBE !', '#ff7a1a', 26); Sim.sfx(M, 'superReady', h.x, h.y);
+    }
+    P.t -= dt;
+    if (P.t <= 0) { // explosion : l'équipe adverse du porteur marque
+      const tm = h.team, sc = 1 - tm; M.score[sc] += 1;
+      Sim.ring(M, h.x, h.y, 20, 2.6 * T, 0.6, '#ff7a1a', true); Sim.burst(M, h.x, h.y, '#ffb21a', 40, 520, 10, 1.1); Sim.shake(M, 14); Sim.sfx(M, 'explode', h.x, h.y);
+      for (const e of M.ents) if (e.alive && e.team === tm && e !== h && G.dist(e.x, e.y, h.x, h.y) < 2.4 * T) Sim.damage(M, e, 1800, null);
+      h.invuln = 0; h.hp = 0; die(M, h, null);
+      Sim.banner(M, 'BOUM !', 'Point pour l\'équipe ' + (sc === 0 ? 'bleue' : 'rouge'), '#ff7a1a', 1.6);
+      P.holder = -1; P.t = 20; P.wait = 2.2; P.next = sc; // la bombe repart chez l'équipe qui vient de marquer
+      if (M.score[sc] >= (M.modeDef.target || 3)) finish(M, sc);
+    }
+  }
+  Sim.potatoPass = function (M, src, tgt) { // touchez un ennemi : il récupère la bombe
+    const P = M.potato; if (!P || P.holder !== src.idx || !tgt || tgt.team === src.team || !tgt.alive || (src.potLock || 0) > 0) return;
+    P.holder = tgt.idx; tgt.potLock = 1; Sim.text(M, tgt.x, tgt.y - 90, '💣 !', '#ff7a1a', 30); Sim.sfx(M, 'pickup', tgt.x, tgt.y, 0.7);
+  };
   function timeUp(M) {
     if (M.mode === 'gemgrab') {
       const a = teamGems(M, 0), b = teamGems(M, 1);
@@ -622,7 +656,7 @@
       const a = M.safes[0].hp / M.safes[0].maxhp, b = M.safes[1].hp / M.safes[1].maxhp;
       // l'équipe dont le coffre est le plus sain gagne
       finish(M, Math.abs(a - b) < 0.001 ? -1 : a > b ? 0 : 1);
-    } else if (M.mode === 'bounty' || M.mode === 'hotzone') {
+    } else if (M.mode === 'bounty' || M.mode === 'hotzone' || M.mode === 'potato' || M.mode === 'eclipse' || M.mode === 'duel') {
       finish(M, Math.floor(M.score[0]) === Math.floor(M.score[1]) ? -1 : M.score[0] > M.score[1] ? 0 : 1);
     } else if (M.mode === 'knockout') {
       const hp = [0, 1].map((t) => M.ents.filter((e) => e.team === t && e.alive).reduce((a, e) => a + e.hp, 0));
@@ -688,7 +722,8 @@
     b.stun = Math.max(0, b.stun - dt); b.freeze = Math.max(0, b.freeze - dt); b.invuln = Math.max(0, b.invuln - dt);
     b.revealT = Math.max(0, b.revealT - dt); b.atkCd = Math.max(0, b.atkCd - dt); b.rollCd = Math.max(0, b.rollCd - dt); b.gadgetCd = Math.max(0, b.gadgetCd - dt); b.sprintT = Math.max(0, b.sprintT - dt);
     const tl = Sim.tileAt(M, b.x, b.y);
-    b.hidden = tl === 3 && b.revealT <= 0 && !b.jump;
+    if (M.mode === 'eclipse') { const bx = M.w * T / 2, by = M.h * T / 2, a = Math.atan2(b.y - by, b.x - bx), beam = (M.t * 0.7) % (Math.PI * 2); b.lit = Math.abs(G.angDiff(a, beam)) < 0.32 || G.dist(b.x, b.y, bx, by) < 2.2 * T; }
+    b.hidden = (tl === 3 || (M.mode === 'eclipse' && !b.lit)) && b.revealT <= 0 && !b.jump;
     if (b.poison > 0) {
       b.poison -= dt; b.poisonAcc += b.poisonDps * dt;
       if (b.poisonAcc >= 120 && M.state !== 'end') { const a = b.poisonAcc; b.poisonAcc = 0; Sim.damage(M, b, a, b.poisonBy); Sim.burst(M, b.x, b.y - 10, '#b04dff', 2, 50, 4, 0.5); if (!b.alive) return; }
@@ -1098,11 +1133,12 @@
       M.zone = { x0: T, y0: T, x1: (M.w - 1) * T, y1: (M.h - 1) * T, fx0: fx - half, fy0: fy - half, fx1: fx + half, fy1: fy + half, sx0: T, sy0: T, sx1: (M.w - 1) * T, sy1: (M.h - 1) * T, start: 22, dur: 150, dmgT: 0 };
     } else {
       for (let team = 0; team < 2; team++) {
-        let mine = opts.players.filter((p) => (mode.id === 'boss' ? 0 : p.team) === team).slice(0, 3);
+        const PER = mode.per || 3;
+        let mine = opts.players.filter((p) => (mode.id === 'boss' ? 0 : p.team) === team).slice(0, PER);
         if (mode.id === 'boss' && team === 1) mine = [{ pid: null, bot: true, name: 'Mégabot', brawler: 'robot', skin: 'classic', level: opts.players[0] ? opts.players[0].level : 3, team: 1, trophies: avg }];
-        while (mine.length < 3 && !(mode.id === 'boss' && team === 1)) mine.push(addBot(team));
+        while (mine.length < PER && !(mode.id === 'boss' && team === 1)) mine.push(addBot(team));
         mine.forEach((p, k) => {
-          const b = mkBrawler(M, G.BRAWLER[p.brawler], team, p.name, p.level, p.skin, !p.bot, map.spawns[team][k], team * 3 + k);
+          const b = mkBrawler(M, G.BRAWLER[p.brawler], team, p.name, p.level, p.skin, !p.bot, map.spawns[team][k], team * PER + k);
           b.spawnIdx = k; b.pid = p.pid; b.human = !p.bot; b.isBot = !!p.bot; M.ents.push(b);
         });
       }
@@ -1125,6 +1161,7 @@
       tm: +M.t.toFixed(3), s: STATE_CODE[M.state], cd: +M.cd.toFixed(1), left: +M.left.toFixed(1), sc: M.score, e,
       it: M.items.map((i) => [i.type === 'gem' ? 0 : 1, Math.round(i.x), Math.round(i.y)]),
     };
+    if (M.potato) snap.pt = [M.potato.holder, +M.potato.t.toFixed(1)];
     if (M.mode === 'gemgrab') snap.gg = [M.gg.active[0] ? 1 : 0, +M.gg.t[0].toFixed(1), M.gg.active[1] ? 1 : 0, +M.gg.t[1].toFixed(1)];
     if (M.zone) snap.z = [Math.round(M.zone.x0), Math.round(M.zone.y0), Math.round(M.zone.x1), Math.round(M.zone.y1)];
     if (M.ball) snap.b = [Math.round(M.ball.x), Math.round(M.ball.y), M.ball.owner ? M.ball.owner.idx : -1];

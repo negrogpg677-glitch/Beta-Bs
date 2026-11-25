@@ -25,7 +25,18 @@
     $$('[data-act=goSocial] .frbadge').forEach((x) => x.remove());
     if (m.incoming.length) $$('[data-act=goSocial]').forEach((b) => b.insertAdjacentHTML('beforeend', `<span class="badge frbadge">${m.incoming.length}</span>`));
   });
-  Net.on('error', (m) => { if (['auth', 'db', 'no_db', 'db_handle', 'login'].includes(m.code)) UI._accErr = m.msg; });
+  Net.on('error', (m) => {
+    if (['auth', 'db', 'no_db', 'db_handle', 'login'].includes(m.code)) UI._accErr = m.msg;
+    // session refusée par le serveur (périmée ou supprimée chez Supabase) : on la renouvelle, sinon on demande de se reconnecter
+    if (m.code === 'auth' && A && A.loggedIn() && Date.now() - (UI._reauthAt || 0) > 30000) {
+      UI._reauthAt = Date.now();
+      A.refresh().then((ok) => {
+        if (ok && A.session) { lastTok = null; auth(true); return; }
+        const doOut = A.loggedIn() ? A.signOut() : Promise.resolve();
+        Promise.resolve(doOut).then(() => { UI.toast('Votre session a expiré : reconnectez-vous à votre compte.', 4000); if (UI.accountModal) UI.accountModal('login'); });
+      });
+    }
+  });
   Net.on('fr_new', (m) => { UI.toast('👋 ' + m.from + ' vous a envoyé une demande d\'ami', 3000); G.Audio.sfx('pickup'); });
   Net.on('name_ok', (m) => { const sv = S(); sv.name = m.name; sv.gems = m.gems; sv.rev = Math.max(sv.rev || 0, m.rev || 0); G.Save.commit(); UI.refreshCur(); UI.closeModal(); UI.toast('Pseudo changé : ' + m.name + ' (−' + m.price + ' 💎)', 2600); G.Audio.sfx('buy'); if (UI.screen === 'home') UI.build.home(); });
   Net.on('end', (m) => { if (m.ranked && typeof m.ranked.delta === 'number' && m.ranked.rank) setTimeout(() => UI.toast('🏆 Classé : ' + (m.ranked.delta >= 0 ? '+' : '') + m.ranked.delta + ' ELO · ' + m.ranked.rank.name + ' (' + m.ranked.elo + ')', 4000), 2200); });
@@ -58,7 +69,7 @@
     const who = (f) => `<div class="fr-who" data-act="frCard" data-h="${esc(f.handle)}"><div class="fn">${esc(f.name)}</div><div class="fh">${esc(f.handle)}</div></div>`;
     let body = '';
     if (UI.frTab === 'list') body = sorted.length ? sorted.map((f, i) => `<div class="fr-row ${f.status}" style="animation-delay:${Math.min(i, 10) * 0.035}s">${av(f)}${who(f)}<div class="fr-st">${stDot(f.status)}${stLabel(f)}</div><div class="fr-tr">${ic('trophy')} ${fmt(f.trophies)}</div>
-        ${f.pid && (f.status === 'menu' || f.status === 'party') ? `<button class="btn small green" data-act="friendInvite" data-pid="${esc(f.pid)}">Inviter</button>` : ''}<button class="btn small gray" data-act="frRemove" data-uid="${esc(f.uid)}" data-n="${esc(f.name)}">✕</button></div>`).join('')
+        ${f.pid && (f.status === 'menu' || f.status === 'party') ? `<button class="btn small green" data-act="friendInvite" data-pid="${esc(f.pid)}">Inviter</button><button class="btn small duelb" data-act="duelFriend" data-pid="${esc(f.pid)}">⚔ Défier</button>` : ''}<button class="btn small gray" data-act="frRemove" data-uid="${esc(f.uid)}" data-n="${esc(f.name)}">✕</button></div>`).join('')
       : '<div class="fr-empty">Aucun ami pour l\'instant.<br>Ajoutez des joueurs grâce à leur identifiant (onglet « Ajouter »).</div>';
     else if (UI.frTab === 'req') body = `<div class="fr-sec">Demandes reçues (${fr.incoming.length})</div>` + (fr.incoming.map((f) => `<div class="fr-row">${av(f)}${who(f)}<div class="fr-tr">${ic('trophy')} ${fmt(f.trophies)}</div><button class="btn small green" data-act="frAccept" data-uid="${esc(f.uid)}">Accepter</button><button class="btn small red" data-act="frDecline" data-uid="${esc(f.uid)}">Refuser</button></div>`).join('') || '<div class="fr-none">Aucune demande reçue.</div>')
       + `<div class="fr-sec">Demandes envoyées (${fr.outgoing.length})</div>` + (fr.outgoing.map((f) => `<div class="fr-row">${av(f)}${who(f)}<div class="fr-st"><i class="dots"></i> En attente</div><button class="btn small gray" data-act="frCancel" data-uid="${esc(f.uid)}">Annuler</button></div>`).join('') || '<div class="fr-none">Aucune demande envoyée.</div>');

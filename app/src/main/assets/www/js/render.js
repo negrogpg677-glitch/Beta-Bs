@@ -536,6 +536,8 @@
     for (const p of M.projs) drawProj(c, p);
     // gaz toxique
     if (M.zone) drawPoison(c, M, time, x0, y0, x1, y1);
+    // bombe-patate au-dessus du porteur
+    if (M.potato && M.potato.holder >= 0) { const h = M.ents[M.potato.holder]; if (h && h.alive) drawPotato(c, h, M.potato.t, time); }
     // particules
     for (const p of M.parts) {
       const k = p.t / p.dur;
@@ -666,6 +668,36 @@
   }
 
   function charDraw(c, id, skin, o) { const C3 = G.Char3D; if (C3 && C3.enabled(true)) { try { C3.drawMatch(c, id, skin, o); return; } catch (e) { C3.failed = true; } } R.drawChar(c, id, skin, o); }
+  function drawPotato(c, h, t, time) {
+    const x = h.x, y = h.y - 112 - (h.z || 0), pulse = t < 5 ? 1 + 0.12 * Math.sin(time * (8 + (5 - t) * 3)) : 1;
+    c.save(); c.translate(x, y); c.scale(pulse, pulse);
+    circ(c, 0, 0, 17); const g = c.createRadialGradient(-5, -6, 2, 0, 0, 17); g.addColorStop(0, '#5a5a6a'); g.addColorStop(1, '#16161e'); c.fillStyle = g; c.fill(); c.strokeStyle = t < 5 ? '#ff4a2a' : OUT; c.lineWidth = 3; c.stroke();
+    c.strokeStyle = '#c9a26a'; c.lineWidth = 3; c.beginPath(); c.moveTo(6, -14); c.quadraticCurveTo(14, -24, 20, -22); c.stroke();
+    circ(c, 20, -22, 4 + Math.random() * 2); c.fillStyle = Math.random() < 0.5 ? '#ffd21f' : '#ff7a1a'; c.fill();
+    c.font = '18px "Lilita One", sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineWidth = 4; c.strokeStyle = OUT; const s = String(Math.max(0, Math.ceil(t)));
+    c.strokeText(s, 0, 2); c.fillStyle = t < 5 ? '#ff6a4a' : '#fff'; c.fillText(s, 0, 2); c.restore();
+  }
+  // nuit de l'éclipse : on éclaircit autour des alliés et dans le faisceau du phare
+  let night = null;
+  R.drawNight = function (c, M, W, H, time) {
+    if (M.mode !== 'eclipse') return;
+    const cam = R.lastCam; if (!cam) return;
+    if (!night || night.width !== W || night.height !== H) { night = document.createElement('canvas'); night.width = W; night.height = H; }
+    const n = night.getContext('2d'), toS = (x, y) => [W / 2 + (x - cam.cx) * cam.sc, H / 2 + (y - cam.cy) * cam.sc];
+    n.globalCompositeOperation = 'source-over'; n.clearRect(0, 0, W, H); n.fillStyle = 'rgba(6,8,28,0.78)'; n.fillRect(0, 0, W, H);
+    n.globalCompositeOperation = 'destination-out';
+    const [lx, ly] = toS(M.w * T / 2, M.h * T / 2), beam = (M.t * 0.7) % (Math.PI * 2), len = Math.max(M.w, M.h) * T * cam.sc;
+    const gb = n.createRadialGradient(lx, ly, 10, lx, ly, len); gb.addColorStop(0, 'rgba(0,0,0,1)'); gb.addColorStop(1, 'rgba(0,0,0,0.55)');
+    n.fillStyle = gb; n.beginPath(); n.moveTo(lx, ly); n.arc(lx, ly, len, beam - 0.32, beam + 0.32); n.closePath(); n.fill();
+    for (const e of M.ents) {
+      if (!e.alive || e.team !== M.player.team) continue;
+      const [sx, sy] = toS(e.x, e.y), r = (e === M.player ? 3.6 : 2.6) * T * cam.sc;
+      const g = n.createRadialGradient(sx, sy, r * 0.25, sx, sy, r); g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)'); n.fillStyle = g; n.beginPath(); n.arc(sx, sy, r, 0, Math.PI * 2); n.fill();
+    }
+    c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(night, 0, 0, c.canvas.width, c.canvas.height); c.restore();
+    c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.12; c.fillStyle = '#fff6c0'; c.beginPath(); c.moveTo(lx, ly); c.arc(lx, ly, len, beam - 0.32, beam + 0.32); c.closePath(); c.fill(); c.restore();
+    c.save(); circ(c, lx, ly, 14 * cam.sc + 6); c.fillStyle = '#fff6c0'; c.shadowColor = '#fff6c0'; c.shadowBlur = 20; c.fill(); c.restore();
+  };
   function drawBrawler(c, M, b, time) {
     const isMe = b === M.player;
     const inBush = b.hidden || Sim_tileBush(M, b);
@@ -839,7 +871,7 @@
       else if (M.mode === 'boss') { s0 = M.ents.filter((e) => e.team === 0 && e.alive).length + ' / ' + M.ents.filter((e) => e.team === 0).length; const bs = M.ents.find((e) => e.isBoss); s1 = bs ? Math.round(bs.hp / bs.maxhp * 100) + '%' : '0%'; }
       else if (M.mode === 'hotzone') { s0 = Math.floor(M.score[0]); s1 = Math.floor(M.score[1]); }
       else { s0 = M.score[0]; s1 = M.score[1]; }
-      const ic = M.mode === 'gemgrab' ? '◆ ' : M.mode === 'bounty' ? '★ ' : M.mode === 'brawlball' ? '⚽ ' : M.mode === 'hotzone' ? '◎ ' : M.mode === 'boss' ? '☻ ' : '🔒 ';
+      const ic = M.mode === 'potato' ? '💣 ' : M.mode === 'eclipse' ? '☾ ' : M.mode === 'duel' ? '⚔ ' : M.mode === 'gemgrab' ? '◆ ' : M.mode === 'bounty' ? '★ ' : M.mode === 'brawlball' ? '⚽ ' : M.mode === 'hotzone' ? '◎ ' : M.mode === 'boss' ? '☻ ' : '🔒 ';
       text(ic + s0, W / 2 - bw * 1.0 - 1 * u, top + bh / 2, 3.8 * u);
       text(ic + s1, W / 2 + bw * 1.0 + 1 * u, top + bh / 2, 3.8 * u);
       if (M.mode === 'gemgrab') {

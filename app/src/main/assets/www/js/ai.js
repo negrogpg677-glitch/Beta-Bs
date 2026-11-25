@@ -173,6 +173,20 @@
         if (near) return { x: near.x, y: near.y, kind: 'hunt' };
         return { x: mw / 2, y: mh / 2, kind: 'center' };
       }
+      case 'potato': {
+        let near = null, nd = 1e9, P = M.potato, h = P && P.holder >= 0 ? M.ents[P.holder] : null;
+        for (const e of M.ents) if (e.alive && e.team === enemy) { const d = G.dist(b.x, b.y, e.x, e.y); if (d < nd) { nd = d; near = e; } }
+        if (h === b && near) return { x: near.x, y: near.y, kind: 'hunt' }; // porteur : il faut toucher un ennemi
+        if (h && h.alive && h.team === enemy && P.t < 9 && G.dist(b.x, b.y, h.x, h.y) < 6 * T) return { x: b.x + (b.x - h.x) * 1.5, y: b.y + (b.y - h.y) * 1.5, kind: 'flee' }; // on s'éloigne de la bombe
+        if (near && nd < 10 * T) return { x: near.x, y: near.y, kind: 'hunt' };
+        return { x: mw / 2, y: mh / 2 + (b.spawnIdx - 1) * 3 * T, kind: 'center' };
+      }
+      case 'duel': { // un contre un : on traque toujours l'adversaire
+        let near = null; for (const e of M.ents) if (e.alive && e.team === enemy) near = e;
+        if (b.hp < b.maxhp * 0.22 && near && G.dist(b.x, b.y, near.x, near.y) < 4 * T) return { x: b.x + (b.x - near.x), y: b.y + (b.y - near.y), kind: 'retreat' };
+        return near ? { x: near.x, y: near.y, kind: 'hunt' } : { x: mw / 2, y: mh / 2, kind: 'center' };
+      }
+      case 'eclipse':
       case 'knockout':
       case 'bounty': {
         let near = null, nd = 1e9;

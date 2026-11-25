@@ -68,7 +68,7 @@
       : !fr.length ? '<div class="invempty">Aucun ami pour l\'instant.<br>Ajoutez des amis avec leur code dans l\'onglet Amis.</div>'
         : fr.map((f, i) => `<div class="invrow ${f.status}" style="animation-delay:${Math.min(i, 10) * 0.04}s"><div class="fav" data-act="friendCard" data-pid="${esc(f.pid)}">${esc(f.name.slice(0, 1).toUpperCase())}</div>
           <div class="finfo" data-act="friendCard" data-pid="${esc(f.pid)}"><div class="fn">${esc(f.name)}</div><div class="fs"><span class="netdot ${f.status === 'off' ? 'off' : f.status === 'match' ? 'wait' : 'on'}"></span>${lab[f.status] || ''} · ${ic('trophy')} ${fmt(f.trophies)}</div></div>
-          ${inTeam(f.pid) ? '<span class="invok">✔ Dans l\'équipe</span>' : T.pending[f.pid] ? '<span class="invok">Invité…</span>' : f.status === 'menu' || f.status === 'party' ? `<button class="btn small green" data-act="invFriend" data-pid="${esc(f.pid)}">INVITER</button>` : '<span class="invoff">Indisponible</span>'}</div>`).join('');
+          ${inTeam(f.pid) ? '<span class="invok">✔ Dans l\'équipe</span>' : T.pending[f.pid] ? '<span class="invok">Invité…</span>' : f.status === 'menu' || f.status === 'party' ? `<button class="btn small green" data-act="invFriend" data-pid="${esc(f.pid)}">INVITER</button><button class="btn small duelb" data-act="duelFriend" data-pid="${esc(f.pid)}">⚔ DÉFIER</button>` : '<span class="invoff">Indisponible</span>'}</div>`).join('');
   }
   for (const t of ['friends', 'status', 'party', 'invite_sent', 'invite_declined']) Net.on(t, () => setTimeout(renderInvList, 30));
   ACT.invitePanel = () => { G.Audio.sfx('ui'); UI.invitePanel(); };

@@ -39,7 +39,7 @@
   })();
   const ic = (n, cls) => (ICONS[n] || '').replace('<svg', '<svg class="ic ' + (cls || '') + '"');
   G.ic = ic;
-  const MODE_ICON = { gem: 'gem', ball: 'ball', safe: 'safe', star: 'star', skull: 'skull', zone: 'flag', robot: 'gear' };
+  const MODE_ICON = { gem: 'gem', ball: 'ball', safe: 'safe', star: 'star', skull: 'skull', zone: 'flag', robot: 'gear', bomb: 'bolt', moon: 'star' };
 
   /* ---------- utilitaires ---------- */
   UI.toast = function (msg, ms) {
