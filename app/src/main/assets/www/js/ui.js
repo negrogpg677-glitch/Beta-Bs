@@ -303,6 +303,7 @@
       const s = S().settings;
       const tg = (k, label) => `<div class="setrow"><span>${label}</span><div class="toggle ${s[k] ? 'on' : ''}" data-act="toggle" data-k="${k}"></div></div>`;
       return `<h2>Réglages</h2>${tg('sound', 'Effets sonores')}${tg('music', 'Musique')}${tg('vibrate', 'Vibrations')}${tg('aimAssist', 'Aide à la visée')}${tg('lefty', 'Mode gaucher')}
+        <div class="setrow"><span>Taille des commandes</span><button class="btn small blue" data-act="ctrlSize">${(s.ctrlScale || 1) < 0.95 ? 'Petite' : (s.ctrlScale || 1) > 1.05 ? 'Grande' : 'Normale'}</button></div>
         <div class="setrow"><span>Qualité graphique</span><button class="btn small ${s.quality === 'high' ? 'green' : s.quality === 'medium' ? 'blue' : 'gray'}" data-act="quality">${s.quality === 'high' ? 'Haute' : s.quality === 'medium' ? 'Moyenne' : 'Économie'}</button></div>
         ${window.AndroidBridge ? '' : '<div class="setrow"><span>Installer le jeu (PWA)</span><button class="btn small blue" data-act="installApp">Installer</button></div>'}
         <div class="setrow"><span>Compte : ${G.Account && G.Account.loggedIn() ? esc(S().name) + ' (connecté)' : 'invité'}</span><button class="btn small ${G.Account && G.Account.loggedIn() ? 'blue' : 'green'}" data-act="account">${G.Account && G.Account.loggedIn() ? 'Mon compte' : 'Connexion'}</button></div>
@@ -322,6 +323,7 @@
     const o = UI.modals[UI.modals.length - 1]; if (!o || !UI._settingsRender) return;
     const m = o.querySelector('.modal'); const x = m.querySelector('.x'); m.innerHTML = ''; m.appendChild(x); m.insertAdjacentHTML('beforeend', UI._settingsRender());
   }
+  ACT.ctrlSize = () => { const s = S().settings, v = s.ctrlScale || 1; s.ctrlScale = v < 0.95 ? 1 : v > 1.05 ? 0.88 : 1.14; G.Save.commit(); refreshSettings(); };
   ACT.quality = () => { const s = S().settings; s.quality = s.quality === 'high' ? 'medium' : s.quality === 'medium' ? 'low' : 'high'; G.Save.commit(); G.App.resize(); refreshSettings(); };
   ACT.rename = () => {
     const o = UI.modal(`<h2>Votre pseudo</h2><div class="row"><input class="txt" id="nameIn" maxlength="14" value="${esc(S().name)}"></div><div class="row" style="margin-top:2.4rem"><button class="btn green" data-act="saveName">OK</button></div>`);
@@ -633,8 +635,8 @@
   UI.showTutorial = function () {
     const L = G.Render.layout(window.innerWidth, window.innerHeight), u = L.u, left = !S().settings.lefty;
     const mk = (txt, x, y) => { const d = el(`<div class="tuto" style="left:${x}px;top:${y}px;transform:translate(-50%,-100%)">${txt}</div>`); $('#ui').appendChild(d); return d; };
-    const a = mk('Glissez pour vous déplacer', L.joyX, L.joyY - L.joyR * 1.5);
-    const b = mk('Touchez pour tirer<br>Glissez pour viser', L.atkX, L.atkY - L.atkR * 1.6);
+    const a = mk('Posez le doigt n’importe où ici<br>et glissez pour bouger', L.joyX, L.joyY - L.joyR * 1.5);
+    const b = mk('Touchez : tir automatique<br>Glissez : visez · revenez au centre : annulez', L.atkX, L.atkY - L.atkR * 1.6);
     const c = mk('Super : se charge en touchant vos cibles', L.supX + (left ? -1 : 1) * 24 * u, L.supY + L.supR * 0.2);
     const d = mk('Esquive : roulade invulnérable', L.dgX - 8 * u * (left ? 1 : -1), L.dgY - L.dgR * 1.4);
     const rm = () => { [a, b, c, d].forEach((x) => x.remove()); S().tutorialDone = true; G.Save.commit(); };

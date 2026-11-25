@@ -62,3 +62,17 @@ Nouveau : comptes Supabase (`COMPTES.md`, `supabase/schema.sql` validé par l'an
 - **Émotes** : roue de 8 émotes, bulle animée au-dessus du brawler, diffusion en ligne vérifiée, anti-spam.
 - **Pass Rush** : 30 paliers mensuels, récompenses vérifiées (pièces, brawler, skin légendaire), paliers non atteints verrouillés, remise à zéro à chaque nouvelle saison, XP affichée dans l'écran de résultats.
 - Non-régression : 37/37 tests serveur, 20/20 tests de comptes, aucune erreur JavaScript.
+
+## v7 — prise en main façon jeu mobile pro
+| Problème constaté | Correction |
+|---|---|
+| Vitesse proportionnelle à l'écart du doigt : petit geste = personnage lent, sensation de mollesse | Joystick flottant : pleine vitesse dès 32 % du rayon (≈ 20 px), zone morte de 10 % |
+| Joystick pouvant rester bloqué (doigt sorti de l'écran, notification, appel) | Relâchement sur `pointercancel`, perte de capture, perte de focus, passage en arrière-plan |
+| Impossible d'annuler un tir visé | Revenir au centre de la manette annule (✕ rouge + vibration) |
+| La visée traversait les murs | Indicateurs découpés par les murs (rayons), arc de trajectoire pour les tirs en cloche |
+| Le personnage accrochait les coins de mur | Glissement automatique autour des coins (jusqu'à un rayon) — vérifié : +86 px au lieu de 0 |
+| Boutons super/attaque qui se touchaient ; commandes géantes sur tablette | Nouvelle disposition sans chevauchement (vérifiée à 640×360 et 1024×768), taille plafonnée, réglage de taille |
+| Ralentissements sur téléphones modestes | Résolution dynamique avant réduction des effets |
+
+Ajouts : alerte vie basse, direction des dégâts, son plus percutant (compresseur, réverbération, variations).
+Tests : `tools/test-touch.js` (11 vérifications tactiles), 37/37 serveur, 20/20 comptes, 8 modes simulés sans erreur.

@@ -120,6 +120,7 @@
       }
       case 'd': {
         const tgt = M.ents[e[4]]; if (!tgt) break;
+        { const s = M.ents[e[6]]; if (tgt === M.player && s && s !== tgt) M.dmgDir = { ang: Math.atan2(s.y - tgt.y, s.x - tgt.x), t: 0 }; }
         if (tgt.popObj && tgt.popT > 0 && tgt.popObj.t < 0.5) { tgt.popObj.amt += e[3]; tgt.popObj.txt = String(Math.round(tgt.popObj.amt)); tgt.popObj.t = 0.1; }
         else { const o = { x: e[1] + G.rr(-8, 8), y: e[2], txt: String(e[3]), color: me && tgt.team === me.team ? '#ff5252' : '#fff', t: 0, dur: 0.9, size: 22, vy: -70, amt: e[3] }; M.texts.push(o); tgt.popObj = o; tgt.popT = 0.25; }
         if (tgt === me) { G.vibrate(25); Sim.shake(M, 5); }

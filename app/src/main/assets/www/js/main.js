@@ -36,7 +36,8 @@
     if (q === 'eco') q = 'low';
     G.Render.q = q === 'high' ? 2 : q === 'medium' ? 1 : 0;
     G.Render.dpr = Math.min(window.devicePixelRatio || 1, q === 'high' ? 2 : q === 'medium' ? 1.5 : 1);
-    App.dpr = Math.min(window.devicePixelRatio || 1, q === 'high' ? 2 : q === 'medium' ? 1.5 : 1);
+    App.dpr = Math.max(0.6, Math.min(window.devicePixelRatio || 1, q === 'high' ? 2 : q === 'medium' ? 1.5 : 1) * (App.resScale || 1)); // résolution dynamique
+    G.Render.dpr = App.dpr;
     App.W = window.innerWidth; App.H = window.innerHeight;
     const cv = App.canvas;
     cv.width = Math.round(App.W * App.dpr); cv.height = Math.round(App.H * App.dpr);
@@ -103,7 +104,9 @@
       if (App.fpsT > 2.5) {
         const fps = App.fpsN / App.fpsT; App.fpsN = 0; App.fpsT = 0;
         const set = G.Save.data.settings;
-        if (fps < 38 && set.quality !== 'low' && set.quality !== 'eco') { set.quality = set.quality === 'high' ? 'medium' : 'low'; G.Save.commit(); App.resize(); G.UI.toast('Qualité réduite pour rester fluide', 2200); }
+        if (fps < 50 && (App.resScale || 1) > 0.66) { App.resScale = Math.max(0.65, (App.resScale || 1) - 0.12); App.resize(); }
+        else if (fps > 59 && (App.resScale || 1) < 1) { App.resScale = Math.min(1, App.resScale + 0.06); App.resize(); }
+        else if (fps < 38 && set.quality !== 'low' && set.quality !== 'eco') { set.quality = set.quality === 'high' ? 'medium' : 'low'; G.Save.commit(); App.resize(); G.UI.toast('Qualité réduite pour rester fluide', 2200); }
       }
     }
     const c = App.ctx;

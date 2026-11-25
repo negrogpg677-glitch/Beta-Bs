@@ -94,7 +94,7 @@
         roadClaimed: [], boxes: 1, lastDaily: 0, dailyStreak: 0,
         stats: { wins: 0, losses: 0, kills: 0, matches: 0, damage: 0, gemsGrabbed: 0, goals: 0, showdownWins: 0 },
         quests: null, questDay: '', shopDay: '', shopBought: {},
-        settings: { sound: true, music: true, vibrate: true, aimAssist: true, quality: 'high', lefty: false },
+        settings: { sound: true, music: true, vibrate: true, aimAssist: true, quality: 'high', lefty: false, ctrlScale: 1 },
         tutorialDone: false,
       };
     },
@@ -116,6 +116,7 @@
   };
 
   /* ---------- audio synthétisé (aucun fichier externe) ---------- */
+  const VARY = { shoot: 1, shotgun: 1, rocket: 1, magic: 1, zap: 1, hit: 1, explode: 1, hitm: 1, kick: 1, dash: 1, pickup: 1 };
   const A = (G.Audio = {
     ctx: null, master: null, sfxGain: null, musGain: null, noiseBuf: null,
     musicOn: false, musicMode: 'menu', step: 0, nextT: 0, timer: null, ready: false,
@@ -125,8 +126,18 @@
         const C = window.AudioContext || window.webkitAudioContext;
         if (!C) return;
         this.ctx = new C();
-        this.master = this.ctx.createGain(); this.master.gain.value = 0.9; this.master.connect(this.ctx.destination);
+        this.master = this.ctx.createGain(); this.master.gain.value = 0.9;
+        // compresseur : sons plus percutants, pas de saturation quand tout explose en même temps
+        const comp = this.ctx.createDynamicsCompressor();
+        comp.threshold.value = -16; comp.knee.value = 10; comp.ratio.value = 4; comp.attack.value = 0.003; comp.release.value = 0.2;
+        this.master.connect(comp); comp.connect(this.ctx.destination);
         this.sfxGain = this.ctx.createGain(); this.sfxGain.connect(this.master);
+        try { // petite réverbération (profondeur de l'arène)
+          const sr = this.ctx.sampleRate, len = Math.floor(sr * 0.55), ir = this.ctx.createBuffer(2, len, sr);
+          for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2); }
+          const cv = this.ctx.createConvolver(); cv.buffer = ir; const wet = this.ctx.createGain(); wet.gain.value = 0.16;
+          this.sfxGain.connect(cv); cv.connect(wet); wet.connect(this.master);
+        } catch (e) { /* pas de réverbération */ }
         this.musGain = this.ctx.createGain(); this.musGain.connect(this.master);
         const n = this.ctx.sampleRate;
         this.noiseBuf = this.ctx.createBuffer(1, n, n);
@@ -169,17 +180,21 @@
       s.connect(f); f.connect(g); g.connect(this.sfxGain);
       s.start(t, Math.random() * 0.5); s.stop(t + dur + 0.02);
     },
+    _last: {},
     sfx(name, pitch) {
       if (!this.ready) return;
-      this._pm = pitch || 1;
+      const now = this.ctx.currentTime; // anti-cacophonie : un même son au plus toutes les 35 ms
+      if (this._last[name] && now - this._last[name] < 0.035) return;
+      this._last[name] = now;
+      this._pm = (pitch || 1) * (VARY[name] ? 1 + (Math.random() - 0.5) * 0.09 : 1); // légère variation : moins répétitif
       switch (name) {
         case 'shoot': this.tone(520, 0.1, 'square', 0.12, 180); this.noise(0.06, 0.12, 2500); break;
         case 'shotgun': this.noise(0.16, 0.3, 1800); this.tone(150, 0.14, 'sawtooth', 0.14, 60); break;
         case 'rocket': this.tone(200, 0.25, 'sawtooth', 0.12, 90); this.noise(0.2, 0.15, 900); break;
         case 'magic': this.tone(700, 0.18, 'sine', 0.15, 1100); this.tone(1050, 0.18, 'triangle', 0.08, 1500, 0.04); break;
         case 'zap': this.tone(900, 0.12, 'sawtooth', 0.12, 200); this.noise(0.1, 0.12, 5000, 0, 'highpass'); break;
-        case 'hit': this.tone(260, 0.09, 'square', 0.12, 90); break;
-        case 'explode': this.noise(0.4, 0.4, 700); this.tone(110, 0.3, 'sawtooth', 0.18, 40); break;
+        case 'hit': this.tone(260, 0.09, 'square', 0.12, 90); this.tone(110, 0.1, 'sine', 0.28, 50); break;
+        case 'explode': this.noise(0.4, 0.4, 700); this.tone(110, 0.3, 'sawtooth', 0.18, 40); this.tone(70, 0.38, 'sine', 0.42, 32); break;
         case 'super': this.tone(300, 0.35, 'sawtooth', 0.18, 900); this.tone(600, 0.35, 'square', 0.1, 1500, 0.05); this.noise(0.25, 0.15, 3000); break;
         case 'superReady': this.tone(660, 0.1, 'triangle', 0.16); this.tone(990, 0.16, 'triangle', 0.16, null, 0.09); break;
         case 'heal': this.tone(520, 0.12, 'sine', 0.14); this.tone(780, 0.2, 'sine', 0.14, null, 0.1); break;

@@ -30,7 +30,7 @@ Test en réseau local : `cd server && npm start`, puis l'adresse `192.168.x.x:80
 Le serveur sert aussi le jeu dans un navigateur à `http://adresse/` et expose `/health`.
 
 ## Contrôles
-Joystick à gauche pour bouger · bouton jaune : toucher = tir automatique, glisser = viser · éclair = super · bouton bleu (en haut à droite) = **roulade d'esquive** (invulnérable un instant) · bouton vert = **gadget** (3 par partie, points verts = charges restantes) · bouton 😀 = roue des **émotes**. Au clavier : F roulade, G gadget, T émotes puis 1-8.
+**Joystick flottant** : posez le doigt n'importe où sur la moitié gauche, il apparaît sous le doigt (pleine vitesse dès un petit glissement, la base suit le doigt) · bouton orange : toucher = tir automatique, glisser = viser (la visée s'arrête sur les murs), revenir au centre = annuler · éclair = super · bouton bleu (en haut à droite) = **roulade d'esquive** (invulnérable un instant) · bouton vert = **gadget** (3 par partie, points verts = charges restantes) · bouton 😀 = roue des **émotes**. Au clavier : F roulade, G gadget, T émotes puis 1-8. *Réglages → Taille des commandes* : petite / normale / grande.
 (PC : ZQSD/flèches, clic = tir, Espace, Maj/E = super, F = esquive, Échap = pause.)
 
 ## Recompiler l'APK

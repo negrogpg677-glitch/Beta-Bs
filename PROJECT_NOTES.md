@@ -54,3 +54,11 @@ Product flavors Gradle `prod`/`dev` (dimension `edition`, `.dev` en suffixe d'ap
 - Émotes : `G.EMOTES`, `Sim.emote` (anti-spam 2,5 s), évènement réseau `['em', idx, i]`, entrée `em: i`. Roue : `R.emoteSlots`, `In.emoteOpen`.
 - Pass Rush : `js/pass.js` (`G.Pass`, `UI.passModal`), donnée `save.pass = { season: 'AAAA-MM', xp, claimed[] }` (synchronisée avec le compte), XP ajoutée dans `App.finish`.
 - Tests : `server/test/run.js` (37 vérifs, dont gadget/émote en ligne).
+
+## v7 (prise en main)
+- `input.js` : joystick flottant (`joyMove` : zone morte 10 %, pleine vitesse à 32 % du rayon, base qui suit le doigt), manettes d'action (`stickStart`, `b.cancel` = retour au centre), `In.release` (doigt perdu / appli en arrière-plan).
+- `render.js` : `R.layout` (taille plafonnée, réglage `settings.ctrlScale`), `actionStick`, `R.drawAim` avec `rayLen` (visée arrêtée par les murs), alerte vie basse, `M.dmgDir` (direction des dégâts).
+- `game.js` : `nudge` glisse autour des coins jusqu'à un rayon.
+- `main.js` : résolution dynamique `App.resScale` (0,65 → 1) avant la baisse de qualité.
+- `util.js` : compresseur + réverbération courte, variation de hauteur, anti-cacophonie (35 ms).
+- Test : `tools/test-touch.js` (toucher multipoint réel émulé).

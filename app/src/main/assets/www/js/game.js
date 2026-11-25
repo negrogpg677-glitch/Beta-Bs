@@ -124,13 +124,14 @@
     }
     return blocked;
   }
-  // aide à contourner les coins : si on est presque aligné avec une ouverture
+  // aide à contourner les coins : si une ouverture est proche (jusqu'à un rayon), on glisse vers elle
   function nudge(M, e, sx, sy) {
-    const k = 1.2;
-    if (sx) {
-      for (const d of [k, -k, 2 * k, -2 * k, 3 * k, -3 * k]) if (!circleHitsSolid(M, e.x + sx, e.y + d, e.r)) { e.y += d * 0.6; return; }
-    } else {
-      for (const d of [k, -k, 2 * k, -2 * k, 3 * k, -3 * k]) if (!circleHitsSolid(M, e.x + d, e.y + sy, e.r)) { e.x += d * 0.6; return; }
+    const step = Math.abs(sx || sy), lim = e.r;
+    for (let d = 2; d <= lim; d += 2) for (const s of [d, -d]) {
+      if (sx ? circleHitsSolid(M, e.x + sx, e.y + s, e.r) : circleHitsSolid(M, e.x + s, e.y + sy, e.r)) continue;
+      const m = Math.sign(s) * Math.min(step * 0.9, d);
+      if (sx) { if (!circleHitsSolid(M, e.x, e.y + m, e.r)) e.y += m; } else if (!circleHitsSolid(M, e.x + m, e.y, e.r)) e.x += m;
+      return;
     }
   }
   Sim.lineClear = function (M, x0, y0, x1, y1, bulletOnly) {
@@ -181,7 +182,7 @@
       src.st.damage += amt;
       if (src.superCharge >= 1 && !src.superReadyFx) { src.superReadyFx = true; if (M.online) M.evq.push(['sr', src.idx]); else if (src === M.player) Sim.sfx(M, 'superReady'); }
     }
-    if (tgt === M.player) { G.vibrate(25); Sim.shake(M, 5); }
+    if (tgt === M.player) { G.vibrate(25); Sim.shake(M, 5); if (src && src !== tgt) M.dmgDir = { ang: Math.atan2(src.y - tgt.y, src.x - tgt.x), t: 0 }; }
     if (src && src === M.player && tgt !== src && !M.online) { M.hitmarks.push({ x: tgt.x, y: tgt.y - 12, t: 0, big: amt >= 1200 }); G.Audio.sfx('hitm'); }
     if (fx) applyFx(M, tgt, fx, src);
     if (tgt.hp <= 0) die(M, tgt, src);
