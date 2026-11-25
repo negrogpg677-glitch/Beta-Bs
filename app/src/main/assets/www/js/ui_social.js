@@ -41,7 +41,7 @@
   function renderSocial() {
     const b = $('#socBody'); if (!b || UI.screen !== 'social') return;
     if (!Net.serverUrl()) { b.innerHTML = '<div class="row" style="font-size:3rem;margin-top:6rem">Le mode en ligne n\'est pas disponible dans cette version.</div>'; return; }
-    if (Net.status !== 'online') { b.innerHTML = '<div class="row" style="font-size:3.2rem;margin-top:6rem;flex-direction:column"><div class="spinner"></div><div>Connexion au serveur…</div></div>'; return; }
+    if (Net.status !== 'online') { b.innerHTML = '<div class="row" style="font-size:3.2rem;margin-top:6rem;flex-direction:column"><div class="spinner"></div><div>' + (Net.waking() ? 'Réveil du serveur… (jusqu’à 1 min)' : 'Connexion au serveur…') + '</div></div>'; return; }
     if (UI.socialTab === 'friends') renderFriends(b); else if (UI.socialTab === 'club') renderClub(b); else renderRanking(b);
   }
   function renderFriends(b) {

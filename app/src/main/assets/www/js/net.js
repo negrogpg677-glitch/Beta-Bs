@@ -27,6 +27,7 @@
   Net.off = (t, fn) => { Net.handlers[t] = (Net.handlers[t] || []).filter((f) => f !== fn); };
   const emit = (t, m) => { (Net.handlers[t] || []).slice().forEach((f) => { try { f(m); } catch (e) { console.error(e); } }); };
   Net.send = function (o) { if (Net.ws && Net.ws.readyState === 1) { Net.ws.send(JSON.stringify(o)); return true; } return false; };
+  Net.waking = () => (Net.status === 'connecting' || Net.status === 'reconnecting') && Date.now() - (Net.since || Date.now()) > 5000;
   Net.setStatus = function (s) { if (Net.status !== s) { Net.status = s; emit('status', s); } };
 
   Net.connect = function () {
@@ -34,11 +35,12 @@
     const url = Net.serverUrl();
     if (!url) { Net.lastErr = 'Aucun serveur configuré (Réglages > Serveur).'; Net.setStatus('off'); emit('neterror', { msg: Net.lastErr }); return; }
     if (Net.ws && (Net.ws.readyState === 0 || Net.ws.readyState === 1)) return;
+    if (Net.status !== 'connecting' && Net.status !== 'reconnecting') Net.since = Date.now();
     Net.setStatus(Net.retry ? 'reconnecting' : 'connecting');
     let ws;
     try { ws = new WebSocket(url); } catch (e) { Net.lastErr = 'Adresse de serveur invalide.'; Net.setStatus('off'); emit('neterror', { msg: Net.lastErr }); return; }
     Net.ws = ws;
-    const to = setTimeout(() => { if (ws.readyState === 0) { try { ws.close(); } catch (e) { /* ignore */ } } }, 9000);
+    const to = setTimeout(() => { if (ws.readyState === 0) { try { ws.close(); } catch (e) { /* ignore */ } } }, 20000); // un serveur gratuit endormi met jusqu'à ~1 min à se réveiller
     ws.onopen = () => {
       clearTimeout(to);
       const n = G.Save.data.net || {};
@@ -55,7 +57,7 @@
       const was = Net.status;
       Net.setStatus(Net.wanted ? 'reconnecting' : 'off');
       emit('disconnected', { wasOnline: was === 'online' });
-      if (Net.wanted) { Net.retry++; setTimeout(Net.connect, Math.min(8000, 800 * Math.pow(1.6, Math.min(Net.retry, 6)))); }
+      if (Net.wanted) { Net.retry++; setTimeout(Net.connect, Math.min(5000, 800 * Math.pow(1.6, Math.min(Net.retry, 6)))); }
     };
     ws.onerror = () => { Net.lastErr = 'Connexion au serveur impossible.'; };
   };

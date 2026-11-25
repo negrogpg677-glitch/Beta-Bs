@@ -18,10 +18,12 @@
   };
   function whenOnline(fn) {
     if (Net.status === 'online') return fn();
-    UI.toast('Connexion au serveur…', 1800);
-    const h = (st) => { if (st === 'online') { Net.off('status', h); setTimeout(fn, 150); } };
+    UI.toast(Net.waking() ? 'Réveil du serveur… (jusqu’à 1 minute)' : 'Connexion au serveur…', 2500);
+    Net.ensure();
+    let done = false; const h = (st) => { if (st === 'online' && !done) { done = true; Net.off('status', h); clearInterval(iv); setTimeout(fn, 150); } };
     Net.on('status', h);
-    setTimeout(() => Net.off('status', h), 9000);
+    const iv = setInterval(() => { if (done) return clearInterval(iv); if (Net.waking()) UI.toast('Réveil du serveur… (jusqu’à 1 minute)', 2500); }, 6000);
+    setTimeout(() => { if (!done) { done = true; Net.off('status', h); clearInterval(iv); UI.toast('Serveur injoignable pour le moment. Réessayez dans un instant.', 3500); } }, 90000);
   }
   Net.on('neterror', (e) => UI.toast(e.msg, 3500));
   Net.on('error', (e) => { UI.toast(e.msg, 3000); G.Audio.sfx('error'); });
@@ -41,7 +43,7 @@
     const body = $('#teamBody', o); if (!body) return;
     const p = Net.party, st = Net.status;
     const dot = st === 'online' ? 'on' : st === 'off' ? 'off' : 'wait';
-    const status = `<div style="text-align:center;font-size:2.4rem;margin-bottom:1rem"><span class="netdot ${dot}"></span>${st === 'online' ? 'Connecté · ' + Net.ping + ' ms' : st === 'reconnecting' ? 'Reconnexion…' : st === 'connecting' ? 'Connexion…' : 'Hors ligne'}</div>`;
+    const status = `<div style="text-align:center;font-size:2.4rem;margin-bottom:1rem"><span class="netdot ${dot}"></span>${st === 'online' ? 'Connecté · ' + Net.ping + ' ms' : Net.waking() ? 'Réveil du serveur… (jusqu’à 1 min)' : st === 'reconnecting' ? 'Reconnexion…' : st === 'connecting' ? 'Connexion…' : 'Hors ligne'}</div>`;
     if (!p) {
       body.innerHTML = `<h2>Équipe</h2>${status}<div class="row"><button class="btn green" data-act="teamCreate" ${st !== 'online' ? 'disabled' : ''}>Créer une équipe</button></div>
         <div class="row" style="margin-top:3rem;font-size:3rem">ou rejoindre un ami :</div>

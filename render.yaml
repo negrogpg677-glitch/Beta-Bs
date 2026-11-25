@@ -4,6 +4,7 @@ services:
     name: brawl-rush-server
     runtime: docker
     plan: free
+    region: frankfurt
     healthCheckPath: /health
     envVars:
       - key: FILL_WAIT
