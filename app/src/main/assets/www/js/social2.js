@@ -25,6 +25,7 @@
     $$('[data-act=goSocial] .frbadge').forEach((x) => x.remove());
     if (m.incoming.length) $$('[data-act=goSocial]').forEach((b) => b.insertAdjacentHTML('beforeend', `<span class="badge frbadge">${m.incoming.length}</span>`));
   });
+  Net.on('error', (m) => { if (['auth', 'db', 'no_db', 'db_handle', 'login'].includes(m.code)) UI._accErr = m.msg; });
   Net.on('fr_new', (m) => { UI.toast('👋 ' + m.from + ' vous a envoyé une demande d\'ami', 3000); G.Audio.sfx('pickup'); });
   Net.on('name_ok', (m) => { const sv = S(); sv.name = m.name; sv.gems = m.gems; sv.rev = Math.max(sv.rev || 0, m.rev || 0); G.Save.commit(); UI.refreshCur(); UI.closeModal(); UI.toast('Pseudo changé : ' + m.name + ' (−' + m.price + ' 💎)', 2600); G.Audio.sfx('buy'); if (UI.screen === 'home') UI.build.home(); });
   Net.on('end', (m) => { if (m.ranked && typeof m.ranked.delta === 'number' && m.ranked.rank) setTimeout(() => UI.toast('🏆 Classé : ' + (m.ranked.delta >= 0 ? '+' : '') + m.ranked.delta + ' ELO · ' + m.ranked.rank.name + ' (' + m.ranked.elo + ')', 4000), 2200); });
@@ -173,7 +174,7 @@
   UI.devStatusRow = () => {
     const me = Net.me;
     if (!A || !A.loggedIn()) return '';
-    if (!me) return '<div class="setrow"><span>🔧 Mode développeur : compte en cours de connexion au serveur…</span></div>';
+    if (!me) return '<div class="setrow"><span style="font-size:2.2rem">🔧 Mode développeur : compte non connecté au serveur de jeu' + (UI._accErr ? ' — <b>' + esc(UI._accErr) + '</b>' : Net.status !== 'online' ? ' (serveur hors ligne / en réveil)' : ' (connexion en cours…)') + '</span></div>';
     if (me.dev) return '<div class="setrow"><span>🔧 Compte développeur ✔</span><span><button class="btn small green" data-act="devTools">Outils DEV</button> <button class="btn small blue" data-act="devPanel">Cadeaux / joueurs</button></span></div>';
     return '<div class="setrow"><span style="font-size:2.2rem">🔧 Mode développeur : non activé pour ce compte (e-mail : <b>' + esc(me.email || '?') + '</b>).' + (me.devConfigured ? ' Mettez exactement cet e-mail dans DEV_EMAILS sur Render.' : ' DEV_EMAILS est vide sur Render.') + '</span></div>';
   };

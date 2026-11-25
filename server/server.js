@@ -378,7 +378,7 @@ function handshake(ws, msg) {
 
 const server = http.createServer((req, res) => {
   const u = (req.url || '/').split('?')[0];
-  if (u === '/health') { res.writeHead(200, { 'content-type': 'application/json' }); return res.end(JSON.stringify({ ok: true, players: clients.size, online: wss.clients.size, matches: matches.size, parties: parties.size, proto: PROTOCOL })); }
+  if (u === '/health') { res.writeHead(200, { 'content-type': 'application/json' }); return res.end(JSON.stringify({ ok: true, players: clients.size, online: wss.clients.size, matches: matches.size, parties: parties.size, proto: PROTOCOL, accounts: acc.diag() })); }
   // le jeu peut aussi être servi directement : http://serveur/ (jouable dans un navigateur)
   const rel = u === '/' ? 'index.html' : u.replace(/\.\./g, '');
   const fp = path.join(WWW, rel);

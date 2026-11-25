@@ -12,6 +12,14 @@ module.exports = function (ctx) {
   const enabled = !!(URL0 && SECRET);
   const DAY = 86400000, NAME_DELAY = 31 * DAY;
   const byUid = new Map(); // uid -> pid (session en ligne)
+  // auto-diagnostic sans secret (visible dans /health) : base joignable ? tables v2 ? clé valide ? combien d'e-mails développeur ?
+  const D = { db: enabled ? 'test en cours' : 'non configurée (SUPABASE_URL / SUPABASE_SECRET absents)', v2: '?', devs: DEVS.length, auths: 0, devAuths: 0, lastAuthErr: '' };
+  async function selfCheck() {
+    if (!enabled) return;
+    try { await db('/rest/v1/profiles?select=id&limit=1'); D.db = 'ok'; } catch (e) { D.db = 'erreur ' + (e.status || '') + ' : ' + String(e.message).slice(0, 120); }
+    try { await db('/rest/v1/friendships?select=a&limit=1'); D.v2 = 'ok'; } catch (e) { D.v2 = 'erreur ' + (e.status || '') + ' : ' + String(e.message).slice(0, 120); }
+  }
+  if (enabled) { setTimeout(selfCheck, 500); setInterval(selfCheck, 300000); }
 
   async function db(path, opt) {
     opt = opt || {};
@@ -107,10 +115,16 @@ module.exports = function (ctx) {
   const H = {};
   H.auth = async (c, msg) => {
     if (!enabled) return err(c, 'no_db', 'Base de données non configurée sur le serveur.');
-    const u = await db('/auth/v1/user', { user: String(msg.token || '') }).catch(() => null);
-    if (!u || !u.id) return err(c, 'auth', 'Session expirée : reconnectez-vous.');
+    let why = '';
+    const u = await db('/auth/v1/user', { user: String(msg.token || '') }).catch((e) => { why = (e.status || '') + ' ' + String(e.message || ''); return null; });
+    if (!u || !u.id) {
+      D.lastAuthErr = why.slice(0, 120);
+      if (/api ?key/i.test(why)) return err(c, 'auth', 'Le serveur ne peut pas vérifier les comptes : clé SUPABASE_SECRET invalide sur Render.');
+      return err(c, 'auth', 'Session expirée : reconnectez-vous.');
+    }
+    D.auths++;
     if (c.uid && c.uid !== u.id) byUid.delete(c.uid);
-    c.uid = u.id; c.email = String(u.email || '').toLowerCase(); c.dev = DEVS.includes(c.email); byUid.set(c.uid, c.pid);
+    c.uid = u.id; c.email = String(u.email || '').toLowerCase(); c.dev = DEVS.includes(c.email); byUid.set(c.uid, c.pid); if (c.dev) D.devAuths++;
     let p = await one('id=eq.' + enc(c.uid) + '&select=' + COLS);
     if (!p) return err(c, 'auth', 'Profil introuvable.');
     if (!p.handle) {
@@ -227,5 +241,5 @@ module.exports = function (ctx) {
   function onClose(c) { if (c.uid) { patchProfile(c.uid, { last_seen: new Date().toISOString() }).catch(() => {}); setTimeout(() => notifyFriends(c), 50); } }
   function onPresence(c) { if (c && c.uid) notifyFriends(c); }
   function handle(c, msg) { const f = H[msg.t]; if (!f) return false; guard(f)(c, msg); return true; }
-  return { enabled, handle, rankedOpen, rankedEnd, rankOf, RANKED_MODES, RANKED_AT, onClose, onPresence, byUid };
+  return { diag: () => D, enabled, handle, rankedOpen, rankedEnd, rankOf, RANKED_MODES, RANKED_AT, onClose, onPresence, byUid };
 };
