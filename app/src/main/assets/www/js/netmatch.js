@@ -123,10 +123,12 @@
         if (tgt.popObj && tgt.popT > 0 && tgt.popObj.t < 0.5) { tgt.popObj.amt += e[3]; tgt.popObj.txt = String(Math.round(tgt.popObj.amt)); tgt.popObj.t = 0.1; }
         else { const o = { x: e[1] + G.rr(-8, 8), y: e[2], txt: String(e[3]), color: me && tgt.team === me.team ? '#ff5252' : '#fff', t: 0, dur: 0.9, size: 22, vy: -70, amt: e[3] }; M.texts.push(o); tgt.popObj = o; tgt.popT = 0.25; }
         if (tgt === me) { G.vibrate(25); Sim.shake(M, 5); }
+        if (me && e[6] === M.ents.indexOf(me) && tgt !== me) { M.hitmarks.push({ x: tgt.x, y: tgt.y - 12, t: 0, big: e[3] >= 1200 }); G.Audio.sfx('hitm'); }
         break;
       }
       case 's': if (e[2] < 0 || !me || G.dist(me.x, me.y, e[2], e[3]) < 1100) G.Audio.sfx(e[1], e[4]); break;
       case 'sr': if (me && M.ents[e[1]] === me) G.Audio.sfx('superReady'); break;
+      case 'kf': { M.feed.push({ k: e[1], v: e[2], t: 0 }); if (M.feed.length > 5) M.feed.shift(); const v = M.ents[e[2]]; if (me && M.ents[e[1]] === me && v) { Sim.text(M, v.x, v.y - 78, 'K.O. !', '#ff4a55', 40); Sim.ring(M, v.x, v.y, 10, 120, 0.45, 'rgba(255,90,90,0.9)'); Sim.burst(M, v.x, v.y - 10, '#ffd21f', 16, 320, 6, 0.7, 'spark'); M.cam.kick = 1; G.Audio.sfx('ko'); G.vibrate(60); } break; }
       case 'rl': { const r = M.ents[e[1]]; if (r && r !== me) r.rollT = 0; break; }
       case 'p': {
         const owner = M.ents[e[13]], def = G.BRAWLER[e[2]], spec = e[3] ? def.sup : def.atk;
@@ -262,6 +264,7 @@
     if (spec.sfx || isSuper) G.Audio.sfx(isSuper ? 'super' : spec.sfx);
     NM.sendInput(M, isSuper ? { s: [+ang.toFixed(3), Math.round(dist)], rtt: G.Net.ping } : { a: [+ang.toFixed(3), Math.round(dist)], rtt: G.Net.ping });
     if (!isSuper) { me.ammo = Math.max(0, me.ammo - 1); NM.lock = 0.3; }
+    M.cam.kick = Math.max(M.cam.kick || 0, 0.25);
     me.recoil = 1;
     return true;
   };

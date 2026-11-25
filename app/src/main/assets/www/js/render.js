@@ -541,10 +541,14 @@
       const k = p.t / p.dur;
       if (p.type === 'smoke') { c.globalAlpha = (1 - k) * 0.45; circ(c, p.x, p.y, p.r0 * (1 + k * 2)); c.fillStyle = '#bbb'; c.fill(); }
       else if (p.type === 'fire') { const r = p.r0 * (1 + k * 0.7) * 2; glowAt(c, p.x, p.y, r, k < 0.35 ? '#ffd86a' : k < 0.7 ? '#ff7a2a' : '#7a2a1a', (1 - k) * 0.95); }
+      else if (p.type === 'flash') { glowAt(c, p.x, p.y, p.r0 * 2.2 * (1 - k * 0.4), p.color, (1 - k) * 0.95); }
       else if (p.type === 'spark') { c.globalAlpha = 1 - k; c.strokeStyle = p.color; c.lineWidth = 2.4; c.lineCap = 'round'; c.beginPath(); c.moveTo(p.x, p.y); c.lineTo(p.x - p.vx * 0.05, p.y - p.vy * 0.05); c.stroke(); }
       else if (p.type === 'chunk') { c.globalAlpha = 1 - k; c.fillStyle = p.color; c.fillRect(p.x - p.r0 / 2, p.y - p.r0 / 2, p.r0, p.r0); }
       else { c.globalAlpha = 1 - k; circ(c, p.x, p.y, Math.max(0.1, p.r0 * (1 - k * 0.8))); c.fillStyle = p.color; c.fill(); }
     }
+    c.globalAlpha = 1;
+    // marqueurs de touche (vos tirs qui touchent)
+    for (const h of M.hitmarks || []) { const k = h.t / 0.22, r = (h.big ? 13 : 9) * (1 + k * 0.4); c.globalAlpha = 1 - k; c.strokeStyle = h.big ? '#ffd21f' : '#fff'; c.lineWidth = h.big ? 4 : 3; c.lineCap = 'round'; c.beginPath(); c.moveTo(h.x - r, h.y - r); c.lineTo(h.x - r * 0.4, h.y - r * 0.4); c.moveTo(h.x + r, h.y - r); c.lineTo(h.x + r * 0.4, h.y - r * 0.4); c.moveTo(h.x - r, h.y + r); c.lineTo(h.x - r * 0.4, h.y + r * 0.4); c.moveTo(h.x + r, h.y + r); c.lineTo(h.x + r * 0.4, h.y + r * 0.4); c.stroke(); }
     c.globalAlpha = 1;
     // textes flottants
     c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineJoin = 'round';
@@ -797,6 +801,21 @@
           text(Math.ceil(M.gg.t[t]) + 's', x, top + bh + 3 * u, 3.6 * u, t === 0 ? '#9dffb4' : '#ff9a9a');
         }
       }
+    }
+    // fil des éliminations
+    if (M.feed && M.feed.length) {
+      let fy = 37 * u;
+      for (const f of M.feed) {
+        const kk = M.ents[f.k], vv = M.ents[f.v]; if (!kk || !vv) continue;
+        const a = f.t < 0.2 ? f.t / 0.2 : f.t > 4 ? (4.5 - f.t) / 0.5 : 1;
+        const col = (e) => (e === M.player ? '#9dffb4' : M.mode !== 'showdown' && e.team === M.player.team ? '#a6d2ff' : '#ff9aa2');
+        c.globalAlpha = Math.max(0, a); c.font = (2.6 * u) + 'px "Lilita One", sans-serif'; c.textAlign = 'center';
+        const vn = vv.name, kn = kk.name, wv = c.measureText(vn).width, wk = c.measureText(kn).width, x1 = W - 2 * u;
+        rrect(c, x1 - wv - wk - 9 * u, fy - 2.2 * u, wv + wk + 10 * u, 4.4 * u, 1.4 * u); c.fillStyle = 'rgba(10,10,30,0.6)'; c.fill();
+        text(vn, x1 - wv / 2 - 0.4 * u, fy, 2.6 * u, col(vv)); text('☠', x1 - wv - 3.6 * u, fy, 2.8 * u, '#fff'); text(kn, x1 - wv - 7 * u - wk / 2, fy, 2.6 * u, col(kk));
+        fy += 5.2 * u;
+      }
+      c.globalAlpha = 1; c.textAlign = 'center';
     }
     // infos jeu (nom de l'arène)
     // --- minimap ---

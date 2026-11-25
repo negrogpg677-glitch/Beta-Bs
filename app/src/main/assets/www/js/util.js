@@ -74,6 +74,14 @@
     return rgb2hex((rr + m) * 255, (gg + m) * 255, (bb + m) * 255);
   };
 
+  /* ---------- stockage durable : natif Android si disponible (écriture synchrone), sinon localStorage ---------- */
+  const NB = () => (window.AndroidBridge && AndroidBridge.kvSet ? AndroidBridge : null);
+  G.Store = {
+    get(k) { try { const nb = NB(); if (nb) { const v = nb.kvGet(k); if (v !== null && v !== undefined) return v; } return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* ignore */ } try { const nb = NB(); if (nb) nb.kvSet(k, v); } catch (e) { /* ignore */ } },
+    del(k) { try { localStorage.removeItem(k); } catch (e) { /* ignore */ } try { const nb = NB(); if (nb) nb.kvDel(k); } catch (e) { /* ignore */ } },
+  };
+
   /* ---------- sauvegarde ---------- */
   const KEY = 'brawlrush_save_v1';
   G.Save = {
@@ -92,7 +100,7 @@
     },
     load() {
       let d = null;
-      try { d = JSON.parse(localStorage.getItem(KEY)); } catch (e) { d = null; }
+      try { d = JSON.parse(G.Store.get(KEY)); } catch (e) { d = null; }
       const def = this.defaults();
       if (!d || typeof d !== 'object') d = def;
       // fusion douce avec les valeurs par défaut
@@ -102,8 +110,8 @@
       this.data = d;
       return d;
     },
-    commit() { try { localStorage.setItem(KEY, JSON.stringify(this.data)); } catch (e) { /* ignore */ } },
-    reset() { try { localStorage.removeItem(KEY); } catch (e) { /* ignore */ } this.load(); },
+    commit() { G.Store.set(KEY, JSON.stringify(this.data)); },
+    reset() { G.Store.del(KEY); this.load(); },
     totalTrophies() { let t = 0; for (const k in this.data.trophies) t += this.data.trophies[k] || 0; return t; },
   };
 
@@ -191,6 +199,8 @@
         case 'open': [660, 880, 1100, 1320, 1760].forEach((f, i) => this.tone(f, 0.2, 'triangle', 0.15, null, i * 0.07)); break;
         case 'dash': this.noise(0.3, 0.25, 1500); this.tone(200, 0.3, 'sawtooth', 0.1, 500); break;
         case 'poison': this.tone(100, 0.15, 'sawtooth', 0.05, 80); break;
+        case 'hitm': this.tone(1500, 0.04, 'square', 0.05, 1100); break;
+        case 'ko': this.tone(220, 0.25, 'sawtooth', 0.16, 70); this.tone(880, 0.12, 'square', 0.1, 1320, 0.06); this.noise(0.25, 0.25, 1600); break;
         case 'kick': this.tone(160, 0.12, 'sine', 0.3, 60); this.noise(0.08, 0.15, 800); break;
       }
       this._pm = 1;

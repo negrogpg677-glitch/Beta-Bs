@@ -45,3 +45,14 @@ Toutes les valeurs ci-dessous ont été **mesurées** avec des outils ajoutés a
 2. **Direction artistique** : pour un rendu de niveau commercial, faire produire des sprites/animations par un artiste (ou des modèles 3D) ; le moteur actuel peut afficher des sprites à la place des personnages vectoriels.
 3. **3D** : seulement avec un moteur dédié (Godot ou Unity) et des artistes 3D — c'est une réécriture complète, pas une amélioration progressive.
 4. **Tests sur appareils réels** (un Android d'entrée de gamme + un iPhone) avant toute publication.
+
+## v5 — comptes, accueil, sensations de combat
+
+| Problème trouvé | Correction |
+|---|---|
+| Le bouton « + » (inviter un ami) à gauche du personnage était **recouvert par le dessin du personnage** : impossible à toucher | Ordre d'empilement corrigé, le personnage ne capte plus les touchers |
+| Deux actions définies avant la déclaration de leur objet (zone morte JavaScript) : **l'interface entière ne se chargeait plus** | Déplacées après la déclaration (détecté par les tests avant livraison) |
+| Le stockage local du WebView Android écrit sur le disque **en différé** : une session ou une sauvegarde peut être perdue si Android tue l'application juste après | Stockage natif `SharedPreferences.commit()` (écriture immédiate) pour la sauvegarde et la session, via le pont Java |
+| Conflit de nom de classe CSS (`.mm`) entre l'accueil et l'écran de recherche | Classe renommée |
+
+Nouveau : comptes Supabase (`COMPTES.md`, `supabase/schema.sql` validé par l'analyseur PostgreSQL), accueil refait, effets K.O. + fil des éliminations + marqueurs de touche + éclair de bouche + à-coup de caméra, qualité graphique choisie selon la puissance du téléphone, rotation horaire des arènes, niveau joueur (XP).

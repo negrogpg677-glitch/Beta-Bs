@@ -158,6 +158,8 @@
   G.HP_SCALE = 2.1; // équilibrage : combats plus longs et plus lisibles
   G.BRAWLERS.forEach((b) => { if (!b.voice) b.voice = 1; b.hp = Math.round(b.hp * G.HP_SCALE / 50) * 50; G.BRAWLER[b.id] = b; });
   G.BRAWLER.robot = G.BOSS;
+  /* comptes joueurs (Supabase) : URL du projet + clé publique « anon ». Voir COMPTES.md */
+  G.SUPABASE = { url: '', key: '' };
   G.DEFAULT_SERVER = ''; // adresse du serveur par défaut (ex. 'mon-jeu.onrender.com') ; modifiable dans Réglages
 
   /* skins : décalage de teinte global + doré */

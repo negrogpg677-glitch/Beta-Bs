@@ -71,7 +71,7 @@
       mode: mode.id, modeDef: mode, mapKey: mapKey, map, w: map.w, h: map.h, t: 0, state: 'countdown', cd: 3.2, cdLast: 4, endT: 0,
       left: mode.time, ents: [], projs: [], items: [], zones: [], parts: [], texts: [], strikes: [], events: [], rings: [],
       score: [0, 0], cam: { x: 0, y: 0, shake: 0, zoom: 1 }, player: null, result: null, banner: null, shakeT: 0,
-      stats: null, caps: (map.caps || []).map((c) => ({ x: c.x, y: c.y, r: c.r, state: -1 })), trophiesAvg: trophies || 0, practice: false, online: false, evq: [], pid: 0,
+      stats: null, feed: [], hitmarks: [], caps: (map.caps || []).map((c) => ({ x: c.x, y: c.y, r: c.r, state: -1 })), trophiesAvg: trophies || 0, practice: false, online: false, evq: [], pid: 0,
       overtime: false, ball: null, safes: [], gg: { count: [0, 0], active: [false, false], t: [15, 15] }, gemT: 3, zone: null, alive: 0, place: 0, tick: 0,
       skill: G.clamp(0.15 + (trophies || 0) / 800, 0.15, 0.95), hitstop: 0,
     };
@@ -169,7 +169,7 @@
     if (G.Dev && !M.online && !M.net) { amt = G.Dev.onDamage(M, tgt, amt, src); if (amt <= 0) return 0; }
     tgt.hp -= amt; tgt.flash = 0.12; tgt.revealT = 0.9; tgt.lastHitBy = src || tgt.lastHitBy;
     if (tgt.hasBall) dropBall(M, tgt);
-    if (M.online) { M.evq.push(['d', Math.round(tgt.x), Math.round(tgt.y - 40), Math.round(amt), tgt.idx, tgt.team]); }
+    if (M.online) { M.evq.push(['d', Math.round(tgt.x), Math.round(tgt.y - 40), Math.round(amt), tgt.idx, tgt.team, src ? src.idx : -1]); }
     else if (tgt.popObj && tgt.popT > 0 && tgt.popObj.t < 0.5) { tgt.popObj.amt += amt; tgt.popObj.txt = String(Math.round(tgt.popObj.amt)); tgt.popObj.t = 0.1; }
     else {
       const o = { x: tgt.x + G.rr(-8, 8), y: tgt.y - 40, txt: String(Math.round(amt)), color: tgt.team === M.player.team ? '#ff5252' : '#fff', t: 0, dur: 0.9, size: 22, vy: -70, amt };
@@ -182,6 +182,7 @@
       if (src.superCharge >= 1 && !src.superReadyFx) { src.superReadyFx = true; if (M.online) M.evq.push(['sr', src.idx]); else if (src === M.player) Sim.sfx(M, 'superReady'); }
     }
     if (tgt === M.player) { G.vibrate(25); Sim.shake(M, 5); }
+    if (src && src === M.player && tgt !== src && !M.online) { M.hitmarks.push({ x: tgt.x, y: tgt.y - 12, t: 0, big: amt >= 1200 }); G.Audio.sfx('hitm'); }
     if (fx) applyFx(M, tgt, fx, src);
     if (tgt.hp <= 0) die(M, tgt, src);
     return amt;
@@ -252,6 +253,9 @@
     if (b.hasBall) dropBall(M, b);
     if (killer && killer !== b) {
       killer.kills++; killer.st.kills = killer.kills;
+      M.feed.push({ k: killer.idx, v: b.idx, t: 0 }); if (M.feed.length > 5) M.feed.shift();
+      if (M.online) M.evq.push(['kf', killer.idx, b.idx]);
+      if (killer === M.player) Sim.koFx(M, b);
     }
     Sim.burst(M, b.x, b.y, G.getLook(b.id, b.skin).body, 18, 240, 8, 0.9);
     Sim.burst(M, b.x, b.y, '#fff', 8, 160, 5, 0.6);
@@ -433,6 +437,8 @@
     }
     const mx = b.x + Math.cos(ang) * 34, my = b.y + Math.sin(ang) * 34;
     Sim.burst(M, mx, my, spec.color || '#ffe066', 4, 120, 4, 0.2);
+    Sim.burst(M, mx, my, spec.color || '#ffe066', 1, 0, 17, 0.09, 'flash'); // éclair de bouche
+    if (b === M.player && !M.online) M.cam.kick = Math.max(M.cam.kick || 0, 0.25);
   }
 
   let _pid = 1;
@@ -594,7 +600,17 @@
     }
   }
 
+  /* effets d'élimination (par le joueur) : texte K.O., anneau, ralenti bref, à-coup de caméra */
+  Sim.koFx = function (M, v) {
+    if (M.online) return;
+    Sim.text(M, v.x, v.y - 78, 'K.O. !', '#ff4a55', 40);
+    Sim.ring(M, v.x, v.y, 10, 120, 0.45, 'rgba(255,90,90,0.9)');
+    Sim.burst(M, v.x, v.y - 10, '#ffd21f', 16, 320, 6, 0.7, 'spark');
+    M.hitstop = 0.07; M.cam.kick = 1; G.Audio.sfx('ko'); G.vibrate(60);
+  };
   function updateFx(M, dt) {
+    if (M.feed) for (let i = M.feed.length - 1; i >= 0; i--) { M.feed[i].t += dt; if (M.feed[i].t > 4.5) M.feed.splice(i, 1); }
+    if (M.hitmarks) for (let i = M.hitmarks.length - 1; i >= 0; i--) { M.hitmarks[i].t += dt; if (M.hitmarks[i].t > 0.22) M.hitmarks.splice(i, 1); }
     const c = M.cam;
     c.shake = Math.max(0, c.shake - dt * 30);
     for (let i = M.parts.length - 1; i >= 0; i--) {

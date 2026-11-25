@@ -42,3 +42,9 @@ Product flavors Gradle `prod`/`dev` (dimension `edition`, `.dev` en suffixe d'ap
 - Roulade d'esquive (`Sim.tryDodge`, drapeau 4096, champ 16 de l'instantané = recharge ×10, message `input.d`).
 - Compensation de latence : `Sim.advanceProjs` + `input.rtt`.
 - Corrections réseau (extrapolation bornée, horodatage ms) et recul (×4,2, plafonné). Détails : `AUDIT.md`.
+
+## v5
+- `js/account.js` (Supabase REST : auth + table `profiles`), `js/ui_account.js` (écrans), `supabase/schema.sql`. `G.Store` = stockage durable (natif Android via `AndroidBridge.kvGet/kvSet/kvDel`).
+- Tests : `tools/supabase-mock.js` + `tools/test-accounts.js` (20 vérifs) + `tools/test-session-refresh.js`.
+- Accueil refait (`UI.build.home`), `UI.currentMap` (rotation horaire), `G.playerLevel`, `Sim.koFx`, `M.feed`, `M.hitmarks`, `cam.kick`.
+- Config comptes : `G.SUPABASE` dans data.js (vide tant que l'utilisateur n'a pas créé son projet).

@@ -8,6 +8,13 @@
 
   App.init = function () {
     G.Save.load();
+    if (G.Account) G.Account.init();
+    // qualité graphique choisie automatiquement selon la puissance du téléphone (une seule fois ; modifiable dans Réglages)
+    if (!G.Save.data.qualityAuto) {
+      const mem = navigator.deviceMemory || 4, cores = navigator.hardwareConcurrency || 4;
+      G.Save.data.settings.quality = mem <= 2 || cores <= 4 ? 'low' : mem <= 4 || cores <= 6 ? 'medium' : 'high';
+      G.Save.data.qualityAuto = true; G.Save.commit();
+    }
     App.canvas = document.getElementById('game');
     App.ctx = App.canvas.getContext('2d');
     try { document.fonts.load('24px "Lilita One"'); } catch (e) { /* ignore */ }
@@ -41,7 +48,7 @@
   /* ----- lancement d'un match ----- */
   App.prepare = function (modeId) {
     const save = G.Save.data, mode = G.MODES[modeId];
-    const mapKey = G.pick(mode.maps);
+    const mapKey = G.UI.currentMap ? G.UI.currentMap(modeId) : G.pick(mode.maps); // rotation horaire des arènes
     const id = save.selected;
     return G.Sim.create({
       mode: modeId, mapKey, brawlerId: id, skin: save.skins[id] || 'classic', level: save.levels[id] || 1,
@@ -142,6 +149,7 @@
     }
     const k = Math.min(1, dt * (M.state === 'goal' ? 3 : 6));
     cam.x += (tx - cam.x) * k; cam.y += (ty - cam.y) * k;
+    cam.kick = Math.max(0, (cam.kick || 0) - dt * 4); cam.zoom = 1 + cam.kick * 0.035; // à-coup de caméra (tirs, K.O.)
   };
 
   /* ----- fin de match, récompenses ----- */

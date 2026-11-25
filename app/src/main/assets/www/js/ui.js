@@ -129,50 +129,76 @@
       if (!s.dataset.ready) return;
       G.Audio.unlock(); G.Audio.sfx('ui'); G.Audio.startMusic('menu');
       s.dataset.ready = ''; UI.show('home');
-      addTimer(() => { if (!S().tutorialDone) UI.toast('Bienvenue ! Choisissez un mode et appuyez sur JOUER.', 3500); UI.checkDaily(); }, 600);
+      addTimer(() => { if (UI.offerAccount && G.Account.enabled() && !G.Account.loggedIn() && !S().guestChoice) { UI.offerAccount(); return; } if (!S().tutorialDone) UI.toast('Bienvenue ! Choisissez un mode et appuyez sur JOUER.', 3500); UI.checkDaily(); }, 600);
     };
   };
 
   /* ---------- accueil ---------- */
   UI.build = {};
+  /* rotation des cartes : une arène par mode et par heure (identique pour tous les joueurs) */
+  UI.currentMap = (modeId) => { const m = G.MODES[modeId].maps; return m[Math.floor(Date.now() / 3600000) % m.length]; };
+  /* niveau du joueur (XP gagnée en jouant) */
+  G.playerLevel = function (sv) {
+    sv = sv || S(); const st = sv.stats;
+    const xp = st.matches * 12 + st.wins * 20 + st.kills * 3 + (st.goals || 0) * 5 + (st.gemsGrabbed || 0);
+    let lvl = 1, need = 100, acc = 0;
+    while (xp >= acc + need) { acc += need; lvl++; need = 100 + (lvl - 1) * 35; }
+    return { lvl, cur: xp - acc, need };
+  };
+  const HANGER = '<svg viewBox="0 0 32 32"><path d="M16 9a3 3 0 1 1 3-3" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/><path d="M16 9v3L4 22h24L16 12" fill="none" stroke="#fff" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/></svg>';
+  const EMBLEM = '<svg viewBox="0 0 100 100"><polygon points="50,4 62,36 96,38 69,59 79,93 50,74 21,93 31,59 4,38 38,36" fill="none" stroke="currentColor" stroke-width="7" stroke-linejoin="round"/></svg>';
   UI.build.home = function () {
     const sv = S(), id = sv.selected, def = G.BRAWLER[id], tot = G.Save.totalTrophies(), mode = G.MODES[sv.mode];
     const home = $('#home');
-    const canDaily = !UI.dailyDone();
+    const canDaily = !UI.dailyDone(), lv = G.playerLevel(sv);
+    const nextRoad = G.ROAD.find(([need], i) => !sv.roadClaimed.includes(i) && need > tot) || G.ROAD[G.ROAD.length - 1];
+    const prevNeed = (G.ROAD.filter(([need]) => need <= tot).pop() || [0])[0];
+    const roadPct = Math.min(100, ((tot - prevNeed) / Math.max(1, nextRoad[0] - prevNeed)) * 100);
+    const roadClaim = G.ROAD.some(([need], i) => tot >= need && !sv.roadClaimed.includes(i));
+    const mapKey = UI.currentMap(mode.id), minsLeft = 60 - new Date().getMinutes();
+    const online = G.Net && G.Net.serverUrl() && G.Net.status === 'online';
+    const freeShop = !sv.shopBought[G.dayKey() + 'free'];
     home.innerHTML = `
-      <div class="topbar">
-        <div class="profile" data-act="profile"><canvas width="160" height="160"></canvas><div><div class="nm">${esc(sv.name)}</div><div class="tr">${ic('trophy')} ${fmt(tot)} <span class="netdot hd" title="Connexion"></span></div></div></div>
-        <div class="spacer"></div>
+      <div class="hm-bg"><div class="emblem">${EMBLEM}</div><div class="spot"></div><div class="podium"></div></div>
+      <div class="hm-left">
+        <div class="bspanel prof" data-act="profile"><div class="pav"><canvas width="160" height="160"></canvas><div class="plv">${lv.lvl}</div></div>
+          <div class="pinfo"><div class="nm">${esc(sv.name)} <span class="netdot hd"></span><span class="cloudst ${G.Account && G.Account.loggedIn() ? G.Account.status : 'guest'}">☁</span></div><div class="xpbar"><i style="width:${(lv.cur / lv.need) * 100}%"></i><span>${lv.cur} / ${lv.need} XP</span></div></div></div>
+        <div class="bspanel trp" data-act="nav" data-to="road">${ic('trophy')}<div class="tinfo"><div class="tv">${fmt(tot)}</div><div class="rbar"><i style="width:${roadPct}%"></i></div><div class="rn">${roadClaim ? '<b>Récompense disponible !</b>' : 'Prochaine récompense : ' + fmt(nextRoad[0])}</div></div>${roadClaim ? '<span class="badge">!</span>' : ''}</div>
+        <div class="hm-menu">
+          <button class="mbtn" data-act="goShop">${ic('bag')}<span>Magasin</span>${freeShop ? '<em>GRATUIT</em>' : ''}</button>
+          <button class="mbtn" data-act="goBrawlers">${ic('user')}<span>Brawlers</span><b class="cnt">${sv.unlocked.length}</b></button>
+          <button class="mbtn" data-act="quests">${ic('scroll')}<span>Quêtes</span>${G.Quests.claimable() ? '<span class="badge">' + G.Quests.claimable() + '</span>' : ''}</button>
+        </div>
+      </div>
+      <div class="hm-top">
         <div class="pill">${ic('gem')}<span class="cur-gems">0</span><span class="plus" data-act="goShop">+</span></div>
         <div class="pill">${ic('coin')}<span class="cur-coins">0</span><span class="plus" data-act="goShop">+</span></div>
-        <button class="icon-btn" data-act="leaderboard">${ic('trophy')}</button><button class="icon-btn" data-act="settings">${ic('gear')}</button>
+        <button class="icon-btn" data-act="settings">${ic('gear')}</button>
       </div>
-      <div class="side-left">
-        <button class="side-btn" data-act="goSocial">${ic('friends')}${UI.pendingInvites ? '<span class="badge">' + UI.pendingInvites + '</span>' : ''}<span class="lbl">Amis</span></button>
-        <button class="side-btn" data-act="quests">${ic('scroll')}${G.Quests.claimable() ? '<span class="badge">' + G.Quests.claimable() + '</span>' : ''}<span class="lbl">Quêtes</span></button>
-        <button class="side-btn" data-act="daily">${ic('gift')}${canDaily ? '<span class="badge">!</span>' : ''}<span class="lbl">Cadeau</span></button>
-        <button class="side-btn" data-act="boxes">${ic('chest')}${sv.boxes ? '<span class="badge">' + sv.boxes + '</span>' : ''}<span class="lbl">Coffres</span></button>
+      <div class="hm-right">
+        <button class="mbtn sm" data-act="goSocial">${ic('friends')}<span>Amis</span>${UI.pendingInvites ? '<span class="badge">' + UI.pendingInvites + '</span>' : ''}</button>
+        <button class="mbtn sm" data-act="goClub">${ic('shield')}<span>Club</span></button>
+        <button class="mbtn sm" data-act="daily">${ic('gift')}<span>Cadeau</span>${canDaily ? '<span class="badge">!</span>' : ''}</button>
+        <button class="mbtn sm" data-act="boxes">${ic('chest')}<span>Coffres</span>${sv.boxes ? '<span class="badge">' + sv.boxes + '</span>' : ''}</button>
       </div>
-      <div class="stage">
-        <canvas width="620" height="620"></canvas>
-        <div class="nm">${def.name}</div>
-        <div class="sub"><span class="lvl">Niv. ${sv.levels[id] || 1}</span><span>${ic('trophy')} ${fmt(sv.trophies[id] || 0)}</span></div>
-        <button class="btn small change" data-act="goBrawlers">Changer de Brawler</button>
+      <div class="stage2">
+        <button class="tslot l" data-act="team" aria-label="Inviter">+</button>
+        <canvas class="hero" width="640" height="640"></canvas>
+        <button class="tslot r" data-act="team" aria-label="Inviter">+</button>
+        <button class="hanger" data-act="goBrawlers" aria-label="Apparences">${HANGER}</button>
+        <div class="hplate" data-act="goBrawlers"><span class="lvl">${sv.levels[id] || 1}</span><b>${def.name}</b><span class="ht">${ic('trophy')} ${fmt(sv.trophies[id] || 0)}</span></div>
       </div>
-      <div class="play-panel">
+      <div class="hm-br">
         ${UI.eventBanner()}
-        <div class="mode-card" data-act="modes" style="--mc:${mode.color}">
-          <div class="mi">${ic(MODE_ICON[mode.icon])}</div>
-          <div><div class="mn">${mode.name}</div><div class="mm">${mode.id === 'showdown' ? 'Solo · 10 joueurs' : mode.id === 'boss' ? 'Coopératif' : '3 contre 3'} · ${mode.time >= 60 ? Math.round(mode.time / 60) + ' min' : mode.time + 's'}</div></div>
-          <div class="chev">›</div>
-        </div>
-        <div class="row2"><button class="btn blue small" data-act="onlinePlay">${ic('bolt')} En ligne</button><button class="btn small" style="background:linear-gradient(#e0a0ff,#a032e0);box-shadow:0 .7rem 0 #5a1a8a,0 .9rem 0 .2rem var(--navy),inset 0 .35rem 0 rgba(255,255,255,.55)" data-act="team">${ic('user')} Équipe</button></div>
-        <button class="btn big green pulse" data-act="play">JOUER <small style="font-size:2rem">vs bots</small></button>
-      </div>
-      ${nav('home')}`;
-    G.Render.portrait($('.profile canvas', home), id, skinOf(id), 0, { aim: 0.4, zoom: 1.5, y: 0.95, shadow: false });
+        <div class="modepanel" data-act="modes" style="--mc:${mode.color}"><div class="mi">${ic(MODE_ICON[mode.icon])}</div>
+          <div class="minfo"><div class="mn">${esc(mode.name)}</div><div class="mmap">${esc(G.MAPS[mapKey].name)}</div><div class="mt">Nouvelle carte dans ${minsLeft} min</div></div><div class="chev">›</div></div>
+        <button class="btn big yellow play" data-act="playMain">JOUER<small>${online ? 'en ligne' : 'contre des bots'}</small></button>
+        <div class="subrow"><button class="chip" data-act="play">🤖 Bots</button><button class="chip" data-act="onlinePlay">🌍 En ligne</button><button class="chip" data-act="team">👥 Équipe</button></div>
+      </div>`;
+    const avId = G.BRAWLER[sv.avatar] ? sv.avatar : id;
+    G.Render.portrait($('.prof canvas', home), avId, skinOf(avId), 0, { aim: 0.4, zoom: 1.5, y: 0.95, shadow: false });
     if (UI.updateNetDot) UI.updateNetDot();
-    const cv = $('.stage canvas', home); animate(cv, id, skinOf(id), { zoom: 0.9, y: 0.7, aim: -0.35 });
+    animate($('.hero', home), id, skinOf(id), { zoom: 0.95, y: 0.76, aim: -0.35, idleShow: true });
   };
   function nav(active) {
     const items = [['shop', 'bag', 'Boutique'], ['brawlers', 'user', 'Brawlers'], ['home', 'home', 'Accueil'], ['road', 'flag', 'Trophées'], ['social', 'friends', 'Social']];
@@ -183,6 +209,8 @@
 
   /* ---------- actions ---------- */
   const ACT = {};
+  ACT.playMain = (a) => { if (G.Net && G.Net.serverUrl() && G.Net.status === 'online') ACT.onlinePlay(a); else ACT.play(a); };
+  ACT.goClub = () => { G.Audio.sfx('ui'); UI.socialTab = 'club'; UI.show('social'); };
   ACT.nav = (a) => { G.Audio.sfx('ui'); UI.show(a.dataset.to); };
   ACT.goShop = () => { G.Audio.sfx('ui'); UI.show('shop'); };
   ACT.goBrawlers = () => { G.Audio.sfx('ui'); UI.show('brawlers'); };
@@ -276,6 +304,8 @@
       return `<h2>Réglages</h2>${tg('sound', 'Effets sonores')}${tg('music', 'Musique')}${tg('vibrate', 'Vibrations')}${tg('aimAssist', 'Aide à la visée')}${tg('lefty', 'Mode gaucher')}
         <div class="setrow"><span>Qualité graphique</span><button class="btn small ${s.quality === 'high' ? 'green' : s.quality === 'medium' ? 'blue' : 'gray'}" data-act="quality">${s.quality === 'high' ? 'Haute' : s.quality === 'medium' ? 'Moyenne' : 'Économie'}</button></div>
         ${window.AndroidBridge ? '' : '<div class="setrow"><span>Installer le jeu (PWA)</span><button class="btn small blue" data-act="installApp">Installer</button></div>'}
+        <div class="setrow"><span>Compte : ${G.Account && G.Account.loggedIn() ? esc(S().name) + ' (connecté)' : 'invité'}</span><button class="btn small ${G.Account && G.Account.loggedIn() ? 'blue' : 'green'}" data-act="account">${G.Account && G.Account.loggedIn() ? 'Mon compte' : 'Connexion'}</button></div>
+        <div class="setrow"><span>Serveur de comptes</span><button class="btn small gray" data-act="accConfig">Configurer</button></div>
         <div class="setrow"><span>Serveur en ligne</span><button class="btn small ${S().settings.server ? 'green' : 'gray'}" data-act="serverCfg">${S().settings.server ? 'Configuré' : 'À configurer'}</button></div>
         <div class="setrow"><span>Pseudo : ${esc(S().name)}</span><button class="btn small blue" data-act="rename">Modifier</button></div>
         <div class="row" style="margin-top:2rem"><button class="btn small red" data-act="reset">Réinitialiser la progression</button></div>

@@ -116,6 +116,17 @@ public class MainActivity extends Activity {
             });
         }
 
+        /* stockage natif à écriture SYNCHRONE (SharedPreferences.commit) : la session et la sauvegarde
+           survivent même si Android tue l'application juste après (le localStorage du WebView écrit en différé). */
+        @JavascriptInterface
+        public String kvGet(String k) { return getSharedPreferences("brawlrush", MODE_PRIVATE).getString(k, null); }
+
+        @JavascriptInterface
+        public void kvSet(String k, String v) { getSharedPreferences("brawlrush", MODE_PRIVATE).edit().putString(k, v).commit(); }
+
+        @JavascriptInterface
+        public void kvDel(String k) { getSharedPreferences("brawlrush", MODE_PRIVATE).edit().remove(k).commit(); }
+
         @JavascriptInterface
         public void quit() { runOnUiThread(MainActivity.this::finish); }
     }

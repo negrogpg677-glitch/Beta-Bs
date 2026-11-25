@@ -47,3 +47,6 @@ En ligne, les outils de combat sont sans effet : le serveur reste seul juge. Pou
 
 ## Audit technique
 Voir `AUDIT.md` : problèmes mesurés, corrections, capacité du serveur et limites connues.
+
+## Comptes joueurs
+Inscription (e-mail ou pseudo), connexion, « rester connecté », mot de passe oublié, sauvegarde en ligne : voir `COMPTES.md` (Supabase, gratuit).
