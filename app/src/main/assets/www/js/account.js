@@ -11,8 +11,9 @@
 
   A.config = function () {
     const s = (G.Save.data && G.Save.data.settings) || {};
-    const url = String(s.sbUrl || (G.SUPABASE && G.SUPABASE.url) || '').trim().replace(/\/+$/, '');
-    const key = String(s.sbKey || (G.SUPABASE && G.SUPABASE.key) || '').trim();
+    const B = G.SUPABASE && G.SUPABASE.url && G.SUPABASE.key ? G.SUPABASE : null; // le projet intégré au jeu passe avant une ancienne configuration enregistrée
+    const url = String((B ? B.url : s.sbUrl) || '').trim().replace(/\/+$/, '');
+    const key = String((B ? B.key : s.sbKey) || '').trim();
     return url && key ? { url, key } : null;
   };
   A.enabled = () => !!A.config();
