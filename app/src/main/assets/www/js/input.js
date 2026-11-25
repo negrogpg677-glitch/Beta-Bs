@@ -136,6 +136,7 @@
         if (best) { ang = Math.atan2(best.y - p.y, best.x - p.x); dist = Math.min(range, G.dist(p.x, p.y, best.x, best.y)); }
       }
     }
+    if (G.Dev && G.Dev.cfg && G.Dev.cfg.aim && !M.net) hasDrag = false; // DEV : aimbot
     if (!hasDrag) {
       const t = G.Sim.autoTarget(M, p, range * 1.05);
       if (t) {

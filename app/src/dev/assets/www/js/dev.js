@@ -5,7 +5,7 @@
 (function () {
   const G = window.G;
   const KEY = 'brawlrush_dev_v1';
-  const def = { god: false, ammo: false, sup: false, ohk: false, passive: false, dmg: 1, speed: 1, ts: 1, fps: false, hit: false, ai: false, mods: {}, custom: [] };
+  const def = { god: false, ammo: false, sup: false, ohk: false, passive: false, aim: false, auto: false, gad: false, esp: false, dmg: 1, speed: 1, ts: 1, fps: false, hit: false, ai: false, mods: {}, custom: [] };
   let cfg = Object.assign({}, def);
   try { cfg = Object.assign({}, def, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) { /* ignore */ }
   const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(cfg)); } catch (e) { /* ignore */ } };
@@ -57,6 +57,12 @@
 
   /* ----- superpositions de debug ----- */
   Dev.draw = function (c, M, dt) {
+    const P = M.player;
+    if (P && P.alive && M.state === 'play' && !M.net) {
+      if (cfg.gad) { P.gadgets = 3; P.gadgetCd = 0; }
+      if (cfg.esp) M.ents.forEach((e) => { if (e.team !== P.team) e.revealT = Math.max(e.revealT || 0, 0.3); });
+      if (cfg.auto && P.ammo >= 1 && (P.atkCd || 0) <= 0) { const t = G.Sim.autoTarget(M, P, (P.def.atk.range || 7) * G.T); if (t && !G.Input.pending.length) G.Input.pending.push({ kind: 'atk', auto: true }); }
+    }
     Dev._f++; Dev._t += dt;
     if (Dev._t > 0.5) { Dev.fps = Dev._f / Dev._t; Dev._f = 0; Dev._t = 0; }
     const cam = G.Render.lastCam;
@@ -150,7 +156,7 @@
         <div class="row" style="margin-top:2rem;font-size:2.4rem">Brawler : <b style="color:#ffd21f">${G.BRAWLER[id].name}</b> · ${s.coins} pièces · ${s.gems} gemmes · ${G.Save.totalTrophies()} 🏆 · ${s.unlocked.length}/${G.BRAWLERS.length} brawlers</div>`;
     } else if (Dev.tab === 'combat') {
       h = (om ? '' : '<div class="row" style="color:#ff9a9a;font-size:2.4rem;margin-bottom:1rem">Lancez un match hors-ligne (onglet Monde) pour utiliser les actions de combat. Les options ci-dessous restent actives.</div>') +
-        tgl('god', 'Invincible') + tgl('ammo', 'Munitions infinies') + tgl('sup', 'Super toujours prêt') + tgl('ohk', 'Éliminations en un coup') + tgl('passive', 'Ennemis passifs (ne bougent/tirent pas)') +
+        tgl('god', 'Invincible') + tgl('ammo', 'Munitions infinies') + tgl('sup', 'Super toujours prêt') + tgl('ohk', 'Éliminations en un coup') + tgl('aim', 'Aimbot (visée automatique parfaite)') + tgl('auto', 'Tir automatique') + tgl('gad', 'Gadgets infinis') + tgl('esp', 'Voir les ennemis dans les buissons') + tgl('passive', 'Ennemis passifs (ne bougent/tirent pas)') +
         sld('dmg', 'Multiplicateur de dégâts ×', 0.25, 10, 0.25) + sld('speed', 'Vitesse du joueur ×', 0.5, 3, 0.1) + sld('ts', 'Vitesse du jeu ×', 0.2, 3, 0.1) +
         (om ? `<div class="row" style="margin-top:1.4rem">${btn('heal', 'Soigner', 'green')}${btn('superNow', 'Super prêt')}${btn('maxhp', '+5000 PV max')}${btn('killAll', 'Tuer les ennemis', 'red')}${btn('center', 'Centre')}${btn('skipTime', '-30 s')}</div>
         <div class="row" style="margin-top:1.2rem">${btn('botFriend', '+ Bot allié', 'blue')}${btn('botFoe', '+ Bot ennemi', 'red')}${btn('cubes', '+5 cubes')}${btn('win', 'Gagner maintenant', 'green')}${btn('lose', 'Perdre', 'gray')}</div>` : '');
