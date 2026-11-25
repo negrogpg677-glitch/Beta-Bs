@@ -223,10 +223,11 @@
     i.value = '';
   }
   Dev.open = open;
+  Dev.act = act; Dev.startMatch = startMatch; Dev.log = log; Dev.persist = persist; Dev.BUILTIN = BUILTIN; // utilisés par le menu professionnel (devpro.js)
 
   /* ----- activation (compte développeur reconnu par le serveur) ----- */
-  G.DevTools = { activate() {
-    if (G.DevReady || G.DEV) return; // l'édition DEV a déjà ses outils
+  G.DevTools = { activate(force, label) {
+    if (G.DevReady || (G.DEV && !force)) return; // l'édition DEV active les outils d'office (force)
     G.Dev = Dev;
     try {
       compileCustom();
@@ -235,7 +236,7 @@
       document.head.appendChild(st);
       const b = document.createElement('button'); b.id = 'devBtn'; b.textContent = 'DEV'; b.onclick = open; document.getElementById('app').appendChild(b);
       const g = document.createElement('button'); g.id = 'devGiftBtn'; g.textContent = '🎁 Joueurs'; g.onclick = () => G.UI.devPanel && G.UI.devPanel(); document.getElementById('app').appendChild(g);
-      const badge = document.createElement('div'); badge.className = 'devbadge'; badge.textContent = 'COMPTE DÉVELOPPEUR'; document.getElementById('app').appendChild(badge);
+      const badge = document.createElement('div'); badge.className = 'devbadge'; badge.textContent = label || 'COMPTE DÉVELOPPEUR'; document.getElementById('app').appendChild(badge);
       G.DevReady = true;
     } catch (e) { console.error('dev init', e); }
   } };

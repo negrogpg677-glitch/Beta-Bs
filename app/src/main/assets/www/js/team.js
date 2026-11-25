@@ -17,7 +17,7 @@
     while (entries.length < 2) entries.push({ k: 'e' });
     ['l', 'r'].forEach((side, i) => {
       const slot = $('.mate.' + side, st), e = entries[i]; if (!slot) return;
-      const key = e.k === 'm' ? 'm:' + e.m.pid + ':' + e.m.brawler + ':' + e.m.skin + ':' + e.m.name : e.k === 'p' ? 'p:' + e.pid + ':' + e.v.st : 'e';
+      const key = e.k === 'm' ? 'm:' + e.m.pid + ':' + e.m.brawler + ':' + e.m.skin + ':' + e.m.name + ':' + (Net.party && Net.party.leader === e.m.pid ? 'L' : '') : e.k === 'p' ? 'p:' + e.pid + ':' + e.v.st : 'e';
       if (slot.dataset.key === key) return; slot.dataset.key = key; slot.className = 'mate ' + side;
       if (e.k === 'm') {
         const lead = Net.party && Net.party.leader === e.m.pid;

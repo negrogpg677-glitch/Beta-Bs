@@ -83,6 +83,11 @@ class Cl {
   m = await w; ok(m.ranked && typeof m.ranked.delta === 'number' && m.delta === 0, 'fin de partie classée : ELO ' + (m.ranked.delta >= 0 ? '+' : '') + m.ranked.delta + ' → ' + m.ranked.elo + ' (' + (m.ranked.rank && m.ranked.rank.name) + '), trophées inchangés');
   await sleep(400); w = D.wait('ranked'); D.send({ t: 'ranked_info' }); const ri = await w;
   ok(ri.games === 1 && ri.hist.length === 1 && ri.elo === m.ranked.elo && ri.top.length >= 1, 'historique classé + classement enregistrés en base');
+  // --- classé 1 contre 1 (duel)
+  await sleep(6500); w = D.wait('match', null, 9000); D.send({ t: 'party_start', kind: 'ranked', mode: 'duel' });
+  const md1 = await w.catch(() => null); const mmd = md1 && [...S.matches.values()].find((x) => x.id === md1.id);
+  ok(md1 && md1.mode === 'duel' && md1.roster.length === 2 && mmd && mmd.ranked, 'classé 1 contre 1 : duel classé (ELO) contre un adversaire');
+  if (mmd) { w = D.wait('error'); D.send({ t: 'match_leave' }); ok((await w).code === 'no_quit', 'duel classé : impossible de quitter (seul le duel entre amis le permet)'); mmd.M.state = 'end'; }
   // --- cadeaux
   w = A.wait('error'); A.send({ t: 'dev_gift', handle: bh, brawler: 'yeti' }); ok((await w).code === 'forbidden', 'cadeau refusé à un joueur ordinaire');
   wb = B.wait('gift'); w = D.wait('toast'); D.send({ t: 'dev_gift', handle: bh, brawler: 'yeti' }); const g = await wb; await w;
@@ -92,6 +97,39 @@ class Cl {
   w = D.wait('error'); D.send({ t: 'dev_gift', handle: bh, brawler: 'yeti' }); ok((await w).code === 'dev_owned', 'cadeau refusé si le joueur possède déjà le brawler');
   A.ws.close(); await sleep(200); w = D.wait('toast'); D.send({ t: 'dev_gift', handle: 'PHENIXDORE', brawler: 'luna' }); await w;
   await A.open(url); const wg = A.wait('gift'); A.send({ t: 'auth', token: tok.al }); ok((await wg).brawler === 'luna', 'joueur hors ligne : le cadeau arrive à la reconnexion');
+  // --- classement mondial : vrais comptes de la base, mon rang, persistant
+  await svc('/rest/v1/profiles?id=eq.' + A.me.uid, { method: 'PATCH', body: { trophies: 900 } });
+  await svc('/rest/v1/profiles?id=eq.' + B.me.uid, { method: 'PATCH', body: { trophies: 450 } });
+  await svc('/rest/v1/profiles?id=eq.' + D.me.uid, { method: 'PATCH', body: { trophies: 120 } });
+  w = B.wait('lb'); B.send({ t: 'lb', fresh: 1 }); m = await w;
+  ok(m.src === 'db' && m.top[0].trophies === 900 && m.top[0].trophies === 900 && m.me.rank === 2 && m.top[1].me === true && m.total === 3, 'classement mondial depuis la base : ordre réel, mon rang (#' + m.me.rank + '/' + m.total + ')');
+  const G0 = new Cl('Invité'); await G0.open(url); w = G0.wait('lb'); G0.send({ t: 'lb', tr: 500 }); m = await w;
+  ok(m.me.guest && m.me.rank === 2 && !m.top.some((x) => x.me), 'invité : position estimée sans apparaître dans le classement');
+  // --- un seul appareil par compte
+  const A2 = new Cl('Alice-tel2'); await A2.open(url);
+  const A1 = new Cl('Alice-tel1'); await A1.open(url);
+  w = A1.wait('me'); A1.send({ t: 'auth', token: tok.al, device: 'devAAA', fresh: true }); await w;
+  let kick = A1.wait('session_taken'); w = A2.wait('me'); A2.send({ t: 'auth', token: tok.al, device: 'devBBB', fresh: true }); await w;
+  ok(!!(await kick.catch(() => null)), 'nouvelle connexion sur un autre appareil : l\'ancien appareil est déconnecté avec un message');
+  const u = await svc('/auth/v1/admin/users/' + A.me.uid);
+  ok(u && u.app_metadata && u.app_metadata.device === 'devBBB', 'appareil actif enregistré côté serveur (persistant)');
+  w = A1.wait('session_taken'); A1.send({ t: 'auth', token: tok.al, device: 'devAAA' }); ok(!!(await w.catch(() => null)), 'l\'ancien appareil ne peut pas reprendre la session sans se reconnecter');
+  w = A1.wait('error'); A1.send({ t: 'fr_list' }); ok((await w).code === 'login', 'ancien appareil : plus aucun accès au compte');
+  w = A2.wait('fr'); A2.send({ t: 'fr_list' }); ok(!!(await w.catch(() => null)), 'le nouvel appareil garde l\'accès');
+  // --- outils développeur (serveur)
+  w = A2.wait('error'); A2.send({ t: 'dv_state' }); ok((await w).code === 'forbidden', 'menu développeur serveur refusé aux joueurs');
+  w = D.wait('dv_state'); D.send({ t: 'dv_cfg', cfg: { afkSec: 30, reconnectSec: 120 } }); m = await w;
+  ok(m.cfg.afkSec === 30 && m.cfg.reconnectSec === 120 && S.CFG.afkSec === 30, 'développeur : délais d\'inactivité et de reconnexion modifiés en direct');
+  const cfgRow = await svc('/rest/v1/game_config?key=eq.live_cfg'); ok(cfgRow[0] && cfgRow[0].value.afkSec === 30, 'paramètres en direct enregistrés (survivent au redémarrage)');
+  w = D.wait('dv_state'); D.send({ t: 'dv_sim', act: 'join' }); m = await w; await sleep(100);
+  ok(m.fakes.length === 1 && D.last('party').party.members.length === 2 && D.last('party').party.members[1].test, 'joueur de test simulé dans l\'équipe (jamais enregistré dans la base)');
+  w = D.wait('invited'); D.send({ t: 'dv_sim', act: 'invite' }); m = await w; ok(m.test && /^[A-Z0-9]{5}$/.test(m.code), 'invitation simulée reçue');
+  D.send({ t: 'party_join', code: m.code }); await sleep(250); ok(D.last('party').party.leader !== D.pid, 'en rejoignant : l\'inviteur reste le chef');
+  w = D.wait('dv_state'); D.send({ t: 'dv_sim', act: 'clear' }); m = await w; ok(!m.fakes.length, 'joueurs de test supprimés');
+  w = D.wait('toast'); D.send({ t: 'dev_grant', handle: B.me.handle }); await w; w = B.wait('me'); B.send({ t: 'me' }); m = await w;
+  ok(m.dev === true && !m.superDev, 'le développeur principal autorise un autre compte');
+  w = B.wait('error'); B.send({ t: 'dev_grant', handle: D.me.handle }); ok((await w).code === 'forbidden', 'un compte autorisé ne peut pas en autoriser d\'autres');
+  w = D.wait('toast'); D.send({ t: 'dev_grant', handle: B.me.handle, revoke: true }); await w; await sleep(150); ok(B.last('me').dev === false, 'accès développeur retiré');
   console.log(fails ? '\n' + fails + ' ÉCHEC(S)' : '\nTOUS LES TESTS COMPTES/SOCIAL/CLASSÉ PASSENT');
   mock.kill(); process.exit(fails ? 1 : 0);
 })().catch((e) => { console.error('ERREUR', e.message); process.exit(2); });

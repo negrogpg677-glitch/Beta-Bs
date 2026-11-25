@@ -35,8 +35,7 @@
       const lefty = G.Save.data.settings.lefty;
       const onMoveSide = lefty ? x > In.W * 0.45 : x < In.W * 0.55;
       if (onMoveSide && (!In.joy.active || In.joy.id !== e.pointerId)) { // joystick flottant ; un nouveau doigt reprend la main : il apparaît sous le doigt (gardé entièrement à l'écran)
-        Object.assign(In.joy, { active: true, id: e.pointerId, bx: x, by: y, x, y, mx: 0, my: 0, t0: performance.now() }); // la direction part du vrai point de contact
-        joyMove(In.joy, x, y, L.joyR);
+        joyStart(e.pointerId, x, y, L); // la direction part du vrai point de contact
       }
     });
     canvas.addEventListener('pointermove', (e) => {
@@ -47,7 +46,7 @@
       if (In.joy.active && e.pointerId === In.joy.id) joyMove(In.joy, x, y, L.joyR);
       else if (!In.joy.active && (e.buttons & 1 || e.pressure > 0) && e.pointerId !== In.atk.id && e.pointerId !== In.sup.id && !In.emoteOpen) { // appui manqué : on démarre au mouvement
         const lefty = G.Save.data.settings.lefty;
-        if (lefty ? x > In.W * 0.45 : x < In.W * 0.55) { Object.assign(In.joy, { active: true, id: e.pointerId, bx: x, by: y, x, y, mx: 0, my: 0, t0: performance.now() }); joyMove(In.joy, x, y, L.joyR); }
+        if (lefty ? x > In.W * 0.45 : x < In.W * 0.55) joyStart(e.pointerId, x, y, L);
       }
       for (const b of [In.atk, In.sup]) {
         if (b.active && e.pointerId === b.id) {
@@ -98,13 +97,21 @@
   };
 
   // joystick « façon arcade » : zone morte minuscule, pleine vitesse très vite, la base suit le doigt s'il va trop loin
-  const DZ = 0.1, FULL = 0.32;
+  // réglages : sensibilité (zone morte + distance pour la pleine vitesse) et mode flottant / fixe
+  const jcfg = () => { const s = G.Save.data.settings, k = G.clamp(+s.joySens || 1, 0.5, 2); return { DZ: Math.max(0.04, 0.1 / k), FULL: G.clamp(0.32 / k, 0.14, 0.6), fixed: s.joyMode === 'fixed' }; };
+  In.joyCfg = jcfg;
+  function joyStart(id, x, y, L) { // flottant : la base apparaît sous le doigt ; fixe : elle reste à sa place
+    const fx = jcfg().fixed;
+    Object.assign(In.joy, { active: true, id, bx: fx ? L.joyX : x, by: fx ? L.joyY : y, x, y, mx: 0, my: 0, t0: performance.now() });
+    joyMove(In.joy, x, y, L.joyR);
+  }
   function joyMove(j, x, y, R) {
+    const { DZ, FULL, fixed } = jcfg();
     let dx = x - j.bx, dy = y - j.by, l = Math.hypot(dx, dy);
-    if (l > R) { const k = (l - R) / l; j.bx += dx * k; j.by += dy * k; dx = x - j.bx; dy = y - j.by; l = R; }
+    if (l > R) { if (!fixed) { const k = (l - R) / l; j.bx += dx * k; j.by += dy * k; dx = x - j.bx; dy = y - j.by; } else { dx *= R / l; dy *= R / l; } l = R; }
     j.x = x; j.y = y;
     const f = l / R;
-    if (f < DZ) { j.mx = j.my = 0; return; }
+    if (f < DZ || l < 0.001) { j.mx = j.my = 0; return; }
     const m = Math.min(1, (f - DZ) / (FULL - DZ)), sp = m * (2 - m);
     j.mx = (dx / l) * sp; j.my = (dy / l) * sp;
   }

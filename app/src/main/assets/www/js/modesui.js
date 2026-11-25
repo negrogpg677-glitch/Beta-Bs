@@ -3,7 +3,7 @@
   const G = window.G, UI = G.UI, ACT = UI.ACT, Net = G.Net;
   const { $, $$, el, esc, ic, S, fmt } = UI.h;
   const ICON = { gem: 'gem', ball: 'ball', safe: 'safe', star: 'star', skull: 'skull', zone: 'flag', robot: 'gear', bomb: 'bolt', moon: 'star' };
-  const FMT = (m) => m.id === 'showdown' ? 'Solo · 10 joueurs' : m.id === 'boss' ? 'Coop · 3 joueurs' : m.per === 1 ? '1 contre 1' : '3 contre 3';
+  const FMT = (m) => m.id === 'showdown' ? 'Solo · 10 joueurs' : m.id === 'boss' ? 'Coop · 3 joueurs' : m.per === 1 ? '1 contre 1' : '3 contre 3 · 2 contre 2';
   const FLOOR = { desert: '#e3c48a', snow: '#dce8f4', night: '#3e4472', meadow: '#86c96a', volcano: '#6e4434', jungle: '#5fa64e' };
   const TILE = { 1: '#6b4f36', 2: '#c98a4a', 3: '#2f8f3a', 4: '#3a8ad6', 5: '#3a8ad6', 6: '#d9a24a' };
   const prevCache = {};
@@ -28,29 +28,58 @@
         ${m.isNew ? '<div class="mw-new">NOUVEAU</div>' : ''}<div class="mw-top"><div class="mw-ic">${ic(ICON[m.icon] || 'star')}</div><div><div class="mw-n">${esc(m.name)}</div><div class="mw-f">${FMT(m)}</div></div></div>
         <div class="mw-art"><i class="mw-map" data-k="${mk}"></i><i class="mw-hero" data-b="${G.BRAWLERS[(i * 5 + 3) % G.BRAWLERS.length].id}"></i></div>
         <div class="mw-mapn">🗺 ${esc(G.MAPS[mk].name)}</div><div class="mw-d">${esc(m.desc)}</div></div>`; }).join('')}</div>
-      <div class="mw-foot"><div class="mw-dots">${order.map((_, i) => `<i data-i="${i}"></i>`).join('')}</div><button class="btn play mw-go" data-act="mwPick">CHOISIR</button></div></div>`);
+      <div class="mw-foot"><div class="mw-fmt"><button data-f="3">3 contre 3</button><button data-f="2">2 contre 2</button></div><div class="mw-dots">${order.map((_, i) => `<i data-i="${i}"></i>`).join('')}</div><button class="btn play mw-go" data-act="mwPick">CHOISIR</button></div></div>`);
     $('#ui').appendChild(o); G.Audio.sfx('ui');
     const track = $('.mw-track', o), cards = $$('.mw-card', o), dots = $$('.mw-dots i', o);
     $$('.mw-map', o).forEach((v) => { const cv = mapPreview(v.dataset.k), img = document.createElement('canvas'); img.width = cv.width; img.height = cv.height; img.getContext('2d').drawImage(cv, 0, 0); img.className = 'mw-map'; v.replaceWith(img); });
     $$('.mw-hero', o).forEach((v) => { const cv = document.createElement('canvas'); cv.width = cv.height = 260; cv.className = 'mw-hero'; v.replaceWith(cv); try { G.Render.portrait(cv, v.dataset.b, 'classic', 1.2, { zoom: 1.1, y: 0.86, yaw: -0.5 }); } catch (e) { /* rien */ } });
-    let sel = -1;
-    const update = () => { // le carte centrale grandit, les autres reculent (effet de rouleau)
-      const mid = track.scrollLeft + track.clientWidth / 2; let best = 0, bd = 1e9;
-      cards.forEach((c, i) => { const cx = c.offsetLeft + c.offsetWidth / 2, d = (cx - mid) / c.offsetWidth; const ad = Math.min(1.6, Math.abs(d));
-        c.style.transform = `perspective(900px) rotateY(${G.clamp(-d * 22, -35, 35)}deg) scale(${1 - ad * 0.16})`; c.style.opacity = String(1 - ad * 0.35); c.style.zIndex = String(10 - Math.round(ad * 4));
-        if (Math.abs(cx - mid) < bd) { bd = Math.abs(cx - mid); best = i; } });
-      if (best !== sel) { sel = best; cards.forEach((c, i) => c.classList.toggle('on', i === sel)); dots.forEach((d, i) => d.classList.toggle('on', i === sel)); if (o._ready) G.Audio.sfx('hitm', 0.7); }
+    // rouleau piloté au doigt (sans défilement natif : fiable sur iPhone / Safari, Android et ordinateur)
+    const rail = document.createElement('div'); rail.className = 'mw-rail'; cards.forEach((c) => rail.appendChild(c)); track.appendChild(rail);
+    let sel = -1, pos = cur, target = cur, raf = 0, drag = null;
+    const step = () => (cards[0].offsetWidth || 300) + (parseFloat(getComputedStyle(rail).columnGap) || 20);
+    const N = cards.length, clampI = (v) => Math.max(0, Math.min(N - 1, v));
+    const fmtBox = $('.mw-fmt', o);
+    const syncFmt = () => { const m = G.MODES[order[sel]] || {}; fmtBox.style.visibility = m.per === 3 ? 'visible' : 'hidden'; $$('button', fmtBox).forEach((b) => b.classList.toggle('on', +b.dataset.f === (sv.fmt === 2 ? 2 : 3))); };
+    fmtBox.addEventListener('click', (e) => { const b = e.target.closest('[data-f]'); if (!b) return; sv.fmt = +b.dataset.f; G.Save.commit(); G.Audio.sfx('ui'); syncFmt(); });
+    const update = () => { // la carte centrale grandit, les autres reculent (effet de rouleau)
+      const st = step(), w0 = cards[0].offsetWidth || 300;
+      rail.style.transform = `translate3d(${track.clientWidth / 2 - w0 / 2 - pos * st}px,0,0)`;
+      cards.forEach((c, i) => { const d = i - pos, ad = Math.min(1.6, Math.abs(d));
+        c.style.transform = `perspective(900px) rotateY(${G.clamp(-d * 22, -35, 35)}deg) scale(${1 - ad * 0.16})`; c.style.opacity = String(1 - ad * 0.35); c.style.zIndex = String(10 - Math.round(ad * 4)); });
+      const best = clampI(Math.round(pos));
+      if (best !== sel) { sel = best; cards.forEach((c, i) => c.classList.toggle('on', i === sel)); dots.forEach((d, i) => d.classList.toggle('on', i === sel)); if (o._ready) G.Audio.sfx('hitm', 0.7); syncFmt(); }
     };
-    track.addEventListener('scroll', () => requestAnimationFrame(update), { passive: true });
-    track.addEventListener('click', (e) => { const c = e.target.closest('.mw-card'); if (!c) return; const i = +c.dataset.i; if (i === sel) ACT.mwPick(); else c.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }); });
-    requestAnimationFrame(() => { cards[cur].scrollIntoView({ inline: 'center', block: 'nearest' }); update(); o._ready = true; });
+    const anim = () => { cancelAnimationFrame(raf); const tick = () => { const d = target - pos; if (Math.abs(d) < 0.002) { pos = target; update(); return; } pos += d * 0.22; update(); raf = requestAnimationFrame(tick); }; raf = requestAnimationFrame(tick); };
+    const goTo = (i) => { target = clampI(i); anim(); };
+    const px = (e) => (e.touches ? e.touches[0] || e.changedTouches[0] : e).clientX;
+    const down = (e) => { if (drag || (e.button !== undefined && e.button > 0)) return; cancelAnimationFrame(raf); drag = { x0: px(e), p0: pos, moved: false, lx: px(e), lt: performance.now(), v: 0, id: e.pointerId }; if (e.pointerId !== undefined && track.setPointerCapture) { try { track.setPointerCapture(e.pointerId); } catch (er) { /* ignore */ } } };
+    const move = (e) => {
+      if (!drag || (e.pointerId !== undefined && drag.id !== undefined && e.pointerId !== drag.id)) return;
+      const x = px(e), dx = x - drag.x0; if (Math.abs(dx) > 8) drag.moved = true;
+      let p = drag.p0 - dx / step(); if (p < 0) p *= 0.35; if (p > N - 1) p = N - 1 + (p - N + 1) * 0.35; // résistance aux extrémités
+      const now = performance.now(), dt = Math.max(1, now - drag.lt); drag.v = 0.8 * drag.v + 0.2 * ((x - drag.lx) / dt); drag.lx = x; drag.lt = now;
+      pos = p; update(); if (e.cancelable) e.preventDefault();
+    };
+    const up = (e) => {
+      if (!drag) return; const d = drag; drag = null;
+      if (!d.moved) { const pt = e.changedTouches ? e.changedTouches[0] : e, hit = pt && document.elementFromPoint(pt.clientX, pt.clientY), c = hit && hit.closest && hit.closest('.mw-card'); /* capture du doigt : on vise ce qui est sous le doigt */ if (c) { const i = +c.dataset.i; if (i === sel) ACT.mwPick(); else goTo(i); } else goTo(Math.round(pos)); return; }
+      goTo(Math.round(pos - (d.v * 260) / step())); // élan du geste
+    };
+    if (window.PointerEvent) { track.addEventListener('pointerdown', down); track.addEventListener('pointermove', move); track.addEventListener('pointerup', up); track.addEventListener('pointercancel', up); }
+    else { track.addEventListener('touchstart', down, { passive: true }); track.addEventListener('touchmove', move, { passive: false }); track.addEventListener('touchend', up); track.addEventListener('mousedown', down); window.addEventListener('mousemove', move); window.addEventListener('mouseup', up); }
+    track.addEventListener('wheel', (e) => { e.preventDefault(); if (Math.abs(e.deltaX) + Math.abs(e.deltaY) < 4) return; const now = performance.now(); if (now - (track._w || 0) < 180) return; track._w = now; goTo(sel + ((e.deltaX || e.deltaY) > 0 ? 1 : -1)); }, { passive: false });
+    o.addEventListener('keydown', (e) => { if (e.key === 'ArrowRight') goTo(sel + 1); else if (e.key === 'ArrowLeft') goTo(sel - 1); else if (e.key === 'Enter') ACT.mwPick(); });
+    dots.forEach((d, i) => d.addEventListener('click', () => goTo(i)));
+    window.addEventListener('resize', update);
+    o._mwGo = goTo;
+    requestAnimationFrame(() => { update(); o._ready = true; });
     UI._mw = { o, get sel() { return order[sel]; } };
   };
   ACT.mwClose = () => { const o = $('.mw'); if (o) { o.classList.add('out'); setTimeout(() => o.remove(), 220); } G.Audio.sfx('back'); };
   ACT.mwPick = () => {
     const id = UI._mw && UI._mw.sel; if (!id) return;
     S().mode = id; G.Save.commit(); G.Audio.sfx('buy'); ACT.mwClose();
-    if (Net.party && Net.party.leader === Net.pid && Net.party.state === 'idle' && id !== 'duel') Net.send({ t: 'party_set', mode: id });
+    if (Net.party && Net.party.leader === Net.pid && Net.party.state === 'idle' && id !== 'duel') Net.send({ t: 'party_set', mode: id, fmt: G.MODES[id].per === 3 && S().fmt === 2 ? 2 : 3 });
     if (UI.screen === 'home') UI.build.home();
   };
   ACT.modes = () => UI.modeWheel();

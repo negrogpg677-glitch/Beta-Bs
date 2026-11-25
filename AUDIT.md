@@ -135,3 +135,28 @@ Tests : `tools/test-social-ui.js` 16/16, `tools/test-social.js` 35/35, serveur 4
 - **Défi en duel entre amis** : bouton « ⚔ Défier » (liste d'amis et invitations), fenêtre « DÉFI EN DUEL », salon face à face (cartes 3D), choix de l'arène par le chef, « PRÊT » des deux joueurs → lancement automatique côté serveur.
 - **Session périmée** (diagnostic serveur : « session_id … does not exist ») : le jeu renouvelle la session ou redemande la connexion au lieu de rester bloqué.
 Tests : `tools/test-duel.js` 7/7, modes simulés jusqu'au bout (11 modes), serveur 44/44, comptes 35/35, équipe 9/9, tactile, visée 4/4.
+
+## v3.6 — stabilité multijoueur, iPhone, menu développeur professionnel
+**Bugs trouvés et corrigés**
+- iPhone : le rouleau des modes utilisait le défilement natif + `scroll-snap` + transformations 3D, peu fiable sous Safari/WKWebView → rouleau piloté au doigt (pointer events, élan, aimantation, toucher pour choisir), indépendant du défilement natif. Listes : `-webkit-overflow-scrolling`, `overscroll-behavior: contain`, `touch-action`.
+- **Joystick bloqué après une pause** : `showPause` mettait `#ui` en `pointer-events: auto` sans jamais le remettre → toute l'interface captait les touchers des parties suivantes. Remis à zéro à la reprise et au début de chaque partie.
+- **Classement mondial** : il lisait `players.json` sur le serveur Render (effacé à chaque redémarrage, trophées « en ligne » seulement). Il lit désormais la table `profiles` (vrais comptes, persistant), avec mon rang exact (`count=exact`), le total, et un rang estimé pour les invités.
+- Écran Amis : le texte tapé dans la recherche et le résultat étaient effacés par les mises à jour en direct (nouvel élément créé, ancien rempli) → saisie, défilement et résultat conservés.
+- Fiche joueur (journal des combats) : l'état « demande reçue » affichait « Ajouter » → Accepter/Refuser, Annuler pour une demande envoyée, « Déjà amis », mise à jour automatique.
+
+**Nouvelles règles côté serveur (testées)**
+- Un seul appareil par compte : identifiant d'appareil + connexion « fraîche » ; l'appareil actif est enregistré dans `app_metadata` (Auth admin) ; l'ancien appareil reçoit `session_taken`, perd l'accès et n'envoie pas sa sauvegarde ; `logout?scope=others` révoque ses jetons ; la déconnexion normale est locale (`scope=local`).
+- Pas d'abandon volontaire : `match_leave` refusé (sauf duel entre amis = défaite). Coupure involontaire : l'IA tient le brawler ; retour automatique si l'écran de combat est encore ouvert, sinon bouton « Reprendre la partie » (état complet renvoyé par le serveur). Partie terminée : pas de bouton, récapitulatif.
+- Inactivité (AFK) : sortie de la partie avec message, la partie continue, reprise possible, pas compté comme un abandon. Délais (inactivité, reconnexion) modifiables en direct par le développeur, enregistrés dans `game_config`. Duel : absence > fenêtre de reconnexion = défaite.
+- Équipes : restent groupées après la partie (même chef), l'inviteur reste chef, seul le chef invite et lance, le chef peut passer la main (`party_promote`), messages en direct (arrivée, départ, nouveau chef).
+- Outils développeur serveur (`dv_*`) : refusés sans compte développeur ; joueurs de test uniquement en mémoire ; le développeur principal (DEV_EMAILS) peut autoriser d'autres comptes (`dev_grant`), qui ne peuvent pas en autoriser d'autres.
+
+**Menu développeur professionnel** (compte développeur, APK DEV et nouvelle IPA DEV) : accueil, recherche, favoris, niveaux débutant/avancé/expert, utilisable en partie (panneau latéral). A. modes de test (hors ligne, entraînement, partie privée en ligne avec joueurs de test) · B. éditeur de personnages (vie, vitesse, dégâts, portée, recharge) · C. éditeur de cartes (peinture, symétrie, jouable) · D. diagnostics (FPS, ping, pertes, mémoire, erreurs, synchro, rapport) · E. outils multijoueur (simulations, paramètres en direct, état du serveur) · F. comptes de test (profils locaux jamais envoyés dans le cloud, statistiques, multi-appareils, autorisations) · G. avancé (console, trafic réseau, options, configurations enregistrées/comparées, tests automatiques avec historique, export) · H. interface.
+
+**Modes** : format **2 contre 2** pour tous les modes en équipe (file d'attente séparée côté serveur, hors ligne aussi ; bug corrigé : la file 2c2 était recopiée dans la file 3c3), **1 contre 1 classé** (duel en ELO, impossible à quitter), **Entraînement** (mannequins immobiles, sans gain ni perte), duel entre amis (seul mode qu'on peut quitter), coop contre bots (Mégabot), survie, événement du jour, parties privées.
+
+**Sécurité des tests** : `tools/test-accounts.js` ne redirigeait pas le domaine Supabase vers la base imitée → il pouvait créer un compte de test (alice@test.fr) dans le vrai projet. Corrigé : toutes les requêtes Supabase des tests sont interceptées.
+
+**Limites connues** : la progression hors ligne (contre les bots) reste calculée par l'appareil ; `supabase/v3.sql` (facultatif) limite la vitesse de montée des trophées pour protéger le classement.
+
+**Tests** : serveur 61 · comptes 53 · interface comptes/dev 33 · v3.6 iPhone émulé 19 · équipe, duel, toucher, visée.

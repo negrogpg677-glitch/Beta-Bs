@@ -44,7 +44,8 @@
     ws.onopen = () => {
       clearTimeout(to);
       const n = G.Save.data.net || {};
-      ws.send(JSON.stringify({ t: 'hello', pid: n.pid, token: n.token, name: G.Save.data.name, v: 1 }));
+      const A0 = G.App, inM = A0 && A0.state === 'match' && A0.M && A0.M.net ? Net.matchId : null;
+      ws.send(JSON.stringify({ t: 'hello', pid: n.pid, token: n.token, name: G.Save.data.name, v: 2, inMatch: inM }));
     };
     ws.onmessage = (ev) => {
       let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
@@ -83,7 +84,9 @@
       case 'queue': Net.queue = m.state === 'searching' ? { mode: m.mode, since: Date.now() } : null; break;
       case 'lobby': Net.lobby = m; Net.queue = null; break;
       case 'lobby_closed': Net.lobby = null; break;
-      case 'match': Net.lobby = null; Net.queue = null; Net.matchId = m.id; break;
+      case 'match': Net.lobby = null; Net.queue = null; Net.matchId = m.id; Net.resumable = null; break;
+      case 'resumable': case 'afk': Net.resumable = m; break;
+      case 'resume_fail': case 'end': if (!(G.App && G.App.state === 'match')) Net.resumable = null; break;
       case 'lb': Net.lb = m; break;
       case 'kicked': Net.party = null; break;
       case 'friends': if (!Net.me) Net.friends = m; break; // compte connecté : la liste vient de la base (message « fr »)
@@ -100,8 +103,9 @@
   Net.leaveParty = () => Net.send({ t: 'party_leave' });
   Net.setMode = (mode) => Net.send({ t: 'party_set', mode });
   Net.kick = (pid) => Net.send({ t: 'party_kick', pid });
-  Net.startQueue = (mode) => Net.send({ t: 'party_start', mode, kind: 'queue' });
-  Net.startPrivate = (mode, split) => Net.send({ t: 'party_start', mode, kind: 'private', split: !!split });
+  Net.fmt = () => (G.MODES[(Net.party && Net.party.mode) || G.Save.data.mode] || {}).per === 3 && G.Save.data.fmt === 2 ? 2 : 3;
+  Net.startQueue = (mode) => Net.send({ t: 'party_start', mode, kind: 'queue', fmt: Net.fmt() });
+  Net.startPrivate = (mode, split) => Net.send({ t: 'party_start', mode, kind: 'private', split: !!split, fmt: Net.fmt() });
   Net.cancelQueue = () => Net.send({ t: 'queue_cancel' });
   Net.getLeaderboard = () => Net.send({ t: 'lb' });
   Net.addFriend = (code) => Net.send({ t: 'friend_add', code });

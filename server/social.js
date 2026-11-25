@@ -82,6 +82,7 @@ module.exports = function (ctx) {
         const fid = msg.pid, tc0 = clients.get(fid); if (!(p.friends || []).includes(fid) && !(c.friendUids && tc0 && tc0.uid && c.friendUids.has(tc0.uid))) return true;
         const target = clients.get(fid); if (!target || !target.ws) { err(c, 'offline', 'Cet ami est hors ligne.'); return true; }
         let party = parties.get(c.party);
+        if (party && party.leader !== pid && party.members.length > 1) { err(c, 'not_leader', 'Seul le chef d\'équipe peut inviter.'); return true; }
         if (!party) party = ctx.createParty(c, msg.mode || 'gemgrab');
         if (msg.mode === 'duel') { // défi en duel : l'équipe passe en mode duel (2 joueurs maximum)
           if (party.leader !== pid || party.state !== 'idle') { err(c, 'duel', 'Seul le chef d\'une équipe au repos peut lancer un défi.'); return true; }

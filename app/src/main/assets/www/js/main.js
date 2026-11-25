@@ -53,11 +53,12 @@
     const id = save.selected;
     return G.Sim.create({
       mode: modeId, mapKey, brawlerId: id, skin: save.skins[id] || 'classic', level: save.levels[id] || 1,
-      trophies: save.trophies[id] || 0, name: save.name,
+      trophies: save.trophies[id] || 0, name: save.name, per: mode.per === 3 && save.fmt === 2 ? 2 : undefined,
     });
   };
   App.begin = function (M) {
     App.M = M; App.state = 'match'; App.paused = false; App.resultShown = false;
+    const ui0 = document.getElementById('ui'); if (ui0) ui0.style.pointerEvents = '';
     G.Input.reset(); G.Input.enabled = true;
     document.body.classList.add('in-match');
     G.UI.hideAll();
@@ -81,9 +82,10 @@
     const M = App.M;
     App.paused = false;
     G.UI.hidePause();
-    if (M && M.net) { // abandon d'un match en ligne : l'IA reprend le brawler
-      G.Net.send({ t: 'match_leave' }); App.state = 'menu'; App.M = null; G.Input.enabled = false; document.body.classList.remove('in-match');
-      G.UI.netOverlay(false); G.Audio.startMusic('menu'); G.UI.show('home'); return;
+    if (M && M.net) { // en ligne : seul le duel entre amis peut être abandonné (défaite), le serveur le vérifie
+      if (M.mode === 'duel' && M.state !== 'end') { G.Net.send({ t: 'match_leave' }); G.UI.toast('Abandon… le duel est perdu.', 2000); return; }
+      if (M.state !== 'end') { G.UI.toast('Impossible de quitter une partie en cours.', 2200); return; }
+      App.leaveOnline(); return;
     }
     if (M && M.state !== 'end') { // abandon = défaite
       M.result = { win: false, draw: false, winnerTeam: -1, place: M.mode === 'showdown' ? (M.player.alive ? M.alive : M.player.place || 10) : 0, time: M.t, quit: true };
@@ -91,6 +93,15 @@
       App.finish();
     }
   };
+
+  App.leaveOnline = function () { // retour au menu sans quitter la partie côté serveur (inactivité, fin)
+    App.paused = false; G.UI.hidePause(); App.state = 'menu'; App.M = null; G.Input.enabled = false; G.Input.reset();
+    document.body.classList.remove('in-match'); G.UI.netOverlay(false); G.Audio.startMusic('menu'); G.UI.show('home');
+  };
+  G.Net.on('afk', (m) => { // inactif trop longtemps : sorti de la partie, qui continue sur le serveur
+    if (App.state === 'match' && App.M && App.M.net) App.leaveOnline();
+    if (G.UI.afkNotice) G.UI.afkNotice(m);
+  });
 
   /* ----- boucle ----- */
   App.loop = function (now) {
@@ -178,6 +189,7 @@
     else { delta = -Math.min(before, G.clamp(Math.round(2 + before / 70), 2, 8)); coins = 20 + G.ri(0, 8); box = Math.random() < 0.2 ? 1 : 0; }
     if (online) { delta = online.delta; coins = online.coins - 4 * (M.stats.kills || p.kills || 0); box = r.win ? (Math.random() < 0.6 ? 1 : 0) : (Math.random() < 0.2 ? 1 : 0); gems = 0; }
     if (r.quit) { delta = -Math.min(before, 5); coins = 0; box = 0; gems = 0; }
+    if (M.training) { delta = 0; coins = 0; box = 0; gems = 0; } // entraînement : ni gain ni perte
     coins += M.stats.kills * 4;
     const kill = M.stats.kills || 0;
     save.trophies[id] = Math.max(0, before + delta);
@@ -230,7 +242,7 @@
   G.Net.on('welcome', () => {
     const M = App.M;
     if (App.state === 'match' && M && M.net && M.resumeWait) {
-      setTimeout(() => { if (App.M === M && M.resumeWait && App.state === 'match' && M.state !== 'end') { G.UI.netOverlay(false); G.UI.toast('La partie est terminée.'); App.quitMatch(); } }, 3500);
+      setTimeout(() => { if (App.M === M && M.resumeWait && App.state === 'match' && M.state !== 'end') { G.UI.netOverlay(false); G.UI.toast('La partie est terminée.'); App.leaveOnline(); } }, 3500);
     }
   });
   G.Net.on('match', () => { if (App.M) App.M.resumeWait = false; });

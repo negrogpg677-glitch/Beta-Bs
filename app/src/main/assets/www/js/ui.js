@@ -637,7 +637,7 @@
   };
   UI.hidePause = function () {
     $$('#ui .overlay').forEach((o) => { if (o.dataset.pause) o.remove(); }); UI.modals = UI.modals.filter((m) => !m.dataset.pause);
-    document.body.classList.remove('in-match-paused');
+    document.body.classList.remove('in-match-paused'); $('#ui').style.pointerEvents = ''; // sinon l'interface bloque le joystick après une pause
   };
   ACT.resume = () => { G.Audio.sfx('ui'); G.App.togglePause(); };
   ACT.quit = () => { G.Audio.sfx('back'); G.App.quitMatch(); };

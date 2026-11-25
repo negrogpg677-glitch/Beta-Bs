@@ -13,7 +13,11 @@ module.exports = function (ctx) {
   const DAY = 86400000, NAME_DELAY = 31 * DAY;
   const byUid = new Map(); // uid -> pid (session en ligne)
   // auto-diagnostic sans secret (visible dans /health) : base joignable ? tables v2 ? clé valide ? combien d'e-mails développeur ?
-  const D = { db: enabled ? 'test en cours' : 'non configurée (SUPABASE_URL / SUPABASE_SECRET absents)', v2: '?', devs: DEVS.length, auths: 0, devAuths: 0, lastAuthErr: '' };
+  const D = { db: enabled ? 'test en cours' : 'non configurée (SUPABASE_URL / SUPABASE_SECRET absents)', v2: '?', devs: DEVS.length, auths: 0, devAuths: 0, lastAuthErr: '', sessions: 'mémoire', takeovers: 0, lb: '?' };
+  const devices = new Map(); // uid -> identifiant de l'appareil actif (un seul appareil par compte)
+  let devUids = []; // comptes autorisés en plus des e-mails DEV_EMAILS (accordé par le développeur principal)
+  async function loadDevUids() { try { const r = await db('/rest/v1/game_config?key=eq.dev_uids&select=value'); devUids = (r && r[0] && Array.isArray(r[0].value)) ? r[0].value : []; } catch (e) { /* table absente */ } }
+  if (enabled) setTimeout(loadDevUids, 800);
   async function selfCheck() {
     if (!enabled) return;
     try { await db('/rest/v1/profiles?select=id&limit=1'); D.db = 'ok'; } catch (e) { D.db = 'erreur ' + (e.status || '') + ' : ' + String(e.message).slice(0, 120); }
@@ -26,10 +30,12 @@ module.exports = function (ctx) {
     const h = { apikey: SECRET, 'Content-Type': 'application/json' };
     if (/^eyJ/.test(SECRET)) h.Authorization = 'Bearer ' + SECRET; // ancienne clé service_role (JWT)
     if (opt.prefer) h.Prefer = opt.prefer;
+    if (opt.count) { h.Prefer = 'count=exact'; h.Range = '0-0'; h['Range-Unit'] = 'items'; }
     if (opt.user) h.Authorization = 'Bearer ' + opt.user;
     const r = await fetch(URL0 + path, { method: opt.method || 'GET', headers: h, body: opt.body !== undefined ? JSON.stringify(opt.body) : undefined });
     const txt = await r.text(); let data = null; try { data = txt ? JSON.parse(txt) : null; } catch (e) { data = txt; }
-    if (!r.ok) { const e = new Error((data && (data.message || data.msg)) || ('HTTP ' + r.status)); e.status = r.status; e.data = data; throw e; }
+    if (!r.ok && r.status !== 416) { const e = new Error((data && (data.message || data.msg)) || ('HTTP ' + r.status)); e.status = r.status; e.data = data; throw e; }
+    if (opt.count) { const m = String(r.headers.get('content-range') || '').match(/\/(\d+)$/); return m ? +m[1] : 0; }
     return data;
   }
   const enc = encodeURIComponent;
@@ -61,7 +67,7 @@ module.exports = function (ctx) {
     return { name: t[0] + (div ? ' ' + ['I', 'II', 'III'][div - 1] : ''), tier: t[0], color: t[2], next: hi };
   }
   const rankedOpen = (c) => !!c.dev || Date.now() >= RANKED_AT;
-  const RANKED_MODES = ['gemgrab', 'brawlball', 'bounty', 'hotzone', 'knockout'];
+  const RANKED_MODES = ['gemgrab', 'brawlball', 'bounty', 'hotzone', 'knockout', 'duel']; // duel = classé 1 contre 1
 
   /* ---------- profil envoyé au joueur ---------- */
   async function me(c, p) {
@@ -70,7 +76,7 @@ module.exports = function (ctx) {
     c.handle = p.handle; c.elo = p.elo; c.rg = p.ranked_games; c.rw = p.ranked_wins; c.uname = p.username;
     const last = Date.parse(p.name_changed_at || p.created_at || 0) || 0, recent = (p.name_changes || []).filter((t) => Date.now() - Date.parse(t) < 365 * DAY).length;
     const gu = await globalUnlock();
-    send(c, { t: 'me', uid: c.uid, email: c.email, devConfigured: DEVS.length > 0, handle: p.handle, name: p.username, dev: !!c.dev, canHandle: (p.handle_changes || 0) < 1 || p.handle_unlock || gu,
+    send(c, { t: 'me', uid: c.uid, email: c.email, devConfigured: DEVS.length > 0, handle: p.handle, name: p.username, dev: !!c.dev, superDev: !!c.superDev, canHandle: (p.handle_changes || 0) < 1 || p.handle_unlock || gu,
       nameAt: last + NAME_DELAY, namePrice: Math.min(640, 20 * Math.pow(2, recent)), elo: p.elo, rank: rankOf(p.elo), games: p.ranked_games, wins: p.ranked_wins,
       rankedAt: RANKED_AT, rankedOpen: rankedOpen(c) });
   }
@@ -123,8 +129,24 @@ module.exports = function (ctx) {
       return err(c, 'auth', 'Session expirée : reconnectez-vous.');
     }
     D.auths++;
+    // un seul appareil par compte : une nouvelle connexion (identifiants saisis) prend le relais, l'ancien appareil est déconnecté
+    const devId = String(msg.device || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 48);
+    if (devId) {
+      let cur = devices.get(u.id) || (u.app_metadata && u.app_metadata.device) || '';
+      if (msg.fresh || !cur) {
+        devices.set(u.id, devId);
+        if (cur !== devId) db('/auth/v1/admin/users/' + u.id, { method: 'PUT', body: { app_metadata: { device: devId, device_at: new Date().toISOString() } } }).then(() => { D.sessions = 'ok (persistant)'; }).catch((e) => { D.sessions = 'mémoire (' + (e.status || '') + ')'; });
+        for (const o of clients.values()) {
+          if (o !== c && o.uid === u.id && o.devId !== devId) { D.takeovers++; send(o, { t: 'session_taken', msg: 'Votre compte vient d\'être ouvert sur un autre appareil. Vous avez été déconnecté de celui-ci.' }); byUid.delete(o.uid); o.uid = null; o.dev = false; o.email = ''; }
+        }
+      } else if (cur !== devId) {
+        D.takeovers++;
+        return send(c, { t: 'session_taken', msg: 'Votre compte est ouvert sur un autre appareil. Reconnectez-vous pour l\'utiliser ici (l\'autre appareil sera déconnecté).' });
+      }
+      c.devId = devId;
+    }
     if (c.uid && c.uid !== u.id) byUid.delete(c.uid);
-    c.uid = u.id; c.email = String(u.email || '').toLowerCase(); c.dev = DEVS.includes(c.email); byUid.set(c.uid, c.pid); if (c.dev) D.devAuths++;
+    c.uid = u.id; c.email = String(u.email || '').toLowerCase(); c.superDev = DEVS.includes(c.email); c.dev = c.superDev || devUids.includes(u.id); byUid.set(c.uid, c.pid); if (c.dev) D.devAuths++;
     let p = await one('id=eq.' + enc(c.uid) + '&select=' + COLS);
     if (!p) return err(c, 'auth', 'Profil introuvable.');
     if (!p.handle) {
@@ -196,7 +218,31 @@ module.exports = function (ctx) {
     send(c, { t: 'ranked', elo: p.elo, rank: rankOf(p.elo), games: p.ranked_games, wins: p.ranked_wins, hist, top: top.map((x) => Object.assign(x, { rank: rankOf(x.elo) })), openAt: RANKED_AT, open: rankedOpen(c), dev: !!c.dev, modes: RANKED_MODES });
   });
   H.gift_ack = need(async (c, msg) => { await db('/rest/v1/gifts?id=eq.' + (+msg.id | 0) + '&to_id=eq.' + c.uid, { method: 'PATCH', body: { claimed: true }, prefer: 'return=minimal' }); });
+  let lbCache = null, lbAt = 0, lbTotal = 0;
+  H.lb = async (c, msg) => {
+    if (!lbCache || Date.now() - lbAt > 8000 || msg.fresh) {
+      lbCache = await db('/rest/v1/profiles?trophies=gt.0&select=id,username,handle,trophies,avatar,elo&order=trophies.desc,created_at.asc&limit=100') || [];
+      lbTotal = await db('/rest/v1/profiles?trophies=gt.0&select=id', { count: true }).catch(() => lbCache.length);
+      lbAt = Date.now(); D.lb = 'ok';
+    }
+    let mine = null;
+    if (c.uid) mine = await one('id=eq.' + enc(c.uid) + '&select=trophies,username,handle,avatar');
+    const tr = mine ? (mine.trophies || 0) : Math.max(0, Math.min(1e6, +msg.tr | 0));
+    const above = tr > 0 ? await db('/rest/v1/profiles?trophies=gt.' + tr + '&select=id', { count: true }) : 0;
+    send(c, { t: 'lb', src: 'db', total: lbTotal, top: lbCache.map((p, i) => ({ rank: i + 1, name: p.username, handle: p.handle, trophies: p.trophies, avatar: p.avatar, me: !!c.uid && p.id === c.uid })),
+      me: { rank: tr > 0 ? above + 1 : 0, trophies: tr, guest: !c.uid, name: mine ? mine.username : c.name, handle: mine ? mine.handle : '' } });
+  };
   const dev = (fn) => need(async (c, msg) => { if (!c.dev) return err(c, 'forbidden', 'Réservé au compte développeur.'); await fn(c, msg); });
+  // le développeur principal (DEV_EMAILS) peut autoriser d'autres comptes ; les comptes autorisés ne peuvent pas en autoriser d'autres
+  H.dev_grant = dev(async (c, msg) => {
+    if (!c.superDev) return err(c, 'forbidden', 'Seul le compte développeur principal peut autoriser d\'autres comptes.');
+    const p = await findProfile(msg.handle, 'id,username'); if (!p) return err(c, 'dev', 'Joueur introuvable.');
+    await loadDevUids();
+    devUids = msg.revoke ? devUids.filter((x) => x !== p.id) : Array.from(new Set(devUids.concat([p.id])));
+    await db('/rest/v1/game_config?on_conflict=key', { method: 'POST', body: { key: 'dev_uids', value: devUids }, prefer: 'resolution=merge-duplicates,return=minimal' });
+    for (const o of clients.values()) if (o.uid === p.id) { o.dev = !msg.revoke; me(o); }
+    send(c, { t: 'toast', msg: msg.revoke ? 'Accès développeur retiré à ' + p.username : 'Accès développeur accordé à ' + p.username });
+  });
   H.dev_gift = dev(async (c, msg) => {
     const id = String(msg.brawler || ''); if (!G.BRAWLER[id] || id === 'robot') return err(c, 'dev', 'Brawler inconnu.');
     const p = /^[0-9a-f-]{36}$/i.test(String(msg.uid || '')) ? await one('id=eq.' + enc(msg.uid) + '&select=id,username,save') : await findProfile(msg.handle, 'id,username,save');
@@ -240,6 +286,8 @@ module.exports = function (ctx) {
 
   function onClose(c) { if (c.uid) { patchProfile(c.uid, { last_seen: new Date().toISOString() }).catch(() => {}); setTimeout(() => notifyFriends(c), 50); } }
   function onPresence(c) { if (c && c.uid) notifyFriends(c); }
-  function handle(c, msg) { const f = H[msg.t]; if (!f) return false; guard(f)(c, msg); return true; }
-  return { diag: () => D, enabled, handle, rankedOpen, rankedEnd, rankOf, RANKED_MODES, RANKED_AT, onClose, onPresence, byUid };
+  function handle(c, msg) { const f = H[msg.t]; if (!f || (msg.t === 'lb' && !enabled)) return false; guard(f)(c, msg); return true; }
+  async function cfgLoad(key) { if (!enabled) return null; try { const r = await db('/rest/v1/game_config?key=eq.' + enc(key) + '&select=value'); return r && r[0] ? r[0].value : null; } catch (e) { return null; } }
+  async function cfgSave(key, value) { if (!enabled) return; await db('/rest/v1/game_config?on_conflict=key', { method: 'POST', body: { key, value }, prefer: 'resolution=merge-duplicates,return=minimal' }); }
+  return { diag: () => D, enabled, handle, cfgLoad, cfgSave, me, rankedOpen, rankedEnd, rankOf, RANKED_MODES, RANKED_AT, onClose, onPresence, byUid };
 };

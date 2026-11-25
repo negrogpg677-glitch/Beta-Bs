@@ -1,5 +1,5 @@
 name: Compiler l'IPA (iPhone)
-on: { workflow_dispatch: {}, push: { paths: ['ios/**', 'app/src/main/assets/www/**'] } }
+on: { workflow_dispatch: {}, push: { paths: ['ios/**', 'app/src/main/assets/www/**', 'app/src/dev/assets/www/**'] } }
 jobs:
   ipa:
     runs-on: macos-14
@@ -18,5 +18,22 @@ jobs:
         run: |
           mkdir -p out/Payload && cp -R ios/build/Build/Products/Release-iphoneos/BrawlRush.app out/Payload/
           cd out && zip -qry BrawlRush-unsigned.ipa Payload
+      # Édition DÉVELOPPEUR pour iPhone : menu développeur actif d'office, installable à côté de la version normale
+      - name: Préparer l'édition DEV
+        run: |
+          cp app/src/dev/assets/www/js/flavor.js app/src/main/assets/www/js/flavor.js
+          cp app/src/dev/assets/www/js/dev.js app/src/main/assets/www/js/dev.js
+          sed -i '' 's#CFBundleDisplayName: Brawl Rush#CFBundleDisplayName: Brawl Rush DEV#; s#PRODUCT_BUNDLE_IDENTIFIER: com.brawlrush.game#PRODUCT_BUNDLE_IDENTIFIER: com.brawlrush.game.dev#' ios/project.yml
+          rm -rf ios/build ios/BrawlRush.xcodeproj && cd ios && xcodegen generate
+      - name: Compiler l'édition DEV (sans signature)
+        run: |
+          cd ios
+          xcodebuild -project BrawlRush.xcodeproj -scheme BrawlRush -configuration Release -sdk iphoneos -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
+      - name: Créer l'IPA DEV
+        run: |
+          rm -rf out/Payload && mkdir -p out/Payload && cp -R ios/build/Build/Products/Release-iphoneos/BrawlRush.app out/Payload/
+          cd out && zip -qry BrawlRush-DEV-unsigned.ipa Payload
       - uses: actions/upload-artifact@v4
         with: { name: BrawlRush-IPA, path: out/BrawlRush-unsigned.ipa }
+      - uses: actions/upload-artifact@v4
+        with: { name: BrawlRush-DEV-IPA, path: out/BrawlRush-DEV-unsigned.ipa }

@@ -12,10 +12,10 @@ const hash = (p, s) => crypto.scryptSync(p, s, 32).toString('hex');
 const now = () => Math.floor(Date.now() / 1000);
 function session(u) {
   const at = 'at_' + crypto.randomBytes(16).toString('hex'), rt = 'rt_' + crypto.randomBytes(16).toString('hex');
-  tokens.set(at, { id: u.id, exp: now() + EXP }); refresh.set(rt, u.id);
+  tokens.set(at, { id: u.id, exp: now() + EXP, rt }); refresh.set(rt, u.id);
   return { access_token: at, token_type: 'bearer', expires_in: EXP, expires_at: now() + EXP, refresh_token: rt, user: pubUser(u) };
 }
-const pubUser = (u) => ({ id: u.id, aud: 'authenticated', role: 'authenticated', email: u.email, user_metadata: u.meta, created_at: u.created });
+const pubUser = (u) => ({ id: u.id, aud: 'authenticated', role: 'authenticated', email: u.email, user_metadata: u.meta, app_metadata: u.app || {}, created_at: u.created });
 const gerr = (res, code, ec, msg) => send(res, code, { code, error_code: ec, msg });
 function send(res, code, body, extra) { res.writeHead(code, Object.assign({ 'content-type': 'application/json' }, cors, extra || {})); res.end(body === undefined ? '' : JSON.stringify(body)); }
 const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'apikey, authorization, content-type, prefer, x-client-info, accept', 'access-control-allow-methods': 'GET, POST, PATCH, PUT, DELETE, OPTIONS' };
@@ -54,9 +54,11 @@ function rest(req, res, url, t, body) {
   const sp = url.searchParams, rep = /return=representation/.test(req.headers.prefer || '');
   let rows = rowsOf(t).filter((r) => match(r, sp));
   if (req.method === 'GET') {
-    const o = sp.get('order'); if (o) { const [c, d] = o.split('.'); rows.sort((a, b) => (a[c] > b[c] ? 1 : a[c] < b[c] ? -1 : 0) * (d === 'desc' ? -1 : 1)); }
+    const o = sp.get('order'); if (o) { const keys = o.split(',').map((x) => x.split('.')); rows.sort((a, b) => { for (const [c, d] of keys) { const r = (a[c] > b[c] ? 1 : a[c] < b[c] ? -1 : 0) * (d === 'desc' ? -1 : 1); if (r) return r; } return 0; }); }
+    const total = rows.length;
     if (sp.get('limit')) rows = rows.slice(0, +sp.get('limit'));
-    return send(res, 200, rows);
+    const rg = (req.headers.range || '').match(/^(\d+)-(\d+)$/); if (rg) rows = rows.slice(+rg[1], +rg[2] + 1);
+    return send(res, 200, rows, /count=exact/.test(req.headers.prefer || '') ? { 'content-range': (rows.length ? '0-' + (rows.length - 1) : '*') + '/' + total } : undefined);
   }
   if (req.method === 'POST') {
     const out = [];
@@ -134,7 +136,14 @@ const server = http.createServer((req, res) => {
       if (body.type !== 'recovery' || !c || c.code !== String(body.token) || c.exp < now()) return send(res, 403, { code: 403, error_code: 'otp_expired', msg: 'Token has expired or is invalid' });
       codes.delete(email); return send(res, 200, session(users.get(email)));
     }
-    if (p === '/auth/v1/logout' && req.method === 'POST') { tokens.delete((req.headers.authorization || '').replace(/^Bearer /, '')); return send(res, 204); }
+    if (p === '/auth/v1/logout' && req.method === 'POST') {
+      const tk = (req.headers.authorization || '').replace(/^Bearer /, ''), me = tokens.get(tk), scope = url.searchParams.get('scope') || 'global';
+      if (me && scope !== 'local') { for (const [k, v] of tokens) if (v.id === me.id && (scope === 'global' || k !== tk)) tokens.delete(k); for (const [k, v] of refresh) if (v === me.id && (scope === 'global' || !(me.rt === k))) refresh.delete(k); }
+      if (scope !== 'others') tokens.delete(tk);
+      return send(res, 204);
+    }
+    const adm = p.match(/^\/auth\/v1\/admin\/users\/([0-9a-f-]{36})$/);
+    if (adm && svc) { const u = byId.get(adm[1]); if (!u) return send(res, 404, { msg: 'User not found' }); if (req.method === 'PUT') u.app = Object.assign({}, u.app || {}, body.app_metadata || {}); return send(res, 200, pubUser(u)); }
     // ---------------- REST (PostgREST) ----------------
     if (svc && p.startsWith('/rest/v1/') && !p.startsWith('/rest/v1/rpc/')) return rest(req, res, url, p.slice(9), body); // clé secrète : accès complet (contourne la RLS)
     if (a && a.expired) return send(res, 401, { code: 'PGRST301', message: 'JWT expired' });

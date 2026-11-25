@@ -69,6 +69,15 @@
   }
   A._api = api;
 
+  /* ---------- appareil (un seul appareil connecté par compte) ---------- */
+  A.deviceId = function () {
+    let d = G.Store.get('br_device');
+    if (!d || !/^[A-Za-z0-9_-]{8,48}$/.test(d)) { d = 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10); G.Store.set('br_device', d); }
+    return d;
+  };
+  A.fresh = false; // vrai juste après avoir saisi ses identifiants : cette connexion prend le relais sur les autres appareils
+  A.logoutOthers = async function () { try { await api('/auth/v1/logout?scope=others', { method: 'POST' }); } catch (e) { /* ancienne version de Supabase : le serveur du jeu fait foi */ } };
+
   /* ---------- session ---------- */
   function storeSession(sess, remember) {
     A.session = { access_token: sess.access_token, refresh_token: sess.refresh_token, expires_at: sess.expires_at || Math.floor(Date.now() / 1000) + (sess.expires_in || 3600), remember: !!remember };
@@ -105,6 +114,7 @@
     if (!(await A.usernameAvailable(username))) throw fail('taken', 'Ce pseudo est déjà pris.');
     const d = await api('/auth/v1/signup', { method: 'POST', auth: false, body: { email: email ? email.trim() : userEmail(username), password, data: { username } } });
     if (!d || !d.access_token) return { confirm: true }; // confirmation par e-mail activée sur le projet
+    A.fresh = true;
     storeSession(d, remember);
     await afterLogin(true);
     return { ok: true };
@@ -114,13 +124,17 @@
     if (!identifier || !password) throw fail('empty', 'Remplissez l\'identifiant et le mot de passe.');
     const email = identifier.includes('@') ? identifier : userEmail(identifier);
     const d = await api('/auth/v1/token?grant_type=password', { method: 'POST', auth: false, body: { email, password } });
+    A.fresh = true;
     storeSession(d, remember);
     await afterLogin(false);
     return { ok: true };
   };
-  A.signOut = async function () {
-    await A.flush();
-    try { await api('/auth/v1/logout', { method: 'POST' }); } catch (e) { /* ignore */ }
+  A.signOut = async function (opt) {
+    opt = opt || {};
+    if (!opt.kicked) { // expulsé par un autre appareil : on n'envoie surtout pas cette sauvegarde (elle écraserait la progression de l'appareil actif)
+      await A.flush();
+      try { await api('/auth/v1/logout?scope=local', { method: 'POST' }); } catch (e) { /* ignore */ }
+    }
     clearSession();
     // la progression du compte reste en ligne ; l'appareil repart sur une partie invité vierge (réglages conservés)
     const keep = G.Save.data.settings; G.Save.reset(); Object.assign(G.Save.data.settings, keep); G.Save.data.guestChoice = true; saveLocal();
@@ -135,7 +149,7 @@
   A.recoverFinish = async function ({ email, code, password, remember }) {
     const pb = A.passwordProblem(password); if (pb) throw fail('password', pb);
     const d = await api('/auth/v1/verify', { method: 'POST', auth: false, body: { type: 'recovery', email: email.trim(), token: String(code).trim() } });
-    storeSession(d, remember);
+    A.fresh = true; storeSession(d, remember);
     await api('/auth/v1/user', { method: 'PUT', body: { password } });
     await afterLogin(false);
     return true;

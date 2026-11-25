@@ -91,11 +91,31 @@ class Cl {
     ok(got && got.idx === ma.you && got.text === 'Attaquez b!', 'discussion rapide en partie reçue par le coéquipier (« ' + (got && got.text) + ' »)'); B.on = null; }
   // --- reconnexion ---
   B.ws.close(); await sleep(400);
-  const B2 = new Cl(url, 'Bob'); const w = await B2.connect({ pid: B.pid, token: B.token });
+  const B2 = new Cl(url, 'Bob'); const w = await B2.connect({ pid: B.pid, token: B.token, inMatch: mb.id }); // coupure réseau : encore sur l'écran de combat
   ok(w.resumed && w.pid === B.pid, 'reconnexion avec la même identité');
   const mr = await B2.wait('match', 4000);
   ok(mr.you === mb.you && mr.id === mb.id, 'reprise de la partie en cours');
   await sleep(300); ok(B2.snaps > 2, 'instantanés reçus après reconnexion');
+  // --- interdiction de quitter + retour au menu + « Reprendre la partie » ---
+  B2.clear(); B2.send({ t: 'match_leave' }); const nq = await B2.wait('error');
+  ok(nq.code === 'no_quit' && [...S.matches.values()][0].M.ents[mb.you].isPlayer, 'quitter une partie en cours est refusé par le serveur (hors duel entre amis)');
+  B2.ws.close(); await sleep(300);
+  const B3 = new Cl(url, 'Bob'); await B3.connect({ pid: B.pid, token: B.token }); // relance du jeu : retour au menu
+  const rs = await B3.wait('resumable', 3000).catch(() => null);
+  ok(rs && rs.id === mb.id && !B3.msgs.some((x) => x.t === 'match'), 'au retour : partie proposée (« Reprendre la partie ») sans y être renvoyé de force');
+  const mm = [...S.matches.values()][0], bb = mm.M.ents[mb.you]; bb.x += 0; const hp0 = bb.hp;
+  ok(!bb.isPlayer, 'pendant l\'absence, la partie continue côté serveur (IA)');
+  B3.send({ t: 'resume' }); const rr = await B3.wait('match', 3000).catch(() => null);
+  await sleep(250); const se = B3.last && B3.last.e[mb.you];
+  ok(rr && rr.you === mb.you && bb.isPlayer && se && Math.abs(se[0] - Math.round(bb.x)) < 40 && se[4] > 0, 'reprise : même personnage, position et vie restaurées depuis le serveur (pv ' + hp0 + ')');
+  // inactivité (AFK)
+  for (let i = 0; i < 40 && !bb.alive; i++) await sleep(150); // (le brawler peut être en train de réapparaître)
+  bb.invuln = 8; S.setCfg({ afkSec: 10 }); B3.clear(); bb.lastAct = 1; const afk = await B3.wait('afk', 3000).catch(() => null);
+  const n0 = B3.snaps; await sleep(400);
+  ok(afk && afk.id === mb.id && !bb.isPlayer && B3.snaps === n0, 'inactivité détectée : joueur sorti de la partie avec un message, la partie continue');
+  B3.send({ t: 'input', seq: 1, mx: 1, my: 0 }); await sleep(100); ok(!bb.isPlayer, 'aucune commande acceptée tant que la partie n\'est pas reprise');
+  B3.send({ t: 'resume' }); ok(!!(await B3.wait('match', 3000).catch(() => null)) && bb.isPlayer, 'reprise après inactivité');
+  S.setCfg({ afkSec: 45 });
   // --- fin de partie (forcée) ---
   const m = [...S.matches.values()][0];
   m.M.score[0] = 1; m.M.left = 0.1; m.M.overtime = true; m.M.state = 'play';
@@ -106,6 +126,7 @@ class Cl {
   ok(lb.top.length >= 1 && lb.me.matches >= 1, 'classement en ligne');
   // --- partie privée + survie ---
   await sleep(6500);
+  { const pp = [...S.parties.values()].find((p) => p.members.includes(A.pid)); ok(pp && pp.state === 'idle' && pp.members.length >= 2 && pp.leader === A.pid, 'après la partie : même équipe, même chef, prête à rejouer (' + (pp && pp.members.length) + ' membres)'); }
   A.send({ t: 'party_set', mode: 'showdown' }); await sleep(100);
   A.send({ t: 'party_start', mode: 'showdown', kind: 'private' });
   const ms = await A.wait('match', 12000);
@@ -143,6 +164,30 @@ class Cl {
   E.send({ t: 'club_join', id: cl.club.id }); await sleep(250); ok(E.lastOf('club').club.count === 2, 'rejoindre un club');
   D.clear(); E.send({ t: 'club_chat', txt: 'Salut <b>tous</b> !' }); const msgc = await D.wait('club_msg'); ok(msgc.msg.txt === 'Salut btous /b !' || !/[<>]/.test(msgc.msg.txt), 'chat de club (HTML nettoyé)');
   E.send({ t: 'club_leave' }); await sleep(200); ok(D.lastOf('club').club.count === 1, 'quitter un club');
+  // --- duel entre amis : seul mode où l'on peut quitter (abandon = défaite) ---
+  { const F1 = new Cl(url, 'Fred'), G1 = new Cl(url, 'Gina'); await F1.connect(); await G1.connect(); await sleep(150); F1.clear(); G1.clear();
+    F1.send({ t: 'party_create', mode: 'duel' }); const pf = await F1.wait('party'); G1.send({ t: 'party_join', code: pf.party.code }); await sleep(200);
+    F1.send({ t: 'party_set', ready: true }); G1.send({ t: 'party_set', ready: true });
+    await F1.wait('match', 9000); await G1.wait('match', 9000); await sleep(300);
+    F1.send({ t: 'match_leave' }); const ef = await F1.wait('end', 4000).catch(() => null), eg = await G1.wait('end', 4000).catch(() => null);
+    ok(ef && eg && !ef.win && eg.win, 'duel entre amis : quitter est autorisé et compte comme une défaite');
+    await sleep(6300); const pd = [...S.parties.values()].find((p) => p.code === pf.party.code);
+    ok(pd && pd.members.length === 2 && pd.state === 'idle', 'après le duel : les deux joueurs restent ensemble pour une revanche'); }
+  // --- promotion du chef ---
+  { const H1 = new Cl(url, 'Hugo'), I1 = new Cl(url, 'Iris'); await H1.connect(); await I1.connect(); await sleep(150); H1.clear(); I1.clear();
+    H1.send({ t: 'party_create', mode: 'gemgrab' }); const ph = await H1.wait('party'); I1.send({ t: 'party_join', code: ph.party.code }); await sleep(200);
+    I1.clear(); H1.send({ t: 'party_promote', pid: I1.pid }); await sleep(200); ok(I1.lastOf('party').party.leader === I1.pid, 'le chef peut passer la main (synchronisé en temps réel)');
+    H1.clear(); H1.send({ t: 'party_start', kind: 'private' }); ok((await H1.wait('error')).code === 'not_leader', 'seul le chef lance la partie'); }
+  // --- format 2 contre 2 (file séparée, bots en complément) ---
+  { const J1 = new Cl(url, 'Jade'), K1 = new Cl(url, 'Karl'); await J1.connect(); await K1.connect(); await sleep(150); J1.clear(); K1.clear();
+    J1.send({ t: 'party_create', mode: 'gemgrab' }); const pj = await J1.wait('party'); K1.send({ t: 'party_join', code: pj.party.code }); await sleep(200);
+    J1.send({ t: 'party_set', fmt: 2 }); await sleep(150); ok(K1.lastOf('party').party.fmt === 2, '2 contre 2 : format choisi par le chef, synchronisé');
+    J1.send({ t: 'party_start', kind: 'queue', mode: 'gemgrab', fmt: 2 });
+    const m2 = await J1.wait('match', 15000).catch(() => null);
+    ok(m2 && m2.roster.length === 4 && m2.roster.filter((r) => r.team === 0).length === 2 && m2.roster.filter((r) => !r.bot).length === 2, '2 contre 2 en ligne : 4 joueurs (2 humains + 2 bots), 2 par équipe'); }
+  // --- outils développeur : refusés sans compte développeur ---
+  { A.clear(); A.send({ t: 'dv_sim', act: 'join' }); ok((await A.wait('error')).code === 'forbidden', 'outils développeur refusés à un joueur normal (vérifié par le serveur)');
+    A.send({ t: 'dv_cfg', cfg: { afkSec: 999 } }); await sleep(150); ok(S.CFG.afkSec === 45, 'paramètres en direct non modifiables par un joueur normal'); }
   console.log(fails ? '\n' + fails + ' ECHEC(S)' : '\nTOUS LES TESTS PASSENT');
   process.exit(fails ? 1 : 0);
 })().catch((e) => { console.error('ERREUR', e); process.exit(2); });

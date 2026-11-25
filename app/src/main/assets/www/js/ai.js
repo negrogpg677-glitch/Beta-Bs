@@ -223,6 +223,7 @@
 
   /* ---------- boucle principale d'un bot ---------- */
   AI.update = function (M, b, dt) {
+    if (M.training && M.player && b.team !== M.player.team) { b.input.mx = b.input.my = 0; return; } // entraînement : mannequins
     const ai = b.ai, def = b.def, skill = M.skill, atk = def.atk;
     ai.t -= dt; ai.pathT = ai.pathT === undefined ? 0 : ai.pathT;
     ai.fireT = (ai.fireT || 0) - dt; ai.strafeT = (ai.strafeT || 0) - dt; ai.dodgeT = (ai.dodgeT || 0) - dt;

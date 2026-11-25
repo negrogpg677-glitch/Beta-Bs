@@ -41,6 +41,15 @@
   UI.renderSocial = () => renderSocial();
   function renderSocial() {
     const b = $('#socBody'); if (!b || UI.screen !== 'social') return;
+    // le texte en cours de saisie (recherche, chat) et le défilement survivent aux mises à jour en direct
+    const keep = {}, act = document.activeElement, focusId = act && b.contains(act) ? act.id : null, scr = b.scrollTop;
+    b.querySelectorAll('input[id], textarea[id]').forEach((i) => { keep[i.id] = [i.value, i.selectionStart, i.selectionEnd]; });
+    renderSocial0(b);
+    for (const id in keep) { const i = b.querySelector('#' + id); if (i && !i.value && keep[id][0]) { i.value = keep[id][0]; if (id === focusId) { try { i.focus(); i.setSelectionRange(keep[id][1], keep[id][2]); } catch (e) { /* ignore */ } } } }
+    if (scr) b.scrollTop = scr;
+    const fr = b.querySelector('#frRes'); if (fr && !fr.innerHTML && UI._frShow && keep.frIn && keep.frIn[0]) UI._frShow(fr); // dernier résultat de recherche conservé
+  }
+  function renderSocial0(b) {
     if (!Net.serverUrl()) { b.innerHTML = '<div class="row" style="font-size:3rem;margin-top:6rem">Le mode en ligne n\'est pas disponible dans cette version.</div>'; return; }
     if (Net.status !== 'online') { b.innerHTML = '<div class="row" style="font-size:3.2rem;margin-top:6rem;flex-direction:column"><div class="spinner"></div><div>' + (Net.waking() ? 'Réveil du serveur… (jusqu’à 1 min)' : 'Connexion au serveur…') + '</div></div>'; return; }
     if (UI.socialTab === 'friends') { if (!(UI.friends2 && UI.friends2(b))) renderFriends(b); } else if (UI.socialTab === 'club') renderClub(b); else renderRanking(b);
@@ -80,6 +89,7 @@
   ACT.clubLeave = () => { G.Audio.sfx('back'); Net.clubLeave(); };
   ACT.chatSend = () => { const i = $('#chatIn'); if (!i || !i.value.trim()) return; Net.clubChat(i.value); i.value = ''; };
   function renderRanking(b) {
+    if (UI.lbRender) { b.innerHTML = '<div id="lbBody" class="lbwrap" style="max-width:120rem;margin:0 auto"></div>'; UI.lbRender(b.firstChild, Net.lb); return; }
     const m = Net.lb;
     if (!m) { b.innerHTML = '<div class="row" style="font-size:3rem;margin-top:5rem">Chargement…</div>'; return; }
     b.innerHTML = '<div class="soclist" style="max-width:110rem;margin:0 auto"><div class="lbrow h"><span>#</span><span>Joueur</span><span>Trophées</span><span>Vict.</span></div>' + (m.top.length ? m.top.map((r) => `<div class="lbrow ${r.me ? 'me' : ''}"><span class="rk">${r.rank}</span><span>${esc(r.name)}</span><span>${ic('trophy')} ${fmt(r.trophies)}</span><span>${r.wins}</span></div>`).join('') : '<div style="font-size:2.8rem;text-align:center;margin-top:3rem">Personne n\'a encore joué en ligne.</div>') + '</div>';

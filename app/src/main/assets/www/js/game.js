@@ -44,11 +44,11 @@
       const pool = G.shuffle(all.slice());
       let pi = 0;
       for (let team = 0; team < 2; team++) {
-        for (let k = 0, PER = mode.per || 3; k < PER; k++) {
+        for (let k = 0, PER = opts.per || mode.per || 3; k < PER; k++) {
           if (mode.id === 'boss' && team === 1 && k > 0) continue;
           const isP = team === 0 && k === 0;
           const def = isP ? G.BRAWLER[opts.brawlerId] : (mode.id === 'boss' && team === 1 ? G.BRAWLER.robot : pool[pi++ % pool.length]);
-          const b = mkBrawler(M, def, team, isP ? opts.name : names[pi + k + team * 3], isP ? lv : botLevel(), isP ? opts.skin : G.pick(G.SKINS).id, isP, map.spawns[team][k], team * (mode.per || 3) + k);
+          const b = mkBrawler(M, def, team, isP ? opts.name : names[pi + k + team * 3], isP ? lv : botLevel(), isP ? opts.skin : G.pick(G.SKINS).id, isP, map.spawns[team][k], team * (opts.per || mode.per || 3) + k);
           b.spawnIdx = k;
           M.ents.push(b);
           if (isP) M.player = b;
@@ -1133,7 +1133,7 @@
       M.zone = { x0: T, y0: T, x1: (M.w - 1) * T, y1: (M.h - 1) * T, fx0: fx - half, fy0: fy - half, fx1: fx + half, fy1: fy + half, sx0: T, sy0: T, sx1: (M.w - 1) * T, sy1: (M.h - 1) * T, start: 22, dur: 150, dmgT: 0 };
     } else {
       for (let team = 0; team < 2; team++) {
-        const PER = mode.per || 3;
+        const PER = opts.per || mode.per || 3;
         let mine = opts.players.filter((p) => (mode.id === 'boss' ? 0 : p.team) === team).slice(0, PER);
         if (mode.id === 'boss' && team === 1) mine = [{ pid: null, bot: true, name: 'Mégabot', brawler: 'robot', skin: 'classic', level: opts.players[0] ? opts.players[0].level : 3, team: 1, trophies: avg }];
         while (mine.length < PER && !(mode.id === 'boss' && team === 1)) mine.push(addBot(team));

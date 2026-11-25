@@ -2,7 +2,7 @@
    Lance l'imitation Supabase puis : node tools/test-accounts.js <port_mock>
    Chaque « contexte » de navigateur = un téléphone différent (stockage séparé). */
 const { chromium } = require('playwright');
-const PORT = process.argv[2] || 54321, URLM = 'http://127.0.0.1:' + PORT;
+const PORT = /^\d+$/.test(process.argv[2] || '') ? process.argv[2] : 54321, URLM = 'http://127.0.0.1:' + PORT;
 const GAME = 'file://' + require('path').resolve(__dirname, '../app/src/main/assets/www/index.html');
 let fails = 0; const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) fails++; };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -12,6 +12,10 @@ const getJSON = async (p) => (await fetch(URLM + p)).json();
   const browser = await chromium.launch(); const errs = [];
   async function phone(name) {
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 600 } });
+    await ctx.route(/supabase\.co\//, async (route) => { // sécurité : le vrai projet Supabase n'est JAMAIS contacté pendant les tests
+      const r = route.request(), u = new URL(r.url()), h = Object.assign({}, r.headers(), { apikey: 'anon-test-key' });
+      const res = await route.fetch({ url: URLM + u.pathname + u.search, headers: h }); await route.fulfill({ response: res });
+    });
     await ctx.addInitScript(([url]) => { // configuration du serveur de comptes (comme si elle était intégrée à l'APK)
       if (!localStorage.getItem('brawlrush_save_v1')) localStorage.setItem('brawlrush_save_v1', JSON.stringify({ settings: { sbUrl: url, sbKey: 'anon-test-key' }, tutorialDone: true, lastDaily: 99999999 }));
     }, [URLM]);

@@ -10,8 +10,8 @@ android {
         applicationId "com.brawlrush.game"
         minSdk 26
         targetSdk 34
-        versionCode 18
-        versionName "3.5"
+        versionCode 19
+        versionName "3.6"
     }
 
     flavorDimensions 'edition'

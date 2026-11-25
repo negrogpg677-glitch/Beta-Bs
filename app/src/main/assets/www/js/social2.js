@@ -12,12 +12,12 @@
   let lastTok = null;
   function auth(force) {
     if (!A || !A.loggedIn() || !A.session || Net.status !== 'online') return;
-    const t = A.session.access_token; if (!force && t === lastTok) return; lastTok = t; Net.send({ t: 'auth', token: t });
+    const t = A.session.access_token; if (!force && t === lastTok) return; lastTok = t; Net.send({ t: 'auth', token: t, device: A.deviceId ? A.deviceId() : '', fresh: !!A.fresh });
   }
   Net.on('welcome', () => { lastTok = null; setTimeout(() => auth(true), 30); });
   if (A) A.on(() => { if (A.loggedIn()) auth(false); else if (Net.me) { Net.me = null; Net.fr = null; lastTok = null; } });
   Net.on('status', (s) => { if (s !== 'online') lastTok = null; });
-  Net.on('me', (m) => { Net.me = m; if (m.dev && G.DevTools) { G.DevTools.activate(); if (!UI._devHello) { UI._devHello = 1; UI.toast('🔧 Compte développeur reconnu : menu DEV activé', 3000); } } if (UI.screen === 'social') UI.renderSocial(); const pf = $('.pf-left'); if (pf) profileExtra(pf.closest('.modal')); });
+  Net.on('me', (m) => { Net.me = m; if (A && A.fresh) { A.fresh = false; if (A.logoutOthers) A.logoutOthers(); } if (m.dev && G.DevTools) { G.DevTools.activate(); if (!UI._devHello) { UI._devHello = 1; UI.toast('🔧 Compte développeur reconnu : menu DEV activé', 3000); } } if (UI.screen === 'social') UI.renderSocial(); const pf = $('.pf-left'); if (pf) profileExtra(pf.closest('.modal')); });
   Net.on('fr', (m) => {
     Net.fr = m;
     Net.friends = { code: Net.me && Net.me.handle, list: m.friends.map((f) => ({ pid: f.pid, uid: f.uid, name: f.name, trophies: f.trophies, status: f.status, club: '', handle: f.handle })) };
@@ -92,13 +92,14 @@
     const inp = $('#frIn'), h = handleFmt(inp && inp.value); const res = $('#frRes'); if (!res) return;
     if (h.length < 4) { UI.toast('L\'identifiant contient au moins 4 lettres.'); return; }
     res.innerHTML = '<div class="spinner"></div>';
-    findPlayer(h, (cdd) => {
-      if (!$('#frRes')) return;
+    findPlayer(h, (cdd) => { UI._frShow = (res) => show(res, cdd); show($('#frRes'), cdd); }); // l'écran peut avoir été redessiné entre-temps : on vise l'élément actuel
+    function show(res, cdd) {
+      if (!res) return;
       if (!cdd) { res.innerHTML = '<div class="fr-none">Aucun joueur avec l\'identifiant ' + esc(h) + '.</div>'; return; }
       const act = cdd.me ? '<span class="invok">C\'est vous !</span>' : cdd.friend === 'yes' ? '<span class="invok">✔ Déjà ami</span>' : cdd.friend === 'sent' ? '<span class="invok">Demande envoyée</span>' : cdd.friend === 'received' ? `<button class="btn small green" data-act="frAccept" data-uid="${esc(cdd.uid)}">Accepter sa demande</button>` : `<button class="btn green" data-act="frReq" data-h="${esc(cdd.handle)}">Demander en ami</button>`;
       res.innerHTML = `<div class="fr-card"><canvas width="220" height="220"></canvas><div class="fr-ci"><div class="fn">${esc(cdd.name)}</div><div class="fh">${esc(cdd.handle)}</div><div class="fs">${stDot(cdd.status)}${stLabel(cdd)} · ${ic('trophy')} ${fmt(cdd.trophies)} · <span style="color:${cdd.rank.color}">${esc(cdd.rank.name)}</span></div></div><div>${act}</div></div>`;
       G.Render.portrait($('canvas', res), G.BRAWLER[cdd.avatar] ? cdd.avatar : 'sherry', 'classic', 1, { zoom: 1.4, y: 0.95 });
-    });
+    }
   };
   ACT.frReq = (a) => { G.Audio.sfx('buy'); Net.send({ t: 'fr_req', handle: a.dataset.h }); a.outerHTML = '<span class="invok">Demande envoyée</span>'; };
   ACT.frCard = (a) => { if (a.dataset.h) UI.playerCard({ c: a.dataset.h, n: a.querySelector('.fn').textContent, b: 'sherry' }); };
@@ -113,9 +114,24 @@
       if (!o.isConnected) return; const s2 = $('#pcSt', o); if (!cdd) { if (s2) s2.textContent = 'Profil introuvable'; return; }
       s2.innerHTML = `${stDot(cdd.status)}${stLabel(cdd)} · ID ${esc(cdd.handle)}`;
       $('#pcTr', o).textContent = fmt(cdd.trophies); $('#pcClub', o).innerHTML = `<span style="color:${cdd.rank.color}">${esc(cdd.rank.name)}</span>`; $('#pcClub', o).nextElementSibling.textContent = 'Rang classé';
-      $('#pcActs', o).innerHTML = cdd.me ? '' : cdd.friend === 'yes' ? '<span class="pc-badge">✔ Ami</span>' + (cdd.pid && cdd.status !== 'off' && cdd.status !== 'match' ? `<button class="btn small blue" data-act="friendInvite" data-pid="${esc(cdd.pid)}">Inviter dans l'équipe</button>` : '') : cdd.friend === 'sent' ? '<span class="pc-badge">Demande envoyée</span>' : `<button class="btn small green" data-act="frReq" data-h="${esc(cdd.handle)}">Ajouter en ami</button>`;
+      o.dataset.h = cdd.handle; $('#pcActs', o).innerHTML = UI.cardActs(cdd);
     });
   };
+
+  /* fiche joueur : état de l'amitié (déjà amis / demande envoyée / demande reçue / ajouter), mis à jour en direct */
+  UI.cardActs = function (cdd) {
+    if (cdd.me) return '<span class="pc-badge">C\'est vous</span>';
+    if (cdd.friend === 'yes') return '<span class="pc-badge">✔ Déjà amis</span>' + (cdd.pid && cdd.status !== 'off' && cdd.status !== 'match' ? `<button class="btn small blue" data-act="friendInvite" data-pid="${esc(cdd.pid)}">Inviter dans l'équipe</button>` : '');
+    if (cdd.friend === 'sent') return '<span class="pc-badge">⏳ Demande envoyée</span>' + `<button class="btn small gray" data-act="frCancelCard" data-uid="${esc(cdd.uid)}">Annuler</button>`;
+    if (cdd.friend === 'received') return `<span class="pc-badge">📩 Vous a demandé en ami</span><button class="btn small green" data-act="frAcceptCard" data-uid="${esc(cdd.uid)}">Accepter</button><button class="btn small red" data-act="frDeclineCard" data-uid="${esc(cdd.uid)}">Refuser</button>`;
+    return `<button class="btn small green" data-act="frReq" data-h="${esc(cdd.handle)}">➕ Ajouter en ami</button>`;
+  };
+  const cardEdge = (t) => (a) => { G.Audio.sfx(t === 'fr_accept' ? 'buy' : 'ui'); a.disabled = true; Net.send({ t, uid: a.dataset.uid }); };
+  ACT.frAcceptCard = cardEdge('fr_accept'); ACT.frDeclineCard = cardEdge('fr_decline'); ACT.frCancelCard = cardEdge('fr_cancel');
+  Net.on('fr', () => { // une fiche ouverte se met à jour toute seule (demande acceptée, envoyée, annulée…)
+    const o = UI.modals[UI.modals.length - 1]; if (!o || !o.dataset.h || !$('.pcard', o)) return;
+    findPlayer(o.dataset.h, (cdd) => { if (cdd && o.isConnected && $('#pcActs', o)) $('#pcActs', o).innerHTML = UI.cardActs(cdd); });
+  });
 
   /* ---------- profil : identifiant + pseudo ---------- */
   function profileExtra(m) {
