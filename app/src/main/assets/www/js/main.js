@@ -187,7 +187,9 @@
     if (r.win) { st.wins++; if (M.mode === 'showdown') st.showdownWins++; } else if (!r.draw) st.losses++;
     const bm = (st.byMode = st.byMode || {}); const e = (bm[M.mode] = bm[M.mode] || { played: 0, wins: 0 }); e.played++; if (r.win) e.wins++;
     st.playTime = (st.playTime || 0) + Math.round(M.t);
-    st.hist = (st.hist || []); st.hist.unshift({ m: M.mode, w: r.win ? 1 : r.draw ? 0 : -1, b: id, d: delta, t: Date.now(), k: kill }); st.hist.length = Math.min(st.hist.length, 12);
+    st.hist = (st.hist || []); st.hist.unshift({ m: M.mode, w: r.win ? 1 : r.draw ? 0 : -1, b: id, d: delta, t: Date.now(), k: kill, on: online ? 1 : 0, pl0: r.place || 0, tm: p.team,
+      pl: M.ents.filter((e) => e && !e.isBoss).map((e) => ({ n: e.name, b: e.id, s: e.skin || 'classic', tm: e.team, bot: e === p ? 0 : (online ? (e.isBot ? 1 : 0) : 1), c: e.code || null, me: e === p ? 1 : 0, k: e.kills || 0 })) });
+    st.hist.length = Math.min(st.hist.length, 25);
     st.bestTr = Math.max(st.bestTr || 0, G.Save.totalTrophies());
     G.Quests.progress('play', 1);
     if (r.win) { G.Quests.progress('win', 1); G.Quests.progress('win_' + M.mode, 1); }

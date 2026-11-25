@@ -163,7 +163,7 @@ function startMatch(m) {
   for (const b of m.M.ents) if (b.pid) sendInit(clients.get(b.pid), m);
 }
 function rosterOf(m) {
-  return m.M.ents.map((b) => ({ idx: b.idx, name: b.name, brawler: b.id, skin: b.skin, level: b.level, team: b.team, bot: !!b.isBot, pid: b.pid ? true : false }));
+  return m.M.ents.map((b) => ({ idx: b.idx, name: b.name, brawler: b.id, skin: b.skin, level: b.level, team: b.team, bot: !!b.isBot, pid: b.pid ? true : false, code: b.pid && social ? social.ensureCode(b.pid) : null }));
 }
 function sendInit(c, m) {
   const M = m.M;

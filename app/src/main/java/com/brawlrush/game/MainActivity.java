@@ -48,6 +48,17 @@ public class MainActivity extends Activity {
         web.setWebViewClient(new WebViewClient());
         web.addJavascriptInterface(new Bridge(), "AndroidBridge");
         setContentView(web);
+        if (Build.VERSION.SDK_INT >= 29) { // le geste « retour » d'Android ne vole plus le doigt du joystick ni celui des boutons
+            web.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+                @Override public void onLayoutChange(View v, int l, int t, int r, int bt, int ol, int ot, int or, int ob) {
+                    int w = r - l, h = bt - t, ex = (int) (200 * getResources().getDisplayMetrics().density);
+                    java.util.List<android.graphics.Rect> rects = new java.util.ArrayList<>();
+                    rects.add(new android.graphics.Rect(0, Math.max(0, h - ex), w / 2, h));
+                    rects.add(new android.graphics.Rect(w / 2, Math.max(0, h - ex), w, h));
+                    v.setSystemGestureExclusionRects(rects);
+                }
+            });
+        }
         web.loadUrl("file:///android_asset/www/index.html");
         immersive();
     }

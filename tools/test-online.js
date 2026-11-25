@@ -66,6 +66,11 @@ class Cl {
   const me = A.last.e[ma.you];
   ok(pos0 && Math.abs(me[0] - pos0[0]) > 30, 'déplacement pris en compte par le serveur');
   ok(me[7] < 30 || me[17] < 3, 'tir / gadget pris en compte (munitions ' + me[7] / 10 + ', gadgets ' + me[17] + ')');
+  // carnet de combat : chaque vrai joueur a un code public, et sa fiche est consultable
+  const other = ma.roster.find((r) => !r.bot && r.idx !== ma.you);
+  ok(other && /^[A-Z0-9]{6}$/.test(other.code || ''), 'composition de la partie avec le code public des joueurs');
+  A.send({ t: 'profile_get', code: other && other.code }); const card = await A.wait('profile_card', 8000);
+  ok(card.card && card.card.name === 'TestB' && !card.card.me, 'fiche du joueur croisé en partie (' + (card.card && card.card.name) + ', ' + (card.card && card.card.status) + ')');
   A.ws.close(); B.ws.close();
   console.log(fails ? '\n' + fails + ' ÉCHEC(S)' : '\nLE SERVEUR EN LIGNE FONCTIONNE');
   process.exit(fails ? 1 : 0);

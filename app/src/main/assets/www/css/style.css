@@ -421,3 +421,31 @@ body.in-match #pauseBtn { display: block; }
 .pnode.done .pn { background: linear-gradient(#ffe45a, #ff9f1a); color: #3a1d00; }
 .pnode.claimable .pw { animation: passGlow 1s ease-in-out infinite alternate; border-color: #ffe45a; }
 @keyframes passGlow { from { box-shadow: 0 .6rem 0 #101340, 0 0 0 0 rgba(255,228,90,.0); transform: translateY(0); } to { box-shadow: 0 .6rem 0 #101340, 0 0 2.4rem .6rem rgba(255,228,90,.7); transform: translateY(-.6rem); } }
+
+/* ---------- v8 : animations des menus, fiche joueur, carnet de combat ---------- */
+.overlay .modal { animation: mpop .24s cubic-bezier(.2,1.35,.4,1) both; }
+@keyframes mpop { from { transform: scale(.86) translateY(2rem); opacity: 0; } to { transform: none; opacity: 1; } }
+.btn, .mbtn, .icon-btn, .blp { transition: transform .08s ease, filter .08s; }
+.btn:active, .mbtn:active, .icon-btn:active, .blp:active { transform: scale(.93) translateY(.3rem); filter: brightness(1.15); }
+.frow { animation: rowIn .3s ease both; } .frow [data-act=friendCard] { cursor: pointer; }
+@keyframes rowIn { from { transform: translateX(-3rem); opacity: 0; } to { transform: none; opacity: 1; } }
+.pcard { display: flex; gap: 3rem; align-items: center; }
+.pc-hero { position: relative; width: 36rem; height: 36rem; flex: none; display: grid; place-items: center; background: radial-gradient(circle at 50% 60%, #5b6cff 0%, #2a2f8f 60%, #171a52 100%); border: .5rem solid var(--navy); border-radius: 3rem; overflow: hidden; box-shadow: 0 .8rem 0 #101340; }
+.pc-glow { position: absolute; inset: -30%; background: conic-gradient(from 0deg, transparent 0 20deg, rgba(255,255,255,.12) 20deg 40deg, transparent 40deg 80deg, rgba(255,255,255,.12) 80deg 100deg, transparent 100deg 140deg, rgba(255,255,255,.12) 140deg 160deg, transparent 160deg); animation: spin 14s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.pc-port { position: relative; animation: pfloat 2.6s ease-in-out infinite; } .pc-port canvas { width: 32rem; height: 32rem; }
+@keyframes pfloat { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-1.2rem) scale(1.02); } }
+.pc-info { flex: 1; min-width: 0; }
+.pc-name { font-size: 6rem; text-shadow: 0 .4rem 0 #000; } .pc-sub { font-size: 2.6rem; opacity: .9; margin: .6rem 0 2rem; }
+.pc-stats { display: flex; gap: 1.4rem; } .pc-stats > div { flex: 1; background: rgba(0,0,0,.28); border-radius: 1.6rem; padding: 1.4rem; text-align: center; }
+.pc-stats b { display: block; font-size: 3.4rem; } .pc-stats span { font-size: 2rem; opacity: .8; } .pc-stats .ic { width: 2.2rem; height: 2.2rem; vertical-align: middle; }
+.pc-acts { display: flex; gap: 1.4rem; margin-top: 2.4rem; flex-wrap: wrap; } .pc-badge { font-size: 2.6rem; color: #6dff8a; align-self: center; }
+.blist { max-height: 66vh; overflow-y: auto; display: flex; flex-direction: column; gap: 1.6rem; padding-right: .6rem; }
+.blrow { background: linear-gradient(#5a5f9e, #464a85); border: .4rem solid var(--navy); border-radius: 2rem; padding: 1.4rem 1.8rem; animation: rowIn .3s ease both; box-shadow: 0 .5rem 0 #101340; }
+.blhd { display: flex; align-items: center; gap: 2rem; font-size: 2.8rem; margin-bottom: 1rem; } .blhd b { font-size: 3.2rem; }
+.blres { font-size: 3.4rem; text-shadow: 0 .3rem 0 #000; } .blres.win { color: #6dff8a; } .blres.lose { color: #ff4a55; } .blres.draw { color: #ffd21f; }
+.bltr .ic { width: 2.6rem; height: 2.6rem; vertical-align: middle; } .blago { margin-left: auto; font-size: 2.2rem; opacity: .75; }
+.blteams { display: flex; align-items: center; gap: 1.6rem; } .blteam { display: flex; gap: 1rem; flex-wrap: wrap; } .blvs { font-size: 4rem; text-shadow: 0 .3rem 0 #000; }
+.blp { position: relative; width: 12.5rem; background: linear-gradient(#2f3478, #1d2050); border: .35rem solid var(--navy); border-radius: 1.4rem; padding: .6rem .4rem .8rem; color: #fff; font: inherit; display: flex; flex-direction: column; align-items: center; cursor: pointer; }
+.blp.me { border-color: #ffd21f; } .blp canvas { width: 9rem; height: 9rem; } .blp span { font-size: 1.9rem; max-width: 11.5rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.blp em { position: absolute; top: .4rem; right: .4rem; font-style: normal; font-size: 1.5rem; background: #6a7090; border-radius: .6rem; padding: 0 .5rem; }

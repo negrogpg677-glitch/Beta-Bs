@@ -76,3 +76,11 @@ Nouveau : comptes Supabase (`COMPTES.md`, `supabase/schema.sql` validé par l'an
 
 Ajouts : alerte vie basse, direction des dégâts, son plus percutant (compresseur, réverbération, variations).
 Tests : `tools/test-touch.js` (11 vérifications tactiles), 37/37 serveur, 20/20 comptes, 8 modes simulés sans erreur.
+
+## v2.1 — joystick fiabilisé, carnet de combat, fiches de joueur
+| Problème | Correction |
+|---|---|
+| Doigt parfois « non détecté » sur le joystick | Geste « retour » d'Android désactivé en bas des bords (là où sont les pouces) ; un nouveau doigt reprend toujours le joystick/les boutons (relâchement manqué = plus de blocage) ; démarrage au mouvement si l'appui a été manqué |
+| Direction fausse quand on pose le doigt près du bord | Direction calculée depuis le vrai point de contact (le cercle reste affiché à l'écran) |
+Test d'endurance : 400 séquences tactiles aléatoires dont 134 relâchements perdus → joystick actif 400/400, bonne direction 396/400 (4 glissements très courts légèrement sous le seuil d'intensité), aucune erreur.
+Nouveau : carnet de combat (25 dernières parties, joueurs de chaque camp), fiche de joueur animée (depuis le carnet et la liste d'amis : statut, trophées, club, ajout en ami, invitation), serveur `profile_get` + code public dans la composition, animations des menus (apparition des fenêtres, appui des boutons, listes).

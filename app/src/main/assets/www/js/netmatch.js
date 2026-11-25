@@ -17,7 +17,7 @@
     M.net = true; M.online = false; M.id = init.id; M.ready = false;
     init.roster.forEach((r) => {
       const b = Sim.mkBrawler(M, G.BRAWLER[r.brawler], r.team, r.name, r.level, r.skin, r.idx === init.you, { x: -999, y: -999 }, r.idx);
-      b.isBot = r.bot; b.human = !r.bot; M.ents[r.idx] = b;
+      b.isBot = r.bot; b.human = !r.bot; b.code = r.code || null; M.ents[r.idx] = b;
       if (r.brawler === 'robot') { b.r = 28; b.big = 1.8; b.isBoss = true; }
     });
     M.player = M.ents[init.you];

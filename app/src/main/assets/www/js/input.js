@@ -30,14 +30,13 @@
       const da = Math.hypot(x - L.atkX, y - L.atkY), ds = Math.hypot(x - L.supX, y - L.supY);
       if (Math.hypot(x - L.dgX, y - L.dgY) < L.dgR * 1.45) { In.pending.push({ kind: 'dodge' }); In.dodgeFx = 0.15; return; }
       // le bouton le plus proche gagne quand les zones de toucher se chevauchent
-      const hitS = !In.sup.active && ds < L.supR * 1.6, hitA = !In.atk.active && da < L.atkR * 1.55;
+      const hitS = ds < L.supR * 1.6, hitA = da < L.atkR * 1.55; // un nouveau doigt reprend toujours le bouton (relâchement manqué = plus de blocage)
       if (hitS && (!hitA || ds / L.supR < da / L.atkR)) { stickStart(In.sup, e.pointerId, L.supX, L.supY); return; }
       if (hitA) { stickStart(In.atk, e.pointerId, L.atkX, L.atkY); return; }
       const lefty = G.Save.data.settings.lefty;
       const onMoveSide = lefty ? x > In.W * 0.45 : x < In.W * 0.55;
-      if (!In.joy.active && onMoveSide) { // joystick flottant : il apparaît sous le doigt (gardé entièrement à l'écran)
-        const m = L.joyR + 8, bx = G.clamp(x, m, In.W - m), by = G.clamp(y, m, In.H - m);
-        Object.assign(In.joy, { active: true, id: e.pointerId, bx, by, x, y, mx: 0, my: 0, t0: performance.now() });
+      if (onMoveSide && (!In.joy.active || In.joy.id !== e.pointerId)) { // joystick flottant ; un nouveau doigt reprend la main : il apparaît sous le doigt (gardé entièrement à l'écran)
+        Object.assign(In.joy, { active: true, id: e.pointerId, bx: x, by: y, x, y, mx: 0, my: 0, t0: performance.now() }); // la direction part du vrai point de contact
         joyMove(In.joy, x, y, L.joyR);
       }
     });
@@ -47,6 +46,10 @@
       if (e.pointerType === 'mouse') { In.mouse.x = x; In.mouse.y = y; return; }
       const L = G.Render.layout(In.W, In.H);
       if (In.joy.active && e.pointerId === In.joy.id) joyMove(In.joy, x, y, L.joyR);
+      else if (!In.joy.active && (e.buttons & 1 || e.pressure > 0) && e.pointerId !== In.atk.id && e.pointerId !== In.sup.id && !In.emoteOpen) { // appui manqué : on démarre au mouvement
+        const lefty = G.Save.data.settings.lefty;
+        if (lefty ? x > In.W * 0.45 : x < In.W * 0.55) { Object.assign(In.joy, { active: true, id: e.pointerId, bx: x, by: y, x, y, mx: 0, my: 0, t0: performance.now() }); joyMove(In.joy, x, y, L.joyR); }
+      }
       for (const b of [In.atk, In.sup]) {
         if (b.active && e.pointerId === b.id) {
           b.dx = x - b.sx; b.dy = y - b.sy; b.len = Math.hypot(b.dx, b.dy);

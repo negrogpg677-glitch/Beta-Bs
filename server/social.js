@@ -55,6 +55,12 @@ module.exports = function (ctx) {
     const pid = c.pid, p = players[pid];
     switch (msg.t) {
       case 'friends_get': pushFriends(pid); return true;
+      case 'profile_get': { // fiche publique d'un joueur (par code d'ami, ou par identifiant pour ses propres amis)
+        const tp = msg.code ? byCode[String(msg.code).toUpperCase()] : (msg.pid && ((p.friends || []).includes(msg.pid) || msg.pid === pid) ? msg.pid : null);
+        const q = tp && players[tp], cc = tp && clients.get(tp);
+        send(c, { t: 'profile_card', ref: msg.code || msg.pid || '', card: q ? { name: q.name, trophies: q.trophies || 0, club: q.club && clubs[q.club] ? clubs[q.club].tag : '', status: status(tp), code: ensureCode(tp), pid: (p.friends || []).includes(tp) ? tp : null, friend: (p.friends || []).includes(tp), me: tp === pid, brawler: (cc && cc.brawler) || 'sherry', skin: (cc && cc.skin) || 'classic', level: (cc && cc.level) || 1 } : null });
+        return true;
+      }
       case 'friend_add': {
         const code = clean(msg.code, 8).toUpperCase(), fid = byCode[code];
         if (!fid || !players[fid]) { err(c, 'friend_nf', 'Code d\'ami introuvable.'); return true; }

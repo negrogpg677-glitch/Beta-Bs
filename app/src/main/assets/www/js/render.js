@@ -973,14 +973,15 @@
     if (j.active) {
       const ap = Math.min(1, (now - (j.t0 || 0)) / 110), sc = 0.82 + 0.18 * (1 - (1 - ap) * (1 - ap)), R0 = L.joyR * sc;
       const dx = j.x - j.bx, dy = j.y - j.by, l = Math.hypot(dx, dy), k = l > L.joyR ? L.joyR / l : 1;
-      const kx = j.bx + dx * k, ky = j.by + dy * k, moving = Math.hypot(j.mx, j.my) > 0.01;
+      const jm = L.joyR + 8, cbx = G.clamp(j.bx, jm, W - jm), cby = G.clamp(j.by, jm, H - jm); // affichage gardé à l'écran
+      const kx = cbx + dx * k, ky = cby + dy * k, moving = Math.hypot(j.mx, j.my) > 0.01;
       c.save(); c.globalAlpha = 0.35 + 0.65 * ap;
-      circ(c, j.bx, j.by, R0); c.fillStyle = 'rgba(8,12,40,0.30)'; c.fill(); c.strokeStyle = 'rgba(255,255,255,0.55)'; c.lineWidth = 3; c.stroke();
-      circ(c, j.bx, j.by, R0 * 0.56); c.strokeStyle = 'rgba(255,255,255,0.14)'; c.lineWidth = 2; c.stroke();
+      circ(c, cbx, cby, R0); c.fillStyle = 'rgba(8,12,40,0.30)'; c.fill(); c.strokeStyle = 'rgba(255,255,255,0.55)'; c.lineWidth = 3; c.stroke();
+      circ(c, cbx, cby, R0 * 0.56); c.strokeStyle = 'rgba(255,255,255,0.14)'; c.lineWidth = 2; c.stroke();
       if (moving) {
         const a = Math.atan2(j.my, j.mx);
-        c.beginPath(); c.arc(j.bx, j.by, R0, a - 0.62, a + 0.62); c.strokeStyle = '#fff'; c.lineWidth = 6; c.lineCap = 'round'; c.stroke();
-        c.save(); c.translate(j.bx + Math.cos(a) * (R0 + 9), j.by + Math.sin(a) * (R0 + 9)); c.rotate(a);
+        c.beginPath(); c.arc(cbx, cby, R0, a - 0.62, a + 0.62); c.strokeStyle = '#fff'; c.lineWidth = 6; c.lineCap = 'round'; c.stroke();
+        c.save(); c.translate(cbx + Math.cos(a) * (R0 + 9), cby + Math.sin(a) * (R0 + 9)); c.rotate(a);
         c.beginPath(); c.moveTo(7, 0); c.lineTo(-4, -7); c.lineTo(-4, 7); c.closePath(); c.fillStyle = '#fff'; c.fill(); c.restore();
       }
       circ(c, kx + 2, ky + 4, L.joyR * 0.42); c.fillStyle = 'rgba(0,0,0,0.22)'; c.fill();

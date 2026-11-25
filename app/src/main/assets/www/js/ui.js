@@ -177,6 +177,7 @@
       </div>
       <div class="hm-right">
         <button class="mbtn sm pass-btn" data-act="pass">${ic('star')}<span>Pass Rush</span>${G.Pass && G.Pass.claimable() ? '<span class="badge">' + G.Pass.claimable() + '</span>' : ''}</button>
+        <button class="mbtn sm" data-act="battleLog">${ic('scroll')}<span>Combats</span></button>
         <button class="mbtn sm" data-act="goSocial">${ic('friends')}<span>Amis</span>${UI.pendingInvites ? '<span class="badge">' + UI.pendingInvites + '</span>' : ''}</button>
         <button class="mbtn sm" data-act="goClub">${ic('shield')}<span>Club</span></button>
         <button class="mbtn sm" data-act="daily">${ic('gift')}<span>Cadeau</span>${canDaily ? '<span class="badge">!</span>' : ''}</button>
