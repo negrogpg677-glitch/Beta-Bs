@@ -238,6 +238,7 @@
     if (!G.Save.data || !G.Save.data.settings.vibrate) return;
     try {
       if (window.AndroidBridge && AndroidBridge.vibrate) AndroidBridge.vibrate(ms);
+      else if (window.IOSBridge) IOSBridge.vibrate(ms);
       else if (navigator.vibrate) navigator.vibrate(ms);
     } catch (e) { /* ignore */ }
   };

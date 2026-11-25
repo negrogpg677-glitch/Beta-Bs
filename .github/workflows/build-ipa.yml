@@ -1,0 +1,22 @@
+name: Compiler l'IPA (iPhone)
+on: { workflow_dispatch: {}, push: { paths: ['ios/**', 'app/src/main/assets/www/**'] } }
+jobs:
+  ipa:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Intégrer l'adresse du serveur
+        if: ${{ vars.SERVER_URL != '' }}
+        run: sed -i '' "s#G.DEFAULT_SERVER = '';#G.DEFAULT_SERVER = '${{ vars.SERVER_URL }}';#" app/src/main/assets/www/js/data.js
+      - run: brew install xcodegen
+      - run: cd ios && xcodegen generate
+      - name: Compiler (sans signature)
+        run: |
+          cd ios
+          xcodebuild -project BrawlRush.xcodeproj -scheme BrawlRush -configuration Release -sdk iphoneos -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
+      - name: Créer l'IPA
+        run: |
+          mkdir -p out/Payload && cp -R ios/build/Build/Products/Release-iphoneos/BrawlRush.app out/Payload/
+          cd out && zip -qry BrawlRush-unsigned.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with: { name: BrawlRush-IPA, path: out/BrawlRush-unsigned.ipa }

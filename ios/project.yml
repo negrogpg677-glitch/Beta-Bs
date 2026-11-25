@@ -1,0 +1,31 @@
+# Projet iOS généré avec XcodeGen (voir .github/workflows/build-ipa.yml) — coque WKWebView plein écran autour du jeu HTML5
+name: BrawlRush
+options: { bundleIdPrefix: com.brawlrush, deploymentTarget: { iOS: "14.0" } }
+targets:
+  BrawlRush:
+    type: application
+    platform: iOS
+    sources:
+      - path: App
+      - path: ../app/src/main/assets/www
+        type: folder
+        buildPhase: resources
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: Brawl Rush
+        UILaunchScreen: { UIColorName: "" }
+        UIRequiresFullScreen: true
+        UIStatusBarHidden: true
+        UIViewControllerBasedStatusBarAppearance: false
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        NSAppTransportSecurity: { NSAllowsArbitraryLoads: true }
+        ITSAppUsesNonExemptEncryption: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.brawlrush.game
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
