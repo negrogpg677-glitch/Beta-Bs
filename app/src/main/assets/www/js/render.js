@@ -692,7 +692,12 @@
     if (b.slowT > 0 && b.slowF < 1) { c.strokeStyle = 'rgba(160,230,255,0.8)'; c.lineWidth = 2; ell(c, b.x, b.y + 12, 28, 11, 0); c.stroke(); }
     if (b.hasBall) { /* la balle est dessinée à part */ }
     if (b.boostT > 0) { c.globalAlpha = 0.5; c.strokeStyle = '#ffd21f'; c.lineWidth = 3; c.beginPath(); c.arc(b.x, b.y - 4, 28, 0, TAU); c.stroke(); c.globalAlpha = 1; }
-    if (b.emoteT > 0) { c.font = '34px sans-serif'; c.textAlign = 'center'; c.fillText(b.emote, b.x, b.y - 80 - (1 - b.emoteT / 2) * 8); }
+    if (b.emoteT > 0 && b.emote) {
+      const k = Math.min(1, (2 - b.emoteT) * 8, b.emoteT * 4), ey = b.y - 92 - (1 - b.emoteT / 2) * 8;
+      c.save(); c.globalAlpha = Math.max(0, Math.min(1, k)); c.translate(b.x, ey); c.scale(0.6 + 0.4 * Math.min(1, k), 0.6 + 0.4 * Math.min(1, k));
+      c.beginPath(); c.arc(0, 0, 25, 0, TAU); c.moveTo(-7, 22); c.lineTo(0, 34); c.lineTo(7, 22); c.fillStyle = '#fff'; c.fill(); c.strokeStyle = OUT; c.lineWidth = 3; c.stroke();
+      c.font = '30px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#000'; c.fillText(b.emote, 0, 2); c.restore();
+    }
   }
   function Sim_tileBush(M, b) { return G.Sim.tileAt(M, b.x, b.y) === 3; }
 
@@ -915,8 +920,14 @@
       atkX: (lefty ? 20 * u : W - 20 * u), atkY: H - 22 * u, atkR: 11.5 * u,
       supX: (lefty ? 37 * u : W - 37 * u), supY: H - 11 * u, supR: 7 * u,
       dgX: (lefty ? 9 * u : W - 9 * u), dgY: H - 40 * u, dgR: 6 * u,
+      gdX: (lefty ? 40 * u : W - 40 * u), gdY: H - 29 * u, gdR: 5.5 * u,
+      emX: (lefty ? 28 * u : W - 28 * u), emY: H - 46 * u, emR: 4.5 * u,
     };
     return L;
+  };
+  R.emoteSlots = function (W, H) {
+    const u = Math.min(W, H) / 100, n = G.EMOTES.length;
+    return G.EMOTES.map((e, i) => { const a = -Math.PI / 2 + (i * TAU) / n; return { x: W / 2 + Math.cos(a) * 19 * u, y: H / 2 + Math.sin(a) * 19 * u, r: 6.5 * u }; });
   };
   function drawControls(c, M, W, H, input, u, time, text) {
     const L = R.layout(W, H), p = M.player;
@@ -950,6 +961,27 @@
       c.strokeStyle = '#fff'; c.lineWidth = L.dgR * 0.16; c.lineCap = 'round'; c.beginPath(); c.arc(0, 0, L.dgR * 0.45, -2.6, 1.2); c.stroke();
       c.beginPath(); c.moveTo(L.dgR * 0.62, L.dgR * 0.02); c.lineTo(L.dgR * 0.2, L.dgR * 0.48); c.lineTo(L.dgR * 0.05, L.dgR * 0.02); c.stroke();
       c.restore(); if (input.dodgeFx > 0) input.dodgeFx -= 0.016; }
+    // gadget (3 par partie)
+    { const gd = p.def && G.GADGETS[p.def.gadget];
+      if (gd) {
+        const n = p.gadgets === undefined ? 3 : p.gadgets, cd = (p.gadgetCd || 0) / G.Sim.GADGET_CD, ok = n > 0 && cd <= 0 && p.alive;
+        c.save(); c.translate(L.gdX, L.gdY); c.globalAlpha = n > 0 ? 1 : 0.45;
+        circ(c, 0, 0, L.gdR * (input.gadgetFx > 0 ? 0.88 : 1)); const gg = c.createRadialGradient(0, -L.gdR * 0.3, 2, 0, 0, L.gdR); gg.addColorStop(0, ok ? '#b8ffcf' : '#6a7090'); gg.addColorStop(1, ok ? '#1fae5a' : '#3a3f5a'); c.fillStyle = gg; c.fill(); c.strokeStyle = OUT; c.lineWidth = 4; c.stroke();
+        if (cd > 0 && n > 0) { c.beginPath(); c.arc(0, 0, L.gdR * 1.18, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - Math.min(1, cd))); c.strokeStyle = '#6dff8a'; c.lineWidth = 4; c.stroke(); }
+        c.font = Math.round(L.gdR * 0.95) + 'px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#fff'; c.fillText(gd.icon, 0, 1);
+        for (let i = 0; i < 3; i++) { circ(c, (i - 1) * L.gdR * 0.42, L.gdR * 1.42, L.gdR * 0.15); c.fillStyle = i < n ? '#6dff8a' : 'rgba(0,0,0,0.45)'; c.fill(); c.strokeStyle = OUT; c.lineWidth = 2; c.stroke(); }
+        c.restore(); if (input.gadgetFx > 0) input.gadgetFx -= 0.016;
+      }
+    }
+    // émotes
+    { c.save(); c.translate(L.emX, L.emY); circ(c, 0, 0, L.emR); c.fillStyle = input.emoteOpen ? 'rgba(255,210,31,0.95)' : 'rgba(20,24,48,0.55)'; c.fill(); c.strokeStyle = 'rgba(255,255,255,0.85)'; c.lineWidth = 3; c.stroke();
+      c.font = Math.round(L.emR * 1.1) + 'px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#fff'; c.fillText('😀', 0, 1); c.restore();
+      if (input.emoteOpen) {
+        c.save(); c.fillStyle = 'rgba(0,0,0,0.35)'; c.fillRect(0, 0, W, H); c.textAlign = 'center'; c.textBaseline = 'middle';
+        R.emoteSlots(W, H).forEach((s, i) => { circ(c, s.x, s.y, s.r); c.fillStyle = 'rgba(255,255,255,0.95)'; c.fill(); c.strokeStyle = OUT; c.lineWidth = 4; c.stroke(); c.font = Math.round(s.r * 1.15) + 'px sans-serif'; c.fillStyle = '#000'; c.fillText(G.EMOTES[i], s.x, s.y + 2); });
+        c.restore();
+      }
+    }
     // super
     const s = input.sup, ready = p.superCharge >= 1;
     c.save(); c.translate(L.supX, L.supY);

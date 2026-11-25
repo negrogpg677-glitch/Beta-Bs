@@ -176,6 +176,7 @@
         <button class="icon-btn" data-act="settings">${ic('gear')}</button>
       </div>
       <div class="hm-right">
+        <button class="mbtn sm pass-btn" data-act="pass">${ic('star')}<span>Pass Rush</span>${G.Pass && G.Pass.claimable() ? '<span class="badge">' + G.Pass.claimable() + '</span>' : ''}</button>
         <button class="mbtn sm" data-act="goSocial">${ic('friends')}<span>Amis</span>${UI.pendingInvites ? '<span class="badge">' + UI.pendingInvites + '</span>' : ''}</button>
         <button class="mbtn sm" data-act="goClub">${ic('shield')}<span>Club</span></button>
         <button class="mbtn sm" data-act="daily">${ic('gift')}<span>Cadeau</span>${canDaily ? '<span class="badge">!</span>' : ''}</button>
@@ -476,6 +477,7 @@
       <div class="stat"><span>Portée</span><div class="bar o"><i style="width:${Math.min(100, (b.atk.range / 10) * 100)}%"></i></div><span>${b.atk.range.toFixed(1)}</span></div>
       <div class="skill"><div class="si" style="background:#ff9f1a">💥</div><div><b>${b.atk.name}</b>Attaque principale · ${b.atk.n > 1 ? b.atk.n + ' projectiles' : b.atk.burst ? b.atk.burst + ' tirs' : 'projectile'}${b.atk.heal ? ' · soigne les alliés' : ''}</div></div>
       <div class="skill"><div class="si" style="background:#ffd21f">⚡</div><div><b>${b.sup.name}</b>Super · ${superDesc(b)}</div></div>
+      ${G.GADGETS[b.gadget] ? `<div class="skill"><div class="si" style="background:${G.GADGETS[b.gadget].color}">${G.GADGETS[b.gadget].icon}</div><div><b>${G.GADGETS[b.gadget].name}</b>Gadget · ${G.GADGETS[b.gadget].desc} (3 par partie)</div></div>` : ''}
       ${owned ? `<div style="font-size:2.4rem">Apparences</div><div class="skins">${skins}</div>` : ''}
       <div class="row" style="margin-top:.6rem">${owned
         ? `${sv.selected === id ? '<button class="btn green disabled">Sélectionné ✔</button>' : '<button class="btn green" data-act="equip">Sélectionner</button>'}
@@ -684,5 +686,5 @@
       requestAnimationFrame(loop);
     })(last);
   }
-  UI.ACT = ACT; UI.h = { $, $$, el, esc, portraitCanvas, animate, fmt, S, ic, addTimer, clearTimers, skinOf, head, nav };
+  UI.ACT = ACT; UI.h = { $, $$, el, esc, portraitCanvas, animate, fmt, S, ic, addTimer, clearTimers, skinOf, head, nav, unlockBrawler, showNewBrawler };
 })();

@@ -48,3 +48,9 @@ Product flavors Gradle `prod`/`dev` (dimension `edition`, `.dev` en suffixe d'ap
 - Tests : `tools/supabase-mock.js` + `tools/test-accounts.js` (20 vérifs) + `tools/test-session-refresh.js`.
 - Accueil refait (`UI.build.home`), `UI.currentMap` (rotation horaire), `G.playerLevel`, `Sim.koFx`, `M.feed`, `M.hitmarks`, `cam.kick`.
 - Config comptes : `G.SUPABASE` dans data.js (vide tant que l'utilisateur n'a pas créé son projet).
+
+## v6
+- Gadgets : `G.GADGETS`/`G.GADGET_OF` (data.js), `Sim.tryGadget` (3 charges, `Sim.GADGET_CD` = 7 s), champs d'instantané 17 (charges) et 18 (recharge ×10), entrée réseau `gd: 1`. Bots : usage situationnel dans ai.js.
+- Émotes : `G.EMOTES`, `Sim.emote` (anti-spam 2,5 s), évènement réseau `['em', idx, i]`, entrée `em: i`. Roue : `R.emoteSlots`, `In.emoteOpen`.
+- Pass Rush : `js/pass.js` (`G.Pass`, `UI.passModal`), donnée `save.pass = { season: 'AAAA-MM', xp, claimed[] }` (synchronisée avec le compte), XP ajoutée dans `App.finish`.
+- Tests : `server/test/run.js` (37 vérifs, dont gadget/émote en ligne).

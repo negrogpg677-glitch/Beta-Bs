@@ -238,6 +238,8 @@ function onMessage(c, raw) {
       if (typeof msg.rtt === 'number' && isFinite(msg.rtt)) b.rtt = G.clamp(msg.rtt, 0, 300);
       const comp = Math.min(0.1, (b.rtt || 0) / 2000); // compensation : la moitié du ping, 100 ms max
       if (typeof msg.d === 'number' && isFinite(msg.d)) Sim.tryDodge(m.M, b, msg.d);
+      if (msg.gd) Sim.tryGadget(m.M, b);
+      if (typeof msg.em === 'number' && isFinite(msg.em)) Sim.emote(m.M, b, msg.em);
       if (msg.a) { const [ang, dist] = msg.a; if (isFinite(ang) && isFinite(dist)) { const n0 = m.M.projs.length; if (Sim.tryAttack(m.M, b, ang, G.clamp(dist, 0, 900))) Sim.advanceProjs(m.M, n0, comp); } }
       if (msg.s) { const [ang, dist] = msg.s; if (isFinite(ang) && isFinite(dist)) { const n0 = m.M.projs.length; if (Sim.trySuper(m.M, b, ang, G.clamp(dist, 0, 900))) Sim.advanceProjs(m.M, n0, comp); } }
       break;

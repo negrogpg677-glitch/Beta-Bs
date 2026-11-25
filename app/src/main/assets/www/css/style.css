@@ -396,3 +396,28 @@ body.in-match #pauseBtn { display: block; }
 @media (max-aspect-ratio: 16/10) { .hm-br { right: 2rem; } .hm-right { top: 12rem; } }
 .stage2 .hero { position: relative; z-index: 1; pointer-events: none; }
 .stage2 .tslot, .stage2 .hanger, .stage2 .hplate { z-index: 2; }
+
+/* ---------- Pass Rush (v6) ---------- */
+.pass-btn { background: linear-gradient(#ffe45a, #ff9f1a) !important; color: #3a1d00 !important; }
+.pass-hd { display: flex; align-items: center; justify-content: space-between; gap: 2rem; }
+.pass-hd h2 { margin: 0; display: flex; align-items: center; gap: 1rem; }
+.pass-hd .sub { font-size: 2.6rem; opacity: .8; }
+.pass-lv { background: linear-gradient(#ffe45a, #ff9f1a); color: #3a1d00; border: .4rem solid var(--navy); border-radius: 2rem; padding: .6rem 2.2rem; font-size: 2.8rem; box-shadow: 0 .5rem 0 #101340; }
+.pass-lv b { font-size: 4.6rem; margin-right: .4rem; }
+.pass-xp { position: relative; height: 4rem; margin: 2rem 0 1rem; background: var(--navy); border-radius: 2rem; overflow: hidden; border: .3rem solid #101340; }
+.pass-xp i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(#7dffa0, #1fae5a); border-radius: 2rem; }
+.pass-xp span { position: relative; display: block; text-align: center; line-height: 3.4rem; font-size: 2.4rem; text-shadow: 0 .2rem 0 #000; }
+.pass-help { font-size: 2.2rem; opacity: .75; margin-bottom: 1.6rem; }
+.pass-track { display: flex; gap: 1.4rem; overflow-x: auto; padding: 1rem .5rem 2rem; scroll-behavior: smooth; }
+.pnode { flex: none; display: flex; flex-direction: column; align-items: center; gap: .8rem; cursor: pointer; }
+.pnode .pw { position: relative; width: 15rem; height: 15rem; border-radius: 2.2rem; border: .4rem solid var(--navy); background: linear-gradient(#3d44b8, #232873); display: grid; place-items: center; box-shadow: 0 .6rem 0 #101340; filter: saturate(.55) brightness(.75); }
+.pnode.big .pw { width: 19rem; background: linear-gradient(#a74bff, #5a1a9e); }
+.pnode .pw .ic { width: 7rem; height: 7rem; }
+.pnode .pw canvas { width: 11rem; height: 11rem; }
+.pnode .amt { position: absolute; bottom: .4rem; left: 0; right: 0; text-align: center; font-size: 2.4rem; text-shadow: 0 .2rem 0 #000; }
+.pnode .pw em { position: absolute; inset: 0; display: grid; place-items: center; font-style: normal; font-size: 7rem; color: #6dff8a; background: rgba(0,0,0,.45); border-radius: 1.8rem; }
+.pnode .pn { font-size: 2.6rem; width: 5.4rem; height: 5.4rem; border-radius: 50%; display: grid; place-items: center; background: var(--navy); border: .3rem solid #101340; }
+.pnode.done .pw { filter: none; }
+.pnode.done .pn { background: linear-gradient(#ffe45a, #ff9f1a); color: #3a1d00; }
+.pnode.claimable .pw { animation: passGlow 1s ease-in-out infinite alternate; border-color: #ffe45a; }
+@keyframes passGlow { from { box-shadow: 0 .6rem 0 #101340, 0 0 0 0 rgba(255,228,90,.0); transform: translateY(0); } to { box-shadow: 0 .6rem 0 #101340, 0 0 2.4rem .6rem rgba(255,228,90,.7); transform: translateY(-.6rem); } }

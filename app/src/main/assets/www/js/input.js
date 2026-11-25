@@ -16,6 +16,11 @@
       if (!In.enabled) return;
       G.Audio.unlock();
       const [x, y] = pos(e);
+      { const L = G.Render.layout(In.W, In.H); // roue d'émotes, bouton d'émote, gadget
+        if (In.emoteOpen) { In.emoteOpen = false; const s = G.Render.emoteSlots(In.W, In.H).findIndex((q) => Math.hypot(x - q.x, y - q.y) < q.r * 1.25); if (s >= 0) In.pending.push({ kind: 'emote', i: s }); return; }
+        if (Math.hypot(x - L.emX, y - L.emY) < L.emR * 1.3) { In.emoteOpen = true; return; }
+        if (Math.hypot(x - L.gdX, y - L.gdY) < L.gdR * 1.35) { In.pending.push({ kind: 'gadget' }); In.gadgetFx = 0.15; return; }
+      }
       if (e.pointerType === 'mouse') {
         if (e.button === 2 || e.button === 1) { In.mouse.sdown = true; In.mouse.x = x; In.mouse.y = y; return; }
         In.mouse.down = true; In.mouse.x = x; In.mouse.y = y; return;
@@ -80,6 +85,9 @@
       if (e.code === 'Space') In.pending.push({ kind: 'atk', key: true });
       if (e.code === 'ShiftLeft' || e.code === 'KeyE' || e.code === 'KeyQ') In.pending.push({ kind: 'sup', key: true });
       if (e.code === 'KeyF' || e.code === 'ControlLeft') In.pending.push({ kind: 'dodge' });
+      if (e.code === 'KeyG') In.pending.push({ kind: 'gadget' });
+      if (e.code === 'KeyT') In.emoteOpen = !In.emoteOpen;
+      if (In.emoteOpen && /^Digit[1-8]$/.test(e.code)) { In.pending.push({ kind: 'emote', i: +e.code.slice(5) - 1 }); In.emoteOpen = false; }
       if (e.code === 'Escape' || e.code === 'KeyP') G.App.togglePause();
     });
     window.addEventListener('keyup', (e) => { In.keys[e.code] = false; });
@@ -142,6 +150,8 @@
     }
     for (const ev of In.pending.splice(0)) {
       if (!p.alive || M.state !== 'play') continue;
+      if (ev.kind === 'gadget') { if (M.net) G.NetMatch.gadget(M); else if (!G.Sim.tryGadget(M, p)) G.Audio.sfx('error'); continue; }
+      if (ev.kind === 'emote') { if (M.net) G.NetMatch.emote(M, ev.i); else G.Sim.emote(M, p, ev.i); continue; }
       if (ev.kind === 'dodge') {
         const ang = (mx || my) ? Math.atan2(my, mx) : p.face;
         if (M.net) G.NetMatch.dodge(M, ang); else if (!G.Sim.tryDodge(M, p, ang)) G.Audio.sfx('error');

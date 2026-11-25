@@ -191,12 +191,13 @@
     if (placeTop3) G.Quests.progress('top3_showdown', 1);
     G.Quests.progress('kill', kill); G.Quests.progress('damage', Math.round(M.stats.damage));
     G.Quests.progress('super', M.stats.supers); G.Quests.progress('heal', Math.round(M.stats.heal)); G.Quests.progress('gems', M.stats.gems);
+    const passR = G.Pass ? G.Pass.add(G.Pass.xpFor(r, kill)) : null;
     G.Save.commit();
     App.state = 'menu'; G.Input.enabled = false; App.M = null;
     document.body.classList.remove('in-match');
     G.Audio.startMusic('menu');
     if (online) G.UI.netOverlay(false);
-    G.UI.showResult({ online: !!online, M, r, delta, coins, gems, box, brawler: id, before, after: save.trophies[id], kills: kill, damage: Math.round(M.stats.damage), mode: M.mode, place: r.place, time: M.t });
+    G.UI.showResult({ online: !!online, M, r, delta, coins, gems, box, brawler: id, before, after: save.trophies[id], kills: kill, damage: Math.round(M.stats.damage), mode: M.mode, place: r.place, time: M.t, passXp: passR ? passR.xp : 0, passTier: passR && passR.t1 > passR.t0 ? passR.t1 : 0 });
   };
 
   /* ----- évènements réseau ----- */

@@ -86,7 +86,7 @@
       if (!wasAlive && b.alive) { b.deathT = -1; b.spawnT = 0; }
       b.hidden = !!(f & 2); b.stun = f & 4 ? 1 : 0; b.freeze = f & 8 ? 1 : 0; b.poison = f & 16 ? 1 : 0; b.slowT = f & 32 ? 1 : 0; b.slowF = f & 32 ? 0.5 : 1;
       b.boostT = f & 64 ? 1 : 0; b.invuln = f & 128 ? 1 : 0; b.hasBall = !!(f & 256); b.dash = f & 512 ? { ax: Math.cos(a[15]), ay: Math.sin(a[15]) } : null;
-      b.moving = !!(f & 1024); b.revealT = f & 2048 ? 1 : 0; b.rollCd = (a[16] || 0) / 10;
+      b.moving = !!(f & 1024); b.revealT = f & 2048 ? 1 : 0; b.rollCd = (a[16] || 0) / 10; b.gadgets = a[17] === undefined ? 3 : a[17]; b.gadgetCd = (a[18] || 0) / 10;
       b.ammo = a[7] / 10; b.superCharge = a[8] / 100; b.gems = a[9]; b.cubes = a[10]; b.bounty = a[11]; b.z = a[12]; b.respawn = a[13]; b.kills = a[14];
       if (first || (b.alive && !wasAlive)) { b.x = a[0]; b.y = a[1]; if (b === me) { NM.P = { x: a[0], y: a[1], r: 21, forced: true }; } }
     });
@@ -129,6 +129,7 @@
       case 's': if (e[2] < 0 || !me || G.dist(me.x, me.y, e[2], e[3]) < 1100) G.Audio.sfx(e[1], e[4]); break;
       case 'sr': if (me && M.ents[e[1]] === me) G.Audio.sfx('superReady'); break;
       case 'kf': { M.feed.push({ k: e[1], v: e[2], t: 0 }); if (M.feed.length > 5) M.feed.shift(); const v = M.ents[e[2]]; if (me && M.ents[e[1]] === me && v) { Sim.text(M, v.x, v.y - 78, 'K.O. !', '#ff4a55', 40); Sim.ring(M, v.x, v.y, 10, 120, 0.45, 'rgba(255,90,90,0.9)'); Sim.burst(M, v.x, v.y - 10, '#ffd21f', 16, 320, 6, 0.7, 'spark'); M.cam.kick = 1; G.Audio.sfx('ko'); G.vibrate(60); } break; }
+      case 'em': { const b = M.ents[e[1]]; if (b && G.EMOTES[e[2]]) { b.emote = G.EMOTES[e[2]]; b.emoteT = 2; } break; }
       case 'rl': { const r = M.ents[e[1]]; if (r && r !== me) r.rollT = 0; break; }
       case 'p': {
         const owner = M.ents[e[13]], def = G.BRAWLER[e[2]], spec = e[3] ? def.sup : def.atk;
@@ -168,6 +169,7 @@
       e.popT -= dt; e.flash = Math.max(0, e.flash - dt); e.recoil = Math.max(0, e.recoil - dt * 6);
       if (e.deathT >= 0) e.deathT += dt;
       if (e.rollT >= 0) { e.rollT += dt; if (e.rollT > 0.4) e.rollT = -1; }
+      if (e.emoteT > 0) e.emoteT -= dt; if (e.emoteCd > 0) e.emoteCd -= dt;
       if (e.moving && e.alive && Math.random() < dt * 7) Sim.burst(M, e.x, e.y + 14, '#d8d0b8', 1, 30, 5, 0.45, 'smoke');
       if (e.spawnT !== undefined) e.spawnT += dt;
       if (e === me || !A) return;
@@ -244,6 +246,15 @@
     me.rollT = 0; me.rollCd = G.Sim.DODGE.cd; me.face = ang; G.Audio.sfx('dash', 1.5);
     NM.sendInput(M, { d: +ang.toFixed(3) });
     return true;
+  };
+  NM.gadget = function (M) {
+    const me = M.player;
+    if (!me.alive || M.state !== 'play' || !(me.gadgets > 0) || (me.gadgetCd || 0) > 0) { G.Audio.sfx('error'); return false; }
+    me.gadgetCd = G.Sim.GADGET_CD; NM.sendInput(M, { gd: 1 }); return true;
+  };
+  NM.emote = function (M, i) {
+    const me = M.player; if ((me.emoteCd || 0) > 0) return false;
+    me.emoteCd = 2.5; NM.sendInput(M, { em: i | 0 }); return true;
   };
   NM.attack = function (M, ang, dist, isSuper) {
     const me = M.player;

@@ -56,3 +56,9 @@ Toutes les valeurs ci-dessous ont été **mesurées** avec des outils ajoutés a
 | Conflit de nom de classe CSS (`.mm`) entre l'accueil et l'écran de recherche | Classe renommée |
 
 Nouveau : comptes Supabase (`COMPTES.md`, `supabase/schema.sql` validé par l'analyseur PostgreSQL), accueil refait, effets K.O. + fil des éliminations + marqueurs de touche + éclair de bouche + à-coup de caméra, qualité graphique choisie selon la puissance du téléphone, rotation horaire des arènes, niveau joueur (XP).
+
+## v6 — gadgets, émotes, Pass Rush
+- **Gadgets** (3e capacité, 3 utilisations par partie, 7 s entre deux) : soin, turbo, bouclier, onde répulsive, recharge éclair. Vérifié : utilisés par les bots dans les 8 modes (simulations complètes sans valeur invalide), refusés pendant la recharge, synchronisés par le serveur (tests en ligne).
+- **Émotes** : roue de 8 émotes, bulle animée au-dessus du brawler, diffusion en ligne vérifiée, anti-spam.
+- **Pass Rush** : 30 paliers mensuels, récompenses vérifiées (pièces, brawler, skin légendaire), paliers non atteints verrouillés, remise à zéro à chaque nouvelle saison, XP affichée dans l'écran de résultats.
+- Non-régression : 37/37 tests serveur, 20/20 tests de comptes, aucune erreur JavaScript.

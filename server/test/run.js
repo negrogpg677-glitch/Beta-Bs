@@ -14,6 +14,7 @@ class Cl {
       this.ws.on('open', () => this.ws.send(JSON.stringify(Object.assign({ t: 'hello', name: this.name }, creds || {}))));
       this.ws.on('message', (raw) => {
         const m = JSON.parse(raw);
+        if (this.on) this.on(m);
         if (m.t === 'snap') { this.snaps++; this.last = m; this.evs += m.ev.length; this.lastSnap = m; }
         else { this.msgs.push(m); if (m.t === 'welcome') { this.pid = m.pid; this.token = m.token; res(m); } }
         this.waiters = this.waiters.filter((w) => { if (w.t === m.t) { w.r(m); return false; } return true; });
@@ -76,6 +77,16 @@ class Cl {
     ok(rolled && cd > 0, 'roulade d\'esquive synchronisée (drapeau + recharge ' + cd / 10 + ' s)');
     A.send({ t: 'input', seq: 9002, mx: 0, my: 0, d: 0 }); await sleep(120);
     ok(A.last.e[idx][16] > 10, 'pas de seconde roulade pendant la recharge'); }
+  // --- gadget (3 par partie) + émote ---
+  { const idx = ma.you; let used = false, n = 3, em = false;
+    A.on = (m) => { if (m.t === 'snap') for (const e of m.ev) if (e[0] === 'em' && e[1] === idx) em = true; };
+    for (let i = 0; i < 250 && !used; i++) {
+      if (i % 5 === 0 && A.last.s === 1) A.send({ t: 'input', seq: 9100 + i, mx: 0, my: 0, gd: 1, em: 4 });
+      await sleep(30); const e = A.last.e[idx]; if (e[17] < 3) { used = true; n = e[17]; } }
+    ok(used && n === 2 && A.last.e[idx][18] > 0, 'gadget utilisé côté serveur (charges ' + n + '/3, recharge ' + A.last.e[idx][18] / 10 + ' s)');
+    A.send({ t: 'input', seq: 9300, mx: 0, my: 0, gd: 1 }); await sleep(120);
+    ok(A.last.e[idx][17] === 2, 'pas de second gadget pendant la recharge');
+    await sleep(100); ok(em, 'émote diffusée aux joueurs'); A.on = null; }
   // --- reconnexion ---
   B.ws.close(); await sleep(400);
   const B2 = new Cl(url, 'Bob'); const w = await B2.connect({ pid: B.pid, token: B.token });

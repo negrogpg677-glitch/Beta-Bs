@@ -335,6 +335,12 @@
         if (Sim.tryAttack(M, b, aimTo(fx, fy), fd)) ai.fireT = react + G.rr(0.05, 0.25);
       }
     }
+    // ---- gadget : utilisé au bon moment ----
+    if (b.gadgets > 0 && b.gadgetCd <= 0 && b.def.gadget && Math.random() < dt * 3) {
+      const g = b.def.gadget, hpF = b.hp / b.maxhp, near = tgt && tdist < 5 * T;
+      if ((g === 'heal' && hpF < 0.4) || (g === 'shield' && hpF < 0.45 && near) || (g === 'sprint' && hpF < 0.3 && near) ||
+          (g === 'pulse' && tgt && tdist < 2.2 * T) || (g === 'reload' && b.ammo < 1 && tgt && los && tdist < atk.range * T)) Sim.tryGadget(M, b);
+    }
     // ---- super ----
     if (b.superCharge >= 1 && !b.hasBall) {
       ai.superWait = (ai.superWait === undefined ? react + 0.2 : ai.superWait) - dt;

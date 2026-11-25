@@ -158,6 +158,17 @@
   G.HP_SCALE = 2.1; // équilibrage : combats plus longs et plus lisibles
   G.BRAWLERS.forEach((b) => { if (!b.voice) b.voice = 1; b.hp = Math.round(b.hp * G.HP_SCALE / 50) * 50; G.BRAWLER[b.id] = b; });
   G.BRAWLER.robot = G.BOSS;
+  /* gadgets : 3e capacité de chaque brawler, 3 utilisations par partie */
+  G.GADGETS = {
+    heal: { name: 'Trousse de soin', icon: '➕', color: '#6dff8a', desc: 'rend 30 % des PV max' },
+    sprint: { name: 'Turbo', icon: '💨', color: '#ffd21f', desc: '+60 % de vitesse pendant 2,5 s' },
+    shield: { name: 'Bouclier', icon: '🛡️', color: '#7df9ff', desc: 'invulnérable pendant 1,6 s' },
+    pulse: { name: 'Onde répulsive', icon: '💥', color: '#ff7ad8', desc: 'repousse, blesse et ralentit les ennemis proches' },
+    reload: { name: 'Recharge éclair', icon: '🔋', color: '#ffb21a', desc: 'recharge toutes les munitions et +30 % de super' },
+  };
+  G.GADGET_OF = { sherry: 'reload', rex: 'sprint', taurus: 'shield', boomer: 'pulse', luna: 'heal', spiky: 'shield', corbeau: 'sprint', frost: 'pulse', pyro: 'reload', volt: 'sprint', maree: 'heal', nimbus: 'reload', grimm: 'sprint', tictac: 'pulse', zen: 'heal', scarab: 'shield', bumper: 'pulse', jongleur: 'reload', yeti: 'heal' };
+  G.BRAWLERS.forEach((b) => { b.gadget = G.GADGET_OF[b.id] || 'heal'; });
+  G.EMOTES = ['😂', '😡', '👍', '😭', '🔥', '👋', '🤝', '💀'];
   /* comptes joueurs (Supabase) : URL du projet + clé publique « anon ». Voir COMPTES.md */
   G.SUPABASE = { url: '', key: '' };
   G.DEFAULT_SERVER = ''; // adresse du serveur par défaut (ex. 'mon-jeu.onrender.com') ; modifiable dans Réglages

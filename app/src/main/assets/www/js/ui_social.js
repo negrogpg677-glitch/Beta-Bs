@@ -127,6 +127,7 @@
     if (R.gems) rows.push(`<div class="rline" style="animation-delay:1.1s">${ic('gem')}<span>Gemmes</span><span class="rv">+${R.gems}</span></div>`);
     if (R.box) rows.push(`<div class="rline" style="animation-delay:1.3s">${ic('chest')}<span>Coffre obtenu !</span><span class="rv">+${R.box}</span></div>`);
     rows.push(`<div class="rline sm" style="animation-delay:1.4s"><span>Éliminations : ${R.kills}</span><span class="rv">Dégâts : ${fmt(R.damage)}</span></div>`);
+    if (R.passXp) rows.push(`<div class="rline" style="animation-delay:1.45s">${ic('star')}<span>Pass Rush</span><span class="rv">+${R.passXp} XP${R.passTier ? ' · palier ' + R.passTier : ''}</span></div>`);
     if (rankNow > rankBefore) rows.push(`<div class="rline" style="animation-delay:1.6s;background:linear-gradient(90deg,#ffd21f55,#0000)">⬆ <span>Nouveau rang !</span><span class="rv">Rang ${rankNow}</span></div>`);
     const o = el(`<div class="fullscreen result ${cls}"><canvas class="rays"></canvas><canvas class="confetti"></canvas>
       <div class="rb ${cls}">${title}</div>${R.online ? '<div class="onl">Partie en ligne</div>' : ''}

@@ -8,8 +8,10 @@ Jeu d'arène complet inspiré des jeux de « brawlers », 100 % hors-ligne, écr
 3. Lancez **Brawl Rush**.
 
 ## Contenu
-- **10 brawlers** originaux (+ le boss Mégabot), chacun avec attaque, super, carrure et animations propres ; 4 apparences, niveaux 1-10
-- **7 modes** : Razzia de cristaux, Foot brawl, Braquage, Chasse aux primes, **Zone stratégique**, **Assaut du Mégabot** (coopératif) — en 3 contre 3 — et Survie (10 joueurs, gaz toxique)
+- **19 brawlers** originaux (+ le boss Mégabot), chacun avec attaque, super, **gadget** (3 par partie), carrure et animations propres ; apparences dont 4 légendaires, niveaux 1-10
+- **Pass Rush** : pass de saison gratuit, 30 paliers par mois (pièces, gemmes, coffres, un brawler au palier 15, un skin légendaire au palier 30), XP gagnée à chaque partie
+- **Émotes** en combat (8 émotes, aussi utilisées par les bots, visibles en ligne)
+- **8 modes** : Razzia de cristaux, Hors-jeu (manches à élimination), Foot brawl, Braquage, Chasse aux primes, **Zone stratégique**, **Assaut du Mégabot** (coopératif) — en 3 contre 3 — et Survie (10 joueurs, gaz toxique)
 - **19 arènes** symétriques (5 thèmes), buissons, caisses destructibles, eau, zones à capturer
 - **Multijoueur en ligne** (serveur autoritatif) : équipes privées avec **code à 5 caractères**, rejoindre/quitter/exclure, matchmaking, salle d'attente, match privé (équipe contre bots ou amis contre amis), reconnexion automatique, classement mondial
 - **Bots** (A*, esquive, visée prédictive) utilisés hors-ligne et pour compléter les places vides en ligne (toujours étiquetés « Bot-… »)
@@ -28,7 +30,7 @@ Test en réseau local : `cd server && npm start`, puis l'adresse `192.168.x.x:80
 Le serveur sert aussi le jeu dans un navigateur à `http://adresse/` et expose `/health`.
 
 ## Contrôles
-Joystick à gauche pour bouger · bouton jaune : toucher = tir automatique, glisser = viser · éclair = super · bouton bleu (en haut à droite) = **roulade d'esquive** (invulnérable un instant).
+Joystick à gauche pour bouger · bouton jaune : toucher = tir automatique, glisser = viser · éclair = super · bouton bleu (en haut à droite) = **roulade d'esquive** (invulnérable un instant) · bouton vert = **gadget** (3 par partie, points verts = charges restantes) · bouton 😀 = roue des **émotes**. Au clavier : F roulade, G gadget, T émotes puis 1-8.
 (PC : ZQSD/flèches, clic = tir, Espace, Maj/E = super, F = esquive, Échap = pause.)
 
 ## Recompiler l'APK

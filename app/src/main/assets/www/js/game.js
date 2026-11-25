@@ -89,7 +89,7 @@
     return {
       id: def.id, def, team, name, level, skin, isPlayer: isP, idx, x: pos.x, y: pos.y, r: 21, vx: 0, vy: 0, kx: 0, ky: 0,
       maxhp: def.hp * mul, hp: def.hp * mul, dmgMul: mul, ammo: 3, reload: 0, superCharge: 0, ang: team === 1 ? Math.PI : 0, face: team === 1 ? Math.PI : 0,
-      deathT: -1, roll: null, rollCd: 0, rtt: 0, alive: true, respawn: 0, stun: 0, freeze: 0, slowF: 1, slowT: 0, poison: 0, poisonDps: 0, poisonBy: null, poisonAcc: 0, boostF: 1, boostT: 0, invuln: 0,
+      deathT: -1, roll: null, rollCd: 0, gadgets: 3, gadgetCd: 0, sprintT: 0, emoteCd: 0, rtt: 0, alive: true, respawn: 0, stun: 0, freeze: 0, slowF: 1, slowT: 0, poison: 0, poisonDps: 0, poisonBy: null, poisonAcc: 0, boostF: 1, boostT: 0, invuln: 0,
       revealT: 0, hidden: false, atkCd: 0, queue: [], dash: null, jump: null, gems: 0, hasBall: false, cubes: 0, kills: 0, deaths: 0, dmgDealt: 0,
       bounty: 0, flash: 0, recoil: 0, walkT: Math.random() * 6, moving: false, supers: 0, input: { mx: 0, my: 0 }, ai: { t: Math.random() * 0.3 }, popObj: null, popT: 0,
       st: { damage: 0, kills: 0, supers: 0, heal: 0, gems: 0, goals: 0 }, pid: null, human: false, px: pos.x, py: pos.y, spawn: pos, lastHitBy: null, z: 0, superReadyFx: false, place: 0, emote: 0, emoteT: 0, shield: 0,
@@ -256,6 +256,7 @@
       M.feed.push({ k: killer.idx, v: b.idx, t: 0 }); if (M.feed.length > 5) M.feed.shift();
       if (M.online) M.evq.push(['kf', killer.idx, b.idx]);
       if (killer === M.player) Sim.koFx(M, b);
+      if (!killer.human && killer.alive && Math.random() < 0.3) Sim.emote(M, killer, [0, 4, 2, 5][(Math.random() * 4) | 0]);
     }
     Sim.burst(M, b.x, b.y, G.getLook(b.id, b.skin).body, 18, 240, 8, 0.9);
     Sim.burst(M, b.x, b.y, '#fff', 8, 160, 5, 0.6);
@@ -325,6 +326,41 @@
   }
 
   /* ---------- attaques ---------- */
+  /* ---------- gadgets : 3 par partie, 7 s de recharge entre deux ---------- */
+  Sim.GADGET_CD = 7;
+  Sim.tryGadget = function (M, b) {
+    const g = b.def.gadget, D = g && G.GADGETS[g];
+    if (!D || !b.alive || M.state !== 'play' || !(b.gadgets > 0) || b.gadgetCd > 0 || b.stun > 0 || b.freeze > 0) return false;
+    b.gadgets--; b.gadgetCd = Sim.GADGET_CD; b.revealT = Math.max(b.revealT, 0.6);
+    if (g === 'heal') Sim.heal(M, b, b.maxhp * 0.3, b);
+    else if (g === 'sprint') { b.sprintT = 2.5; Sim.burst(M, b.x, b.y + 12, '#fff3b0', 10, 160, 6, 0.5, 'smoke'); }
+    else if (g === 'shield') b.invuln = Math.max(b.invuln, 1.6);
+    else if (g === 'reload') {
+      b.ammo = 3; b.superCharge = Math.min(1, b.superCharge + 0.3);
+      if (b.superCharge >= 1 && !b.superReadyFx) { b.superReadyFx = true; if (M.online) M.evq.push(['sr', b.idx]); else if (b === M.player) Sim.sfx(M, 'superReady'); }
+    } else if (g === 'pulse') {
+      const R = 2.6 * T;
+      for (const e of M.ents) {
+        if (!e.alive || e.team === b.team) continue;
+        if (G.dist(b.x, b.y, e.x, e.y) > R + e.r) continue;
+        Sim.damage(M, e, 300, b, { knock: 120, ang: Math.atan2(e.y - b.y, e.x - b.x), slow: { f: 0.5, t: 1.5 } });
+      }
+      Sim.ring(M, b.x, b.y, 20, R, 0.45, D.color, true); Sim.shake(M, 5);
+    }
+    Sim.ring(M, b.x, b.y, 10, 64, 0.45, D.color, true);
+    Sim.burst(M, b.x, b.y - 10, D.color, 12, 180, 5, 0.6, 'spark');
+    Sim.text(M, b.x, b.y - 92, D.icon + ' ' + D.name, D.color, 20);
+    Sim.sfx(M, 'super', b.x, b.y, 1.4);
+    return true;
+  };
+  /* ---------- émotes en combat ---------- */
+  Sim.emote = function (M, b, i) {
+    const e = G.EMOTES[i | 0];
+    if (!e || !b.alive || (b.emoteCd || 0) > 0) return false;
+    b.emote = e; b.emoteT = 2; b.emoteCd = 2.5;
+    if (M.online) M.evq.push(['em', b.idx, i | 0]);
+    return true;
+  };
   /* ---------- roulade d'esquive (mécanique originale) ---------- */
   Sim.DODGE = { cd: 3.2, dist: 2.7, dur: 0.3, iframes: 0.24 };
   Sim.tryDodge = function (M, b, ang) {
@@ -635,6 +671,7 @@
     b.flash = Math.max(0, b.flash - dt);
     b.recoil = Math.max(0, b.recoil - dt * 6);
     if (b.emoteT > 0) b.emoteT -= dt;
+    if (b.emoteCd > 0) b.emoteCd -= dt;
     if (!b.alive) {
       if (b.deathT >= 0) b.deathT += dt;
       if (M.mode !== 'showdown' && M.state !== 'end' && M.state !== 'countdown') {
@@ -648,7 +685,7 @@
     b.boostT -= dt; if (b.boostT <= 0) b.boostF = 1;
     b.rageT = Math.max(0, (b.rageT || 0) - dt);
     b.stun = Math.max(0, b.stun - dt); b.freeze = Math.max(0, b.freeze - dt); b.invuln = Math.max(0, b.invuln - dt);
-    b.revealT = Math.max(0, b.revealT - dt); b.atkCd = Math.max(0, b.atkCd - dt); b.rollCd = Math.max(0, b.rollCd - dt);
+    b.revealT = Math.max(0, b.revealT - dt); b.atkCd = Math.max(0, b.atkCd - dt); b.rollCd = Math.max(0, b.rollCd - dt); b.gadgetCd = Math.max(0, b.gadgetCd - dt); b.sprintT = Math.max(0, b.sprintT - dt);
     const tl = Sim.tileAt(M, b.x, b.y);
     b.hidden = tl === 3 && b.revealT <= 0 && !b.jump;
     if (b.poison > 0) {
@@ -718,6 +755,7 @@
     const blockedMove = b.stun > 0 || b.freeze > 0 || (M.state === 'countdown');
     let spd = b.def.speed * T * b.slowF * b.boostF * (b.hasBall ? 0.93 : 1) * (M.event === 'turbo' ? 1.2 : 1);
     if (G.Dev && !M.online) spd *= G.Dev.speedMul(M, b);
+    if (b.sprintT > 0) spd *= 1.6;
     if (M.mode === 'showdown') spd *= 1;
     if (blockedMove) { mx = my = 0; }
     b.moving = ml > 0.1 && !blockedMove;
@@ -1079,8 +1117,8 @@
   const STATE_CODE = { countdown: 0, play: 1, goal: 2, end: 3 };
   Sim.snapshot = function (M) {
     const e = M.ents.map((b) => {
-      const f = (b.alive ? 1 : 0) | (b.hidden ? 2 : 0) | (b.stun > 0 ? 4 : 0) | (b.freeze > 0 ? 8 : 0) | (b.poison > 0 ? 16 : 0) | (b.slowT > 0 && b.slowF < 1 ? 32 : 0) | (b.boostT > 0 ? 64 : 0) | (b.invuln > 0 ? 128 : 0) | (b.hasBall ? 256 : 0) | (b.dash ? 512 : 0) | (b.moving ? 1024 : 0) | (b.revealT > 0 ? 2048 : 0) | (b.roll ? 4096 : 0);
-      return [Math.round(b.x), Math.round(b.y), +b.ang.toFixed(2), +b.face.toFixed(2), Math.round(b.hp), Math.round(b.maxhp), f, Math.round(b.ammo * 10), Math.round(b.superCharge * 100), b.gems, b.cubes, b.bounty, Math.round(b.z || 0), +Math.max(0, b.respawn).toFixed(1), b.kills, b.dash ? +Math.atan2(b.dash.ay, b.dash.ax).toFixed(2) : 0, Math.round(b.rollCd * 10)];
+      const f = (b.alive ? 1 : 0) | (b.hidden ? 2 : 0) | (b.stun > 0 ? 4 : 0) | (b.freeze > 0 ? 8 : 0) | (b.poison > 0 ? 16 : 0) | (b.slowT > 0 && b.slowF < 1 ? 32 : 0) | (b.boostT > 0 || b.sprintT > 0 ? 64 : 0) | (b.invuln > 0 ? 128 : 0) | (b.hasBall ? 256 : 0) | (b.dash ? 512 : 0) | (b.moving ? 1024 : 0) | (b.revealT > 0 ? 2048 : 0) | (b.roll ? 4096 : 0);
+      return [Math.round(b.x), Math.round(b.y), +b.ang.toFixed(2), +b.face.toFixed(2), Math.round(b.hp), Math.round(b.maxhp), f, Math.round(b.ammo * 10), Math.round(b.superCharge * 100), b.gems, b.cubes, b.bounty, Math.round(b.z || 0), +Math.max(0, b.respawn).toFixed(1), b.kills, b.dash ? +Math.atan2(b.dash.ay, b.dash.ax).toFixed(2) : 0, Math.round(b.rollCd * 10), b.gadgets, Math.round(b.gadgetCd * 10)];
     });
     const snap = {
       tm: +M.t.toFixed(3), s: STATE_CODE[M.state], cd: +M.cd.toFixed(1), left: +M.left.toFixed(1), sc: M.score, e,
