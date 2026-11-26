@@ -6,8 +6,21 @@
    ⚠ À chaque nouvelle version : ajouter une entrée EN TÊTE de G.CHANGELOG et mettre G.VERSION à jour. */
 (function () {
   const G = window.G, UI = G.UI;
-  G.VERSION = '4.2'; G.VERSION_NAME = G.VERSION;
+  G.VERSION = '4.3'; G.VERSION_NAME = G.VERSION;
   G.CHANGELOG = [
+    { v: '4.3', date: '2026-11-26', title: 'Graphismes nouvelle génération',
+      players: [
+        'Personnages en 3D animée pendant les combats (course, tir, roulade, victoire, défaite, élimination) — les téléphones moins puissants repassent automatiquement en 2D.',
+        'Éclairage dynamique : chaque carte a son ambiance, les tirs, explosions et brawlers éclairent les alentours.',
+        'Nouveaux effets de combat : ondes de choc et étincelles aux impacts, poussière des pas, éclair au tir, éliminations spectaculaires, anneau d\'énergie quand la super part.',
+        'Transitions : saut néon en entrant en combat, éclair de fin de partie, changements d\'écran plus fluides.',
+        'Réglages : « Éclairage dynamique » et « Personnages 3D en combat » activables ou non.',
+      ],
+      dev: [
+        'Rendu 3D en combat groupé : tous les personnages sont dessinés en une seule passe dans un atlas 5×5 (une seule synchronisation GPU par image ; −31 % de temps de rendu mesuré).',
+        'Nouveau module js/vfx.js (purement visuel, aucun effet sur la simulation ni le réseau) : carte de lumière multipliée, particules ring/dust/soul/pillar.',
+        'Repli automatique : qualité « économie » → ni éclairage ni particules supplémentaires ni 3D en combat.',
+      ] },
     { v: '4.2', date: '2026-11-26', title: 'Accès au mode développeur',
       players: [
         'Améliorations techniques de l\'interface.',

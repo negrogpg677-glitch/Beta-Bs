@@ -199,3 +199,10 @@ Tests : `tools/test-duel.js` 7/7, modes simulés jusqu'au bout (11 modes), serve
 - Bouton « DEV » (en haut à gauche) et bouton « 🎁 Joueurs » retirés ; remplacés par le **logo carré du Dev Hub** (« BR », dégradé indigo → cyan, petite étiquette « DEV ») **en bas à gauche** du salon, respectant les zones sûres de l'écran.
 - Caché en partie et en spectateur (le joystick reste libre ; accès par « ⚡ Accès rapide ») ; étiquette « COMPTE DÉVELOPPEUR » retirée (elle chevauchait les boutons).
 - Cadeaux de brawlers : Dev Hub → Modération → Droits & cadeaux.
+
+## v4.3 — graphismes nouvelle génération
+- **Personnages 3D animés en combat par défaut** (modèles riggés : course, tir, roulade, victoire, défaite, élimination). Rendu groupé : tous les personnages d'une image sont rendus en une passe dans un atlas 5×5 au début de l'image suivante puis copiés à leur position (une seule synchronisation GPU au lieu d'une par personnage) — 61 → 42 ms par image mesurés en rendu logiciel. Repli 2D automatique quand la qualité tombe en « économie » (adaptation au FPS existante) ou sans WebGL.
+- **Éclairage dynamique** (`js/vfx.js`) : carte de lumière à demi-résolution multipliée sur la scène — ambiance teintée par thème, lumières des brawlers (couleur d'équipe), projectiles, flammes, éclairs, gemmes et objectifs. Barres de vie et textes non assombris.
+- **Particules** : onde de choc et étincelles aux impacts, poussière des pas, éclair de bouche à chaque tir, élimination (gerbe, onde, esprit qui s'élève, éclair), réapparition (anneau + colonne de lumière), anneau d'énergie quand la super part. Purement visuel (aucun effet sur la simulation ni le réseau).
+- **Transitions** : saut néon à l'entrée en combat, éclair doré/rouge en fin de partie, écrans des menus qui apparaissent en fondu glissé.
+- Réglages : « Éclairage dynamique » et « Personnages 3D en combat » (activés par défaut).
