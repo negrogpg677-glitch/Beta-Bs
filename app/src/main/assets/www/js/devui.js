@@ -213,7 +213,7 @@
     DP.wasPaused = G.App.paused;
     if (inM && !G.App.M.net && DP.pause) { G.App.paused = true; G.Input.reset(); }
     const o = document.createElement('div'); o.className = 'rg-ov' + (inM ? ' inmatch' : '');
-    o.innerHTML = `<div class="rg"><header class="rg-hd"><div class="rg-logo">BR</div><div class="rg-name"><b>Brawl Rush DEV</b><small>BRDEV ${esc(G.VERSION_NAME || '3.8')}</small></div>
+    o.innerHTML = `<div class="rg"><header class="rg-hd"><div class="rg-logo">BR</div><div class="rg-name"><b>Brawl Rush DEV</b><small>BRDEV ${esc(G.VERSION_NAME || '3.9')}</small></div>
         <button class="rg-dd" id="rgLib" data-hdr="lib">Bibliothèque ${IC.chev}</button><div class="rg-sp"></div>
         <button class="rg-hb purple" data-hdr="friends">${IC.friends}<span>Amis</span></button><button class="rg-hb orange" data-hdr="settings">${IC.gear}<span>Paramètres</span></button>
         <button class="rg-hb blue" data-hdr="iface">${IC.brush}<span>Modifier l'interface</span></button><button class="rg-hb red rg-close" data-hdr="close" aria-label="Fermer">${IC.x}</button></header>
@@ -224,9 +224,9 @@
     o.addEventListener('input', (e) => DP._input(e));
     o.addEventListener('change', () => G.Dev.persist && G.Dev.persist());
     o.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.id === 'dpIn') DP._runCon(); });
-    o.addEventListener('pointerdown', (e) => { const cv = e.target.closest('#meCv'); if (!cv) return; if (cv.setPointerCapture) cv.setPointerCapture(e.pointerId); cv._down = true; DP._mePaint({ currentTarget: cv, clientX: e.clientX, clientY: e.clientY }); });
+    o.addEventListener('pointerdown', (e) => { const cv = e.target.closest('#meCv'); if (!cv) return; if (cv.setPointerCapture) cv.setPointerCapture(e.pointerId); cv._down = true; DP._mePaint({ currentTarget: cv, clientX: e.clientX, clientY: e.clientY, first: true }); });
     o.addEventListener('pointermove', (e) => { const cv = e.target.closest('#meCv'); if (cv && cv._down) DP._mePaint({ currentTarget: cv, clientX: e.clientX, clientY: e.clientY }); });
-    o.addEventListener('pointerup', () => { const cv = o.querySelector('#meCv'); if (cv) cv._down = false; });
+    o.addEventListener('pointerup', () => { const cv = o.querySelector('#meCv'); if (cv && cv._down) { cv._down = false; DP._meUp(); DP._render(); } });
     if (G.Account && G.Account.loggedIn && G.Account.loggedIn()) Net.send({ t: 'dv_state' });
     DP._render();
     DP._live(() => { if (!DP.panel) return; const k = DP.panel.querySelector('#dpKpis'); if (k) { const it = itemOf('diag_live'), tmp = document.createElement('div'); tmp.innerHTML = it.html(); const nk = tmp.querySelector('#dpKpis'); if (nk) k.innerHTML = nk.innerHTML; } });

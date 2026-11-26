@@ -62,11 +62,12 @@
     if (mp && def && def.override && def.override.length === mp.tiles.length) for (let i = 0; i < mp.tiles.length; i++) { const t = def.override[i]; mp.tiles[i] = t; mp.hp[i] = t === 2 ? 2400 : t === 6 ? 3600 : 0; }
     return mp;
   };
-  const ME = { base: null, tiles: null, w: 0, h: 0, tool: 1, lock: null, saved: LS.get('br_dev_maps2', {}) };
+  const ME = { base: null, tiles: null, w: 0, h: 0, tool: 1, lock: null, saved: LS.get('br_dev_maps2', {}), undo: [], redo: [], brush: 1, rect: false, coll: false, start: null, spawns: [], check: null };
   const TCOL = { 0: '#86c96a', 1: '#6b4f36', 2: '#c98a4a', 3: '#2f8f3a', 4: '#3a8ad6', 5: '#ffd21f', 6: '#d9a24a' };
   function meLoad(key) {
     const def = G.MAPS[key]; if (!def) return; const mp = baseGen(def);
-    ME.base = key; ME.w = mp.w; ME.h = mp.h; ME.tiles = Array.from((ME.saved[key] && ME.saved[key].length === mp.tiles.length) ? ME.saved[key] : mp.tiles);
+    ME.base = key; ME.w = mp.w; ME.h = mp.h; ME.tiles = Array.from((ME.saved[key] && ME.saved[key].length === mp.tiles.length) ? ME.saved[key] : mp.tiles); ME.orig = Array.from(mp.tiles); ME.undo = []; ME.redo = []; ME.check = null;
+    ME.spawns = Array.isArray(mp.spawns[0]) ? [].concat(mp.spawns[0].map((p) => [p, 0]), (mp.spawns[1] || []).map((p) => [p, 1])) : mp.spawns.map((p) => [p, 2]); ME.goal = mp.mine || mp.ball || mp.center;
     ME.lock = new Uint8Array(mp.w * mp.h);
     for (let y = 0; y < mp.h; y++) for (let x = 0; x < mp.w; x++) { const i = y * mp.w + x; if (x === 0 || y === 0 || x === mp.w - 1 || y === mp.h - 1 || mp.tiles[i] === 5) ME.lock[i] = 1; }
     const sp = Array.isArray(mp.spawns[0]) ? [].concat(mp.spawns[0], mp.spawns[1] || []) : mp.spawns;
@@ -77,15 +78,43 @@
     const s = Math.max(4, Math.floor(Math.min(720 / ME.w, 520 / ME.h))); cv.width = ME.w * s; cv.height = ME.h * s; const c = cv.getContext('2d');
     for (let y = 0; y < ME.h; y++) for (let x = 0; x < ME.w; x++) { const i = y * ME.w + x; c.fillStyle = TCOL[ME.tiles[i]] || '#86c96a'; c.fillRect(x * s, y * s, s, s); if (ME.lock[i]) { c.fillStyle = 'rgba(0,0,0,.18)'; c.fillRect(x * s, y * s, s, s); } }
     c.strokeStyle = 'rgba(0,0,0,.08)'; for (let x = 0; x <= ME.w; x++) { c.beginPath(); c.moveTo(x * s, 0); c.lineTo(x * s, ME.h * s); c.stroke(); }
+    if (ME.coll) { c.strokeStyle = 'rgba(255,40,60,.9)'; c.lineWidth = 2; for (let i = 0; i < ME.tiles.length; i++) { const t = ME.tiles[i]; if (t === 1 || t === 2 || t === 4 || t === 5 || t === 6) c.strokeRect((i % ME.w) * s + 1, Math.floor(i / ME.w) * s + 1, s - 2, s - 2); } c.lineWidth = 1; }
+    for (const [p, tm] of ME.spawns) { c.fillStyle = tm === 0 ? '#3c9bff' : tm === 1 ? '#ff4a55' : '#ffd21f'; c.beginPath(); c.arc(p.x / G.T * s, p.y / G.T * s, s * 0.45, 0, 6.3); c.fill(); c.strokeStyle = '#fff'; c.stroke(); }
+    if (ME.goal) { c.strokeStyle = '#ffd21f'; c.lineWidth = 3; c.beginPath(); c.arc(ME.goal.x / G.T * s, ME.goal.y / G.T * s, s * 0.7, 0, 6.3); c.stroke(); c.lineWidth = 1; }
+    if (ME.start && ME.cur) { const x0 = Math.min(ME.start[0], ME.cur[0]), y0 = Math.min(ME.start[1], ME.cur[1]), x1 = Math.max(ME.start[0], ME.cur[0]), y1 = Math.max(ME.start[1], ME.cur[1]); c.strokeStyle = '#fff'; c.setLineDash([4, 3]); c.strokeRect(x0 * s, y0 * s, (x1 - x0 + 1) * s, (y1 - y0 + 1) * s); c.setLineDash([]); }
     cv._s = s;
   }
-  function mePaint(e) {
-    const cv = e.currentTarget, r = cv.getBoundingClientRect(), s = cv._s || 8;
-    const x = Math.floor(((e.clientX - r.left) / r.width) * cv.width / s), y = Math.floor(((e.clientY - r.top) / r.height) * cv.height / s);
+  function meSet(x, y) { // pose une tuile (et son miroir) si la case n'est pas protégée
     if (x < 0 || y < 0 || x >= ME.w || y >= ME.h) return; const i = y * ME.w + x; if (ME.lock[i]) return;
     const j = ME.h > ME.w ? (ME.h - 1 - y) * ME.w + x : y * ME.w + (ME.w - 1 - x); // symétrie miroir (haut/bas en vue verticale) : la carte reste équitable
-    ME.tiles[i] = ME.tool; if (DP.mirror && !ME.lock[j]) ME.tiles[j] = ME.tool; meDraw();
+    ME.tiles[i] = ME.tool; if (DP.mirror && !ME.lock[j]) ME.tiles[j] = ME.tool;
   }
+  function meCell(e) { const cv = e.currentTarget, r = cv.getBoundingClientRect(), s = cv._s || 8; return [Math.floor(((e.clientX - r.left) / r.width) * cv.width / s), Math.floor(((e.clientY - r.top) / r.height) * cv.height / s)]; }
+  function mePaint(e) {
+    const [x, y] = meCell(e);
+    if (e.first) { ME.undo.push(ME.tiles.slice()); if (ME.undo.length > 60) ME.undo.shift(); ME.redo = []; ME.check = null; if (ME.rect) { ME.start = [x, y]; ME.cur = [x, y]; meDraw(); return; } }
+    if (ME.rect) { if (ME.start) { ME.cur = [x, y]; meDraw(); } return; }
+    const b = ME.brush, o = Math.floor((b - 1) / 2);
+    for (let dy = 0; dy < b; dy++) for (let dx = 0; dx < b; dx++) meSet(x - o + dx, y - o + dy);
+    meDraw();
+  }
+  function meUp() { // fin du rectangle : remplissage de la zone (placer / redimensionner / supprimer avec « Sol »)
+    if (!ME.rect || !ME.start || !ME.cur) return; const x0 = Math.min(ME.start[0], ME.cur[0]), y0 = Math.min(ME.start[1], ME.cur[1]), x1 = Math.max(ME.start[0], ME.cur[0]), y1 = Math.max(ME.start[1], ME.cur[1]);
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) meSet(x, y); ME.start = ME.cur = null; meDraw();
+  }
+  function meValidate() { // carte publiable ? bords fermés, apparitions libres et reliées entre elles et à l'objectif
+    const w = ME.w, h = ME.h, t = ME.tiles, issues = [], pass = (i) => t[i] === 0 || t[i] === 3;
+    for (let x = 0; x < w; x++) if (t[x] !== 1 || t[(h - 1) * w + x] !== 1) { issues.push('bord ouvert'); break; }
+    const cell = (p) => Math.floor(p.y / G.T) * w + Math.floor(p.x / G.T);
+    const sp = ME.spawns.map(([p]) => cell(p)); if (sp.some((i) => !pass(i))) issues.push('point d\'apparition bloqué');
+    const seen = new Uint8Array(w * h), q = [sp[0]]; seen[sp[0]] = 1;
+    while (q.length) { const i = q.pop(), x = i % w, y = (i / w) | 0; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx, ny = y + dy, j = ny * w + nx; if (nx >= 0 && ny >= 0 && nx < w && ny < h && !seen[j] && pass(j)) { seen[j] = 1; q.push(j); } } }
+    if (sp.some((i) => !seen[i])) issues.push('équipes séparées (aucun chemin entre les apparitions)');
+    if (ME.goal) { const g = cell(ME.goal); let near = false; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (seen[g + dy * w + dx]) near = true; if (!near) issues.push('objectif inaccessible'); }
+    const free = t.filter((v) => v === 0 || v === 3).length / t.length; if (free < 0.35) issues.push('trop peu d\'espace libre (' + Math.round(free * 100) + ' %)');
+    ME.check = { ok: !issues.length, issues, at: Date.now() }; return ME.check;
+  }
+  DP._meUp = meUp; DP._meDraw = meDraw;
 
   /* ---------- comptes de test (profils locaux, jamais envoyés dans le cloud) ---------- */
   const TP = { list: () => LS.get('br_test_profiles', []), save: (l) => LS.set('br_test_profiles', l), active: () => LS.get('br_test_active', null) };
@@ -182,8 +211,12 @@
     if (!ME.tiles || !G.MAPS[ME.base]) meLoad(DP.mapBase || G.MODES[G.Save.data.mode || 'gemgrab'].maps[0]);
     return `<div class="dp-chips dp-scroll">${Object.keys(G.MAPS).filter((k) => G.MAPS[k].mode !== 'showdown').map((k) => `<button class="btn small ${k === ME.base ? 'green' : 'gray'}" data-mb="${k}">${esc(G.MAPS[k].name)}</button>`).join('')}</div>
       <div class="dp-chips">${[[0, 'Sol'], [1, 'Mur'], [3, 'Buisson'], [4, 'Eau'], [2, 'Caisse']].map(([t, n]) => `<button class="btn small dp-tile ${ME.tool === t ? 'on' : ''}" data-tool="${t}" style="--tc:${TCOL[t]}">${n}</button>`).join('')}<div class="dp-row dp-inl"><span>Symétrie</span><div class="toggle ${DP.mirror ? 'on' : ''}" data-mirror="1"></div></div></div>
+      <div class="dp-chips">${[1, 2, 3].map((b) => `<button class="btn small ${!ME.rect && ME.brush === b ? 'green' : ''}" data-brush="${b}">Pinceau ${b}×${b}</button>`).join('')}<button class="btn small ${ME.rect ? 'green' : ''}" data-merect="1">▭ Rectangle (placer / redimensionner)</button><button class="btn small ${ME.coll ? 'yellow' : ''}" data-mecoll="1">Collisions</button>${bt('meUndo', '↶ Annuler' + (ME.undo.length ? ' (' + ME.undo.length + ')' : ''))}${bt('meRedo', '↷ Rétablir' + (ME.redo.length ? ' (' + ME.redo.length + ')' : ''))}</div>
       <canvas id="meCv" class="dp-map"></canvas>
-      <div class="dp-chips">${bt('meSave', '💾 Enregistrer', 'blue')}${bt('mePlay', '▶ Jouer cette carte', 'green')}${bt('meReset', '↺ Carte d\'origine', 'gray')}</div><div class="dp-note">Les cases grisées (bords, apparitions, coffres) sont protégées.</div>`; });
+      <div class="dp-chips">${bt('meNew', '✚ Nouvelle carte (vide)')}${bt('meSave', '💾 Enregistrer', 'blue')}${bt('meVer', '🗂 Enregistrer une version')}${bt('meCheck', '✔ Vérifier')}${bt('mePublish', '⤴ Publier (labo)', 'green')}${bt('mePlay', '▶ Tester hors ligne', 'green')}${bt('meReset', '↺ Carte d\'origine', 'gray')}</div>
+      ${ME.check ? `<div class="dp-note" style="color:${ME.check.ok ? '#9dffb4' : '#ff9a8a'}">${ME.check.ok ? '✔ Carte valide : bords fermés, apparitions libres et reliées, objectif accessible.' : '✘ ' + ME.check.issues.join(' · ')}</div>` : ''}
+      ${((LS.get('br_dev_mapver', {})[ME.base]) || []).length ? `<div class="dp-log">${LS.get('br_dev_mapver', {})[ME.base].map((v, i) => `<div class="dp-tp"><b>${esc(v.name)}</b> ${new Date(v.at).toLocaleString('fr-FR')} <span><button class="btn small blue" data-mver="${i}">Charger</button><button class="btn small red" data-mverdel="${i}">✕</button></span></div>`).join('')}</div>` : ''}
+      <div class="dp-note">Points bleus/rouges : apparitions (fixes, leur déplacement est à développer) · cercle jaune : objectif · cases grisées protégées. « Publier » vérifie la carte puis la rend disponible dans le labo en ligne (Studio → Labo → « Utiliser ma carte modifiée »).</div>`; });
   add('diag_live', 'diag', 1, 'Diagnostics en direct (FPS, ping, pertes, mémoire, erreurs, synchro)', () => {
     const M = G.App.M, n = DP.net, age = n.lastSnapAt ? Math.round(performance.now() - n.lastSnapAt) : null, lossPct = n.snaps ? (100 * n.lost / (n.snaps + n.lost)).toFixed(1) : '0.0';
     const mem = performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) + ' Mo' : (DP.srv ? 'serveur ' + DP.srv.mem.heap + ' Mo' : 'n/d');
@@ -285,7 +318,7 @@
     if (d.ce) { const id = DP.char || G.Save.data.selected, e2 = (CE()[id] = Object.assign({ hp: 1, speed: 1, dmg: 1, range: 1, reload: 1 }, CE()[id] || {})); e2[d.ce] = +t.value; save(); const b = t.parentNode.querySelector('.dp-v'); if (b) b.textContent = t.value; }
   }
   function onClick(e) {
-    const t = e.target.closest('[data-a],[data-s],[data-cat],[data-d],[data-m],[data-map],[data-mod],[data-fav],[data-lvl],[data-ch],[data-mb],[data-tool],[data-mirror],[data-tp],[data-tpdel],[data-flag],[data-pause],[data-cfgload],[data-cfgcmp],[data-cfgdel]'); if (!t) return;
+    const t = e.target.closest('[data-a],[data-s],[data-cat],[data-d],[data-m],[data-map],[data-mod],[data-fav],[data-lvl],[data-ch],[data-mb],[data-tool],[data-mirror],[data-tp],[data-tpdel],[data-flag],[data-pause],[data-cfgload],[data-cfgcmp],[data-cfgdel],[data-brush],[data-merect],[data-mecoll],[data-mver],[data-mverdel]'); if (!t) return;
     G.Audio.unlock && G.Audio.unlock(); G.Audio.sfx('ui');
     const d = t.dataset, Dev = G.Dev, cfg = Dev.cfg, act = Dev.act || {};
     if (d.cat) { DP.cat = d.cat; DP.q = ''; const q = DP.panel.querySelector('#dpQ'); if (q) q.value = ''; }
@@ -298,6 +331,11 @@
     else if (d.ch) DP.char = d.ch;
     else if (d.mb) { DP.mapBase = d.mb; meLoad(d.mb); }
     else if (d.tool !== undefined) ME.tool = +d.tool;
+    else if (d.brush) { ME.brush = +d.brush; ME.rect = false; }
+    else if (d.merect) ME.rect = !ME.rect;
+    else if (d.mecoll) ME.coll = !ME.coll;
+    else if (d.mver !== undefined) { const v = (LS.get('br_dev_mapver', {})[ME.base] || [])[+d.mver]; if (v && v.tiles.length === ME.tiles.length) { ME.undo.push(ME.tiles.slice()); ME.tiles = v.tiles.slice(); ME.check = null; G.UI.toast('Version « ' + v.name + ' » chargée'); } }
+    else if (d.mverdel !== undefined) { const all = LS.get('br_dev_mapver', {}); (all[ME.base] || []).splice(+d.mverdel, 1); LS.set('br_dev_mapver', all); }
     else if (d.mirror) DP.mirror = !DP.mirror;
     else if (d.tp) tpSwitch(d.tp);
     else if (d.tpdel) { if (TP.active() === d.tpdel) tpSwitch(null); TP.save(TP.list().filter((x) => x.name !== d.tpdel)); }
@@ -319,6 +357,12 @@
       else if (a === 'ceTest') { G.Save.data.selected = DP.char || G.Save.data.selected; G.Save.commit(); close(); Dev.startMatch(G.Save.data.mode && G.Save.data.mode !== 'showdown' ? G.Save.data.mode : 'gemgrab', ''); return; }
       else if (a === 'meSave') { ME.saved[ME.base] = ME.tiles.slice(); LS.set('br_dev_maps2', ME.saved); G.UI.toast('Carte enregistrée'); }
       else if (a === 'meReset') { delete ME.saved[ME.base]; LS.set('br_dev_maps2', ME.saved); meLoad(ME.base); }
+      else if (a === 'meUndo') { if (ME.undo.length) { ME.redo.push(ME.tiles.slice()); ME.tiles = ME.undo.pop(); ME.check = null; } }
+      else if (a === 'meRedo') { if (ME.redo.length) { ME.undo.push(ME.tiles.slice()); ME.tiles = ME.redo.pop(); ME.check = null; } }
+      else if (a === 'meNew') { ME.undo.push(ME.tiles.slice()); ME.tiles = ME.tiles.map((t, i) => { const x = i % ME.w, y = (i / ME.w) | 0; return x === 0 || y === 0 || x === ME.w - 1 || y === ME.h - 1 ? 1 : ME.orig[i] === 5 ? 5 : 0; }); ME.check = null; }
+      else if (a === 'meVer') { const all = LS.get('br_dev_mapver', {}), l = all[ME.base] = all[ME.base] || []; l.unshift({ name: 'Version ' + (l.length + 1), at: Date.now(), tiles: ME.tiles.slice() }); all[ME.base] = l.slice(0, 8); LS.set('br_dev_mapver', all); G.UI.toast('Version enregistrée'); }
+      else if (a === 'meCheck') meValidate();
+      else if (a === 'mePublish') { const r = meValidate(); if (!r.ok) G.UI.toast('Carte non publiée : ' + r.issues.join(', '), 3200); else { ME.saved[ME.base] = ME.tiles.slice(); LS.set('br_dev_maps2', ME.saved); if (G.DevConsole) { const L = G.DevConsole.lab; L.mode = G.MAPS[ME.base].mode; L.map = ME.base; L.useMap = true; } G.UI.toast('✔ Carte publiée pour le labo (Studio → Labo)', 2600); } }
       else if (a === 'mePlay') { const b = G.MAPS[ME.base]; G.MAPS.dev_custom = Object.assign({}, b, { name: b.name + ' (perso)', override: ME.tiles.slice() }); close(); Dev.startMatch(b.mode || 'gemgrab', 'dev_custom'); return; }
       else if (a === 'report') exportReport();
       else if (a === 'clearErr') DP.errs.length = 0;
