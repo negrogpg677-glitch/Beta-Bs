@@ -6,13 +6,13 @@ const GAME = 'file://' + require('path').resolve(__dirname, '../app/src/main/ass
 (async () => {
   const b = await chromium.launch(); const ctx = await b.newContext({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true }); const p = await ctx.newPage();
   const errs = []; p.on('pageerror', (e) => errs.push(e.message));
-  await p.addInitScript(() => localStorage.setItem('brawlrush_save_v1', JSON.stringify({ tutorialDone: true, lastDaily: 99999999 })));
+  await p.addInitScript(() => localStorage.setItem('brawlrush_save_v1', JSON.stringify({ tutorialDone: true, lastDaily: 99999999, settings: { chars3dMatch: false } }))); // test de la visée (pas du rendu 3D)
   await p.goto(GAME); await p.waitForTimeout(2500);
   const cdp = await ctx.newCDPSession(p); const T = (type, pts) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts.map(([x, y, id]) => ({ x, y, id })) });
   let fails = 0, id = 1;
   for (const bid of ['rex', 'sherry', 'boomer', 'volt']) {
     await p.evaluate((bid) => { while (G.UI.modals.length) G.UI.closeModal(); G.UI.hideAll(); G.App.begin(G.Sim.create({ mode: 'bounty', mapKey: 'canyon', brawlerId: bid, skin: 'classic', level: 3, trophies: 300, name: 'Moi', event: 'none' })); }, bid);
-    await p.waitForTimeout(4300);
+    await p.waitForTimeout(1500); for (let w = 0; w < 60 && !(await p.evaluate(() => G.App.M && G.App.M.state === 'play')); w++) await p.waitForTimeout(200); // fin du compte à rebours (rendu logiciel plus lent)
     const L = await p.evaluate(() => G.Render.layout(844, 390));
     let worst = 0;
     for (let k = 0; k < 8; k++) {

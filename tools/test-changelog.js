@@ -8,7 +8,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const b = await chromium.launch(); const errs = [];
   async function launch(seen, withSave, dev) {
     const ctx = await b.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2 }); const p = await ctx.newPage(); p.on('pageerror', (e) => errs.push(e.message));
-    await ctx.addInitScript(([s, w]) => { window.__clTest = true; if (w) localStorage.setItem('brawlrush_save_v1', JSON.stringify({ name: 'Joueur', tutorialDone: true, lastDaily: 99999999, guestChoice: true })); if (s && !localStorage.getItem('__clInit')) localStorage.setItem('br_seen_version', s); localStorage.setItem('__clInit', '1'); }, [seen, withSave]);
+    await ctx.addInitScript(([s, w]) => { window.__clTest = true; if (w) localStorage.setItem('brawlrush_save_v1', JSON.stringify({ name: 'Joueur', tutorialDone: true, lastDaily: 99999999, guestChoice: true })); if (s && !/relance=1/.test(location.search)) localStorage.setItem('br_seen_version', s); }, [seen, withSave]);
     await p.goto(GAME); if (dev) { await p.waitForTimeout(600); await p.evaluate(() => G.DevTools.activate(true)); }
     await p.waitForTimeout(2300); await p.mouse.click(422, 200); // toucher l'écran d'accueil, comme un joueur
     for (let i = 0; i < 60 && !(await p.evaluate(() => !!document.querySelector('.clm'))); i++) await sleep(250);
@@ -20,7 +20,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   ok(st.open && st.vers.join() === 'Version 4.3,Version 4.2,Version 4.1,Version 4.0' && st.players && !st.dev, 'mise à jour 3.9 → 4.3 : nouveautés pour les joueurs, sans la partie développeurs');
   ok(st.seen === '4.3', 'version marquée comme vue');
   await p.screenshot({ path: path.join(OUT, 'changelog_joueur.png') });
-  await p.reload(); await sleep(2300); await p.mouse.click(422, 200); await sleep(5000); ok(!(await p.evaluate(() => !!document.querySelector('.clm'))), 'relance suivante : la fenêtre ne réapparaît pas');
+  await p.evaluate(() => { while (G.UI.modals.length) G.UI.closeModal(); }); await sleep(2500); await p.goto(GAME + '?relance=1'); await sleep(2300); await p.mouse.click(422, 200); await sleep(5000); { const d = await p.evaluate(() => ({ cl: !!document.querySelector('.clm'), h: (document.querySelector('.clm h2') || {}).textContent, seen: localStorage.getItem('br_seen_version'), vers: [...document.querySelectorAll('.cl-vh b')].map((x) => x.textContent).join() })); ok(!d.cl, 'relance suivante : la fenêtre ne réapparaît pas' + (d.cl ? ' ' + JSON.stringify(d) : '')); }
   // 2. versions sautées
   p = await launch('3.6', true, false); st = await p.evaluate(() => [...document.querySelectorAll('.cl-vh b')].map((x) => x.textContent));
   ok(st.join() === 'Version 4.3,Version 4.2,Version 4.1,Version 4.0,Version 3.9,Version 3.8,Version 3.7', 'versions sautées (3.6 → 4.3) : toutes les nouveautés manquées (' + st.length + ')');
