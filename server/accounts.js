@@ -16,7 +16,8 @@ module.exports = function (ctx) {
   const D = { db: enabled ? 'test en cours' : 'non configurée (SUPABASE_URL / SUPABASE_SECRET absents)', v2: '?', devs: DEVS.length, auths: 0, devAuths: 0, lastAuthErr: '', sessions: 'mémoire', takeovers: 0, lb: '?' };
   const devices = new Map(); // uid -> identifiant de l'appareil actif (un seul appareil par compte)
   let devUids = []; // comptes autorisés en plus des e-mails DEV_EMAILS (accordé par le développeur principal)
-  async function loadDevUids() { try { const r = await db('/rest/v1/game_config?key=eq.dev_uids&select=value'); devUids = (r && r[0] && Array.isArray(r[0].value)) ? r[0].value : []; } catch (e) { /* table absente */ } }
+  let devRoles = {}; // uid -> droits accordés : observe / admin / dev (séparés)
+  async function loadDevUids() { try { const r = await db('/rest/v1/game_config?key=eq.dev_uids&select=value'); devUids = (r && r[0] && Array.isArray(r[0].value)) ? r[0].value : []; const r2 = await db('/rest/v1/game_config?key=eq.dev_roles&select=value'); devRoles = (r2 && r2[0] && r2[0].value && typeof r2[0].value === 'object') ? r2[0].value : {}; } catch (e) { /* table absente */ } }
   if (enabled) setTimeout(loadDevUids, 800);
   async function selfCheck() {
     if (!enabled) return;
@@ -76,7 +77,7 @@ module.exports = function (ctx) {
     c.handle = p.handle; c.elo = p.elo; c.rg = p.ranked_games; c.rw = p.ranked_wins; c.uname = p.username;
     const last = Date.parse(p.name_changed_at || p.created_at || 0) || 0, recent = (p.name_changes || []).filter((t) => Date.now() - Date.parse(t) < 365 * DAY).length;
     const gu = await globalUnlock();
-    send(c, { t: 'me', uid: c.uid, email: c.email, devConfigured: DEVS.length > 0, handle: p.handle, name: p.username, dev: !!c.dev, superDev: !!c.superDev, canHandle: (p.handle_changes || 0) < 1 || p.handle_unlock || gu,
+    send(c, { t: 'me', uid: c.uid, email: c.email, devConfigured: DEVS.length > 0, handle: p.handle, name: p.username, dev: !!c.dev, superDev: !!c.superDev, roles: ctx.rolesOf ? ctx.rolesOf(c) : [], canHandle: (p.handle_changes || 0) < 1 || p.handle_unlock || gu,
       nameAt: last + NAME_DELAY, namePrice: Math.min(640, 20 * Math.pow(2, recent)), elo: p.elo, rank: rankOf(p.elo), games: p.ranked_games, wins: p.ranked_wins,
       rankedAt: RANKED_AT, rankedOpen: rankedOpen(c) });
   }
@@ -147,6 +148,8 @@ module.exports = function (ctx) {
     }
     if (c.uid && c.uid !== u.id) byUid.delete(c.uid);
     c.uid = u.id; c.email = String(u.email || '').toLowerCase(); c.superDev = DEVS.includes(c.email); c.dev = c.superDev || devUids.includes(u.id); byUid.set(c.uid, c.pid); if (c.dev) D.devAuths++;
+    c.roles = c.superDev ? ['observe', 'admin', 'dev'] : (devRoles[u.id] || (c.dev ? ['observe', 'dev'] : []));
+    if (ctx.onAuthHook && ctx.onAuthHook(c)) return; // compte sanctionné
     let p = await one('id=eq.' + enc(c.uid) + '&select=' + COLS);
     if (!p) return err(c, 'auth', 'Profil introuvable.');
     if (!p.handle) {
@@ -239,8 +242,11 @@ module.exports = function (ctx) {
     const p = await findProfile(msg.handle, 'id,username'); if (!p) return err(c, 'dev', 'Joueur introuvable.');
     await loadDevUids();
     devUids = msg.revoke ? devUids.filter((x) => x !== p.id) : Array.from(new Set(devUids.concat([p.id])));
+    const roles = (Array.isArray(msg.roles) ? msg.roles : ['observe']).filter((r) => ['observe', 'admin', 'dev'].includes(r));
+    if (msg.revoke) delete devRoles[p.id]; else devRoles[p.id] = roles.length ? roles : ['observe'];
+    await db('/rest/v1/game_config?on_conflict=key', { method: 'POST', body: { key: 'dev_roles', value: devRoles }, prefer: 'resolution=merge-duplicates,return=minimal' });
     await db('/rest/v1/game_config?on_conflict=key', { method: 'POST', body: { key: 'dev_uids', value: devUids }, prefer: 'resolution=merge-duplicates,return=minimal' });
-    for (const o of clients.values()) if (o.uid === p.id) { o.dev = !msg.revoke; me(o); }
+    for (const o of clients.values()) if (o.uid === p.id) { o.dev = !msg.revoke; o.roles = msg.revoke ? [] : devRoles[p.id]; me(o); }
     send(c, { t: 'toast', msg: msg.revoke ? 'Accès développeur retiré à ' + p.username : 'Accès développeur accordé à ' + p.username });
   });
   H.dev_gift = dev(async (c, msg) => {

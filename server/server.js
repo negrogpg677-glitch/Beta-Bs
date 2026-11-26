@@ -86,7 +86,8 @@ function removeTicket(p) { for (const m in queues) queues[m] = queues[m].filter(
 
 /* ---------- social : amis, invitations, clubs ---------- */
 social = require('./social.js')({ players, clients, parties, send, err, G, DATA_DIR, markDirty, createParty });
-const acc = require('./accounts.js')({ clients, send, err, G });
+const accCtx = { clients, send, err, G };
+const acc = require('./accounts.js')(accCtx);
 acc.cfgLoad('live_cfg').then((v) => { if (v) setCfg(v); }).catch(() => {});
 
 /* ---------- matchmaking ---------- */
@@ -166,7 +167,8 @@ function rankedMatch(qk, now) {
 setInterval(runMatchmaker, 700);
 
 /* ---------- salle d'attente puis match ---------- */
-function launchLobby(modeId, roster, usedParties, ranked, per) {
+function launchLobby(modeId, roster, usedParties, ranked, per, opts) {
+  opts = opts || {};
   for (const p of usedParties) { removeTicket(p); p.state = 'lobby'; pushParty(p); }
   const id = rid(4);
   const mode = G.MODES[modeId];
@@ -176,7 +178,7 @@ function launchLobby(modeId, roster, usedParties, ranked, per) {
     const c = clients.get(r.pid);
     return { pid: r.pid, name: c.name, brawler: c.brawler, skin: c.skin, level: c.level, team: r.team, trophies: c.trophies };
   });
-  const m = { id, ranked: !!ranked, mode: modeId, mapKey, seed, slots, parties: usedParties.map((p) => p.code), per: per || 0, state: 'lobby', M: null, startAt: Date.now() + LOBBY_SECS * 1000, lastT: 0, tick: 0, ended: false };
+  const m = { id, ranked: !!ranked, mode: modeId, mapKey, seed, slots, parties: usedParties.map((p) => p.code), per: per || 0, lab: !!opts.lab, labCfg: opts.lab || null, priv: !!opts.priv, cheatsOK: !!opts.lab || !!opts.cheats, state: 'lobby', M: null, startAt: Date.now() + LOBBY_SECS * 1000, lastT: 0, tick: 0, ended: false };
   matches.set(id, m);
   // aperçu de la composition (les bots sont ajoutés au démarrage et étiquetés)
   const preview = { t: 'lobby', id, mode: modeId, mapName: G.MAPS[mapKey].name, secs: LOBBY_SECS, slots: slots.map((s) => ({ name: s.name, brawler: s.brawler, skin: s.skin, team: s.team, bot: false })), need: modeId === 'showdown' ? 10 : modeId === 'boss' ? 3 : (per || mode.per || 3) * 2 };
@@ -192,6 +194,7 @@ function startMatch(m) {
   m.state = 'play'; m.lastT = process.hrtime.bigint();
   m.M.ents.forEach((b) => { if (b.pid) { const c = clients.get(b.pid); c.ent = b.idx; c.away = false; b.isPlayer = !!c.ws; b.disc = c.ws ? 0 : Date.now(); b.lastAct = Date.now(); } });
   for (const pc of m.parties) { const p = parties.get(pc); if (p) { p.state = 'match'; pushParty(p); } }
+  devops.onStart(m);
   for (const b of m.M.ents) if (b.pid) sendInit(clients.get(b.pid), m);
 }
 function rosterOf(m) {
@@ -199,16 +202,16 @@ function rosterOf(m) {
 }
 function sendInit(c, m) {
   const M = m.M;
-  send(c, { t: 'match', id: m.id, mode: m.mode, mapKey: m.mapKey, seed: m.seed, roster: rosterOf(m), event: m.event, you: c.ent, tiles: Buffer.from(M.map.tiles).toString('base64'), proto: PROTOCOL });
+  send(c, { t: 'match', id: m.id, mode: m.mode, mapKey: m.mapKey, seed: m.seed, roster: rosterOf(m), event: m.event, you: c.ent, tiles: Buffer.from(M.map.tiles).toString('base64'), proto: PROTOCOL, lab: !!m.lab, cheatsOK: !!m.cheatsOK, priv: !!m.priv });
 }
 
 setInterval(() => {
-  const nowN = process.hrtime.bigint();
+  const nowN = process.hrtime.bigint(); let busy = false;
   for (const m of matches.values()) {
     if (m.state !== 'play') continue;
     const M = m.M;
     let dt = Number(nowN - m.lastT) / 1e9; m.lastT = nowN;
-    dt = Math.min(dt, 0.1);
+    dt = Math.min(dt, 0.1) * (m.ts || 1); busy = true;
     try {
       while (dt > 0) { const step = Math.min(dt, 0.033); Sim.update(M, step); dt -= step; }
       m.tick++;
@@ -216,16 +219,19 @@ setInterval(() => {
       if (m.tick % 2 === 0) {
         const snap = Sim.snapshot(M); snap.ev = Sim.flushEvents(M); snap.t = 'snap'; snap.n = m.tick;
         const raw = JSON.stringify(snap);
+        devops.onSnap(m, snap, raw);
         for (const b of M.ents) { if (b.pid) { const c = clients.get(b.pid); if (c && c.ws && c.ws.readyState === 1 && c.match === m.id && !c.away) { try { c.ws.send(raw); } catch (e) { /* ignore */ } } } }
       }
       if (M.state === 'end' && !m.ended) endMatch(m);
-    } catch (e) { console.error('match error', m.id, e.stack); m.state = 'dead'; endMatch(m, true); }
+    } catch (e) { console.error('match error', m.id, e.stack); devops.onMatchError(m, e); m.state = 'dead'; endMatch(m, true); }
   }
+  if (busy) devops.onTick(Number(process.hrtime.bigint() - nowN) / 1e6);
 }, 1000 / 60);
 
 function endMatch(m, crashed) {
   m.ended = true; m.state = 'over';
   const M = m.M, r = M.result || { winnerTeam: -1, draw: true };
+  try { devops.onEnd(m, r); } catch (e) { console.error('devops end', e); }
   if (m.ranked && !crashed) acc.rankedEnd(m, M, r).then((rk) => sendEnds(m, M, r, crashed, rk)).catch(() => sendEnds(m, M, r, crashed, {}));
   else sendEnds(m, M, r, crashed, {});
 }
@@ -242,6 +248,7 @@ function sendEnds(m, M, r, crashed, rk) {
     else if (win) { delta = 8; coins = 60; } else if (r.draw) { delta = 0; coins = 28; } else { delta = -Math.min(pl.trophies, G.clamp(Math.round(2 + pl.trophies / 70), 2, 8)); coins = 22; }
     if (crashed) { delta = 0; coins = 0; }
     if (m.ranked) delta = 0; // en classé : l'ELO remplace les trophées
+    if (m.lab || m.adminStop) { delta = 0; coins = 0; } // labo / partie arrêtée : ni gain ni perte
     coins += b.kills * 4;
     pl.trophies = Math.max(0, pl.trophies + delta); pl.matches++; if (win) pl.wins++; pl.kills += b.kills; dirty = true;
     c.trophies = pl.trophies;
@@ -265,10 +272,11 @@ function onMessage(c, raw) {
   if (!msg || typeof msg.t !== 'string') return;
   if (social.handle(c, msg)) return;
   if (acc.handle(c, msg)) return;
+  if (devops.handle(c, msg)) return;
   if (devsrv.handle(c, msg)) return;
   if (c.v < 3 && (msg.t === 'party_start' || msg.t === 'resume' || msg.t === 'party_join')) return err(c, 'update', 'Nouvelle version de Brawl Rush disponible : mettez le jeu à jour pour jouer en ligne.');
   switch (msg.t) {
-    case 'ping': send(c, { t: 'pong', ts: msg.ts }); break;
+    case 'ping': if (isFinite(+msg.p) && +msg.p > 0) c.ping = Math.min(5000, Math.round(+msg.p)); send(c, { t: 'pong', ts: msg.ts }); break;
     case 'input': {
       const m = c.match && matches.get(c.match);
       if (!m || m.state !== 'play') return;
@@ -285,8 +293,10 @@ function onMessage(c, raw) {
       if (typeof msg.d === 'number' && isFinite(msg.d)) Sim.tryDodge(m.M, b, msg.d);
       if (msg.gd) Sim.tryGadget(m.M, b);
       if (typeof msg.em === 'number' && isFinite(msg.em)) Sim.emote(m.M, b, msg.em);
-      if (msg.a) { const [ang, dist] = msg.a; if (isFinite(ang) && isFinite(dist)) { const n0 = m.M.projs.length; if (Sim.tryAttack(m.M, b, ang, G.clamp(dist, 0, 900))) Sim.advanceProjs(m.M, n0, comp); } }
-      if (msg.s) { const [ang, dist] = msg.s; if (isFinite(ang) && isFinite(dist)) { const n0 = m.M.projs.length; if (Sim.trySuper(m.M, b, ang, G.clamp(dist, 0, 900))) Sim.advanceProjs(m.M, n0, comp); } }
+      if (msg.a) { let [ang, dist] = msg.a; if (isFinite(ang) && isFinite(dist)) { if (m.cheatsOK) [ang, dist] = devops.aim(m, b, ang, dist); // visée auto de test (parties de test/privées)
+ const n0 = m.M.projs.length; if (Sim.tryAttack(m.M, b, ang, G.clamp(dist, 0, 900))) Sim.advanceProjs(m.M, n0, comp); } }
+      if (msg.s) { let [ang, dist] = msg.s; if (isFinite(ang) && isFinite(dist)) { if (m.cheatsOK) [ang, dist] = devops.aim(m, b, ang, dist);
+ const n0 = m.M.projs.length; if (Sim.trySuper(m.M, b, ang, G.clamp(dist, 0, 900))) Sim.advanceProjs(m.M, n0, comp); } }
       break;
     }
     case 'profile': { // brawler choisi (niveau borné pour limiter la triche)
@@ -334,11 +344,12 @@ function onMessage(c, raw) {
       // duel : la partie démarre toute seule quand les deux joueurs sont prêts
       if (p.mode === 'duel' && p.state === 'idle' && p.members.length === 2 && p.members.every((m) => (clients.get(m) || {}).ready)) {
         p.members.forEach((m) => { const mc = clients.get(m); if (mc) mc.ready = false; });
-        launchLobby('duel', p.members.map((pid, i) => ({ pid, team: i })), [p]);
+        launchLobby('duel', p.members.map((pid, i) => ({ pid, team: i })), [p], false, 0, { priv: true, cheats: p.members.some((x) => devops.can(clients.get(x), 'dev')) });
       }
       break;
     }
     case 'party_start': {
+      devops.stopSpec(c);
       let p = parties.get(c.party);
       if (!p) p = createParty(c, msg.mode || 'gemgrab');
       if (p.leader !== c.pid) return err(c, 'not_leader', 'Seul le chef d\'équipe peut lancer la partie.');
@@ -355,7 +366,7 @@ function onMessage(c, raw) {
       if (msg.kind === 'private') {
         const mode = G.MODES[p.mode], f2 = mode.per === 3 && p.fmt === 2, mem = p.members.slice(0, mode.id === 'showdown' ? 10 : f2 ? 4 : 6);
         const roster = mem.map((pid, i) => ({ pid, team: mode.id === 'showdown' ? i : mode.id === 'boss' ? 0 : (msg.split || mode.per === 1 || (f2 && mem.length > 2) ? i % 2 : 0) }));
-        launchLobby(p.mode, roster, [p], false, f2 ? 2 : 0);
+        launchLobby(p.mode, roster, [p], false, f2 ? 2 : 0, { priv: true, cheats: devops.can(c, 'dev') });
       } else { const e = enqueue(p); if (e) err(c, 'bad_party', e); }
       break;
     }
@@ -402,6 +413,8 @@ function handshake(ws, msg) {
   if (!c) { c = { pid, party: null, match: null, ent: null, ready: false, brawler: 'sherry', skin: 'classic', level: 1, trophies: pl.trophies }; clients.set(pid, c); }
   c.ws = ws; ws.pid = pid; c.v = msg.v | 0; c.name = pl.name; c.trophies = pl.trophies; c.lastSeen = Date.now(); c.dropAt = 0;
   if (msg.name) { c.name = pl.name = cleanName(msg.name); dirty = true; }
+  if (resumed) c.reconnects = (c.reconnects || 0) + 1;
+  if (devops.onHello(c, msg)) return;
   send(c, { t: 'welcome', pid, token: pl.token, name: c.name, proto: PROTOCOL, trophies: pl.trophies, online: wss.clients.size, resumed, friendCode: social.ensureCode(pid), club: social.clubView(pid) });
   social.pushFriends(pid); social.pushClub(pid); social.notifyPresence(pid);
   // reprise de partie / retour dans l'équipe
@@ -440,11 +453,11 @@ wss.on('connection', (ws) => {
     if (!ws.isReady) { if (msg && msg.t === 'hello') { clearTimeout(hs); ws.isReady = true; handshake(ws, msg); } return; }
     const c = clients.get(ws.pid); if (c && c.ws === ws) onMessage(c, raw);
   });
-  ws.on('close', () => {
+  ws.on('close', (code) => {
     clearTimeout(hs);
     const c = clients.get(ws.pid);
     if (!c || c.ws !== ws) return;
-    c.ws = null; c.dropAt = Date.now(); social.notifyPresence(c.pid); acc.onClose(c);
+    c.ws = null; c.dropAt = Date.now(); social.notifyPresence(c.pid); acc.onClose(c); devops.onClose(c, code);
     const m = c.match && matches.get(c.match);
     if (m && m.M && m.state === 'play') { const b = m.M.ents[c.ent]; if (b) { b.isPlayer = false; b.disc = Date.now(); } }
     const p = parties.get(c.party); if (p) { if (p.state === 'queue') { /* reste en file */ } pushParty(p); }
@@ -479,10 +492,12 @@ setInterval(() => { // battement de cœur + nettoyage
     if (m.state !== 'play') continue;
     const any = m.M.ents.some((b) => b.pid && clients.get(b.pid) && clients.get(b.pid).ws && !clients.get(b.pid).test && clients.get(b.pid).match === id);
     m.empty = any ? 0 : (m.empty || now);
-    if (m.empty && now - m.empty > RECON()) { m.state = 'dead'; matches.delete(id); }
+    if (m.empty && now - m.empty > RECON()) { m.state = 'dead'; matches.delete(id); for (const b of m.M.ents) { const c = b.pid && clients.get(b.pid); if (c && c.match === id) { c.match = null; c.ent = null; c.away = false; } } }
   }
 }, 1000);
 
 const devsrv = require('./devsrv.js')({ clients, parties, matches, players, send, err, G, Sim, CFG, setCfg, acc, createParty, leaveParty, pushParty, partyView, forfeit, rid, wss, launchLobby });
+const devops = require('./devops.js')({ clients, parties, matches, players, send, err, G, Sim, CFG, acc, rosterOf, PROTOCOL, createParty, launchLobby, devsrvSim: (c, a) => devsrv.handle(c, { t: 'dv_sim', act: a }) });
+accCtx.onAuthHook = (c) => devops.onAuth(c); accCtx.rolesOf = (c) => devops.rolesOf(c);
 if (require.main === module) server.listen(PORT, () => console.log('Brawl Rush server — port ' + PORT + ' — jeu servi depuis ' + WWW));
-module.exports = { server, wss, players, parties, matches, clients, runMatchmaker, CFG, setCfg };
+module.exports = { server, wss, players, parties, matches, clients, runMatchmaker, CFG, setCfg, get devops() { return devops; } };

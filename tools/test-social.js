@@ -15,7 +15,7 @@ const api = async (p, o) => { o = o || {}; const r = await fetch('http://127.0.0
 const svc = (p, o) => api(p, Object.assign({ key: 'service-test-key' }, o));
 class Cl {
   constructor(name) { this.name = name; this.msgs = []; this.w = []; }
-  open(url) { return new Promise((res) => { this.ws = new WebSocket(url); this.ws.on('open', () => this.ws.send(JSON.stringify({ t: 'hello', name: this.name, v: 3 }))); this.ws.on('message', (raw) => { const m = JSON.parse(raw); if (m.t === 'snap') return; this.msgs.push(m); if (m.t === 'welcome') { this.pid = m.pid; res(); } this.w = this.w.filter((x) => { if (x.t === m.t && (!x.f || x.f(m))) { x.r(m); return false; } return true; }); }); }); }
+  open(url) { return new Promise((res) => { this.ws = new WebSocket(url); this.ws.on('open', () => this.ws.send(JSON.stringify({ t: 'hello', name: this.name, v: 3 }))); this.ws.on('message', (raw) => { const m = JSON.parse(raw); if (this.on) this.on(m); if (m.t === 'snap') return; this.msgs.push(m); if (m.t === 'welcome') { this.pid = m.pid; res(); } this.w = this.w.filter((x) => { if (x.t === m.t && (!x.f || x.f(m))) { x.r(m); return false; } return true; }); }); }); }
   send(o) { this.ws.send(JSON.stringify(o)); }
   wait(t, f, ms = 5000) { return new Promise((r, j) => { const to = setTimeout(() => j(new Error('délai : ' + t)), ms); this.w.push({ t, f, r: (m) => { clearTimeout(to); r(m); } }); }); }
   last(t) { return [...this.msgs].reverse().find((m) => m.t === t); }
@@ -130,6 +130,65 @@ class Cl {
   ok(m.dev === true && !m.superDev, 'le développeur principal autorise un autre compte');
   w = B.wait('error'); B.send({ t: 'dev_grant', handle: D.me.handle }); ok((await w).code === 'forbidden', 'un compte autorisé ne peut pas en autoriser d\'autres');
   w = D.wait('toast'); D.send({ t: 'dev_grant', handle: B.me.handle, revoke: true }); await w; await sleep(150); ok(B.last('me').dev === false, 'accès développeur retiré');
+  // ===================== MODE DÉVELOPPEUR (serveur) =====================
+  w = B.wait('error'); B.send({ t: 'dv_dash' }); ok((await w).code === 'forbidden', 'joueur normal : tableau de bord refusé par le serveur');
+  w = B.wait('error'); B.send({ t: 'dv_cheats', cheats: { god: true } }); ok((await w).code === 'forbidden', 'joueur normal : triches refusées par le serveur (même en envoyant la commande)');
+  w = D.wait('dv_dash'); D.send({ t: 'dv_dash' }); m = await w;
+  ok(m.players.online >= 3 && typeof m.server.tickAvg === 'number' && m.services.db === 'ok' && Array.isArray(m.activity) && m.activity.length > 0, 'tableau de bord : données réelles du serveur (' + m.players.online + ' en ligne, base ' + m.services.db + ', ' + m.activity.length + ' activités)');
+  // droits séparés : Bob reçoit seulement « observer »
+  w = D.wait('toast'); D.send({ t: 'dev_grant', handle: B.me.handle, roles: ['observe'] }); await w; await sleep(200);
+  w = B.wait('dv_dash'); B.send({ t: 'dv_dash' }); ok(!!(await w.catch(() => null)), 'droit « observer » : tableau de bord accessible');
+  w = B.wait('error'); B.send({ t: 'dv_kick', pid: A2.pid }); ok((await w).code === 'forbidden', 'droit « observer » seul : déconnecter un joueur est refusé (droit « administrer » requis)');
+  w = B.wait('error'); B.send({ t: 'dv_lab', mode: 'bounty' }); ok((await w).code === 'forbidden', 'droit « observer » seul : laboratoire refusé (droit « développer » requis)');
+  w = D.wait('toast'); D.send({ t: 'dev_grant', handle: B.me.handle, revoke: true }); await w; await sleep(150);
+  // laboratoire + triches appliquées par le serveur
+  D.send({ t: 'party_leave' }); await sleep(150);
+  w = D.wait('dv_cheats'); D.send({ t: 'dv_cheats', cheats: { god: true, aim: true, dodge: true, ammo: true } }); await w;
+  w = D.wait('match', (x) => !x.spectate, 9000); D.send({ t: 'dv_lab', mode: 'bounty', passiveBots: true, botLevel: 3 }); const lm = await w.catch(() => null);
+  const lab = lm && S.matches.get(lm.id);
+  ok(lm && lm.lab && lm.cheatsOK && lab && lab.lab, 'laboratoire : partie de test lancée (triches de test autorisées)');
+  await sleep(4000);
+  if (lab) { const LM = lab.M, me = LM.ents[lm.you], foe = LM.ents.find((e) => e.team !== me.team && e.alive);
+    const hp0 = me.hp; me.invuln = 0; global.G.Sim.damage(LM, me, 3000, foe);
+    ok(me.hp === hp0, 'triche « invincible » appliquée par le serveur dans le labo (aucun dégât)');
+    foe.x = me.x; foe.y = me.y - 240; foe.hidden = false; me.ammo = 3; me.reload = 0; LM.state = 'play';
+    const n0 = LM.projs.length; D.send({ t: 'input', seq: 900, mx: 0, my: 0, a: [0, 300] }); await sleep(120);
+    const pj = LM.projs.slice(n0).find((p) => p.owner === me);
+    ok(pj && Math.abs(Math.atan2(Math.sin(pj.ang + Math.PI / 2), Math.cos(pj.ang + Math.PI / 2))) < 0.35, 'visée auto en ligne (labo) : le serveur corrige le tir vers l\'ennemi (' + (pj ? pj.ang.toFixed(2) : '—') + ' rad, attendu −1.57)'); }
+  // spectateur (2e connexion du compte développeur)
+  const D2 = new Cl('Dev-obs'); await D2.open(url); w = D2.wait('me'); D2.send({ t: 'auth', token: tok.dev }); await w;
+  w = D2.wait('match', (x) => x.spectate, 4000); D2.send({ t: 'dv_spectate', pid: D.pid }); const sm = await w.catch(() => null);
+  ok(sm && sm.spectate && sm.id === lm.id && lab.specs.has(D2.pid), 'spectateur : la partie du joueur suivi est transmise à l\'observateur');
+  ok(lab.M.ents.every((b) => b.pid !== D2.pid), 'spectateur : n\'est pas un joueur de la partie (aucune influence)');
+  w = D2.wait('dv_matches'); D2.send({ t: 'dv_matches' }); m = await w; ok(m.list.some((x) => x.id === lm.id && x.lab && x.specs === 1), 'liste des parties en cours (mode, carte, joueurs, spectateurs)');
+  w = D2.wait('dv_players'); D2.send({ t: 'dv_players', q: 'bob' }); m = await w; ok(m.list.some((x) => x.pid === B.pid && x.online), 'gestion des joueurs : recherche par pseudo');
+  w = D2.wait('dv_player'); D2.send({ t: 'dv_player', pid: D.pid }); m = await w; const js = JSON.stringify(m);
+  ok(m.p.match && m.p.match.id === lm.id && !/@|token|secret/i.test(js), 'profil joueur : partie en cours, session ; aucun e-mail ni secret exposé');
+  // signalement, avertissement, journal
+  B.send({ t: 'report', pid: A2.pid, why: 'insultes' }); await sleep(200);
+  w = D2.wait('dv_reports'); D2.send({ t: 'dv_reports' }); m = await w; ok(m.list.some((r) => r.target === A2.pid && r.why === 'insultes'), 'signalements : reçus par l\'administration');
+  w = B.wait('admin_warn'); D2.send({ t: 'dv_warn', pid: B.pid, text: 'Restez correct' }); ok((await w).text === 'Restez correct', 'avertissement envoyé au joueur');
+  // arrêt de la partie de test → replay
+  w = D.wait('end', null, 6000); D2.send({ t: 'dv_endmatch', id: lm.id, reason: 'test' }); const le = await w.catch(() => null);
+  ok(le && le.delta === 0, 'administration : partie arrêtée (aucun trophée en jeu)');
+  await sleep(300); w = D2.wait('dv_replays'); D2.send({ t: 'dv_replays', q: 'devboss' }); m = await w; const rp = m.list.find((x) => x.id === lm.id);
+  ok(rp && rp.n > 20 && rp.players.length >= 2, 'replays : partie enregistrée (' + (rp ? rp.n : 0) + ' images), recherche par joueur');
+  let parts = 0, frames = 0; D2.on = (x) => { if (x.t === 'dv_replay') { parts++; frames += (x.frames || []).length; } };
+  w = D2.wait('dv_replay', (x) => x.last, 5000); D2.send({ t: 'dv_replay', id: lm.id }); await w.catch(() => null); D2.on = null;
+  ok(rp && frames === rp.n, 'replay téléchargé en entier (' + frames + ' images en ' + parts + ' parties)');
+  // triches bloquées en partie publique
+  await sleep(6500); D.send({ t: 'party_leave' }); await sleep(150);
+  w = D.wait('match', (x) => !x.spectate, 12000); D.send({ t: 'party_start', mode: 'gemgrab', kind: 'queue' }); const pm = await w.catch(() => null); const pub = pm && S.matches.get(pm.id);
+  ok(pub && !pub.cheatsOK && !pub.M.cheats && !pm.cheatsOK, 'partie publique : triches de test bloquées côté serveur');
+  if (pub) { await sleep(3600); const me = pub.M.ents[pm.you], foe = pub.M.ents.find((e) => e.team !== me.team); me.invuln = 0; const h0 = me.hp; global.G.Sim.damage(pub.M, me, 1000, foe); ok(me.hp < h0, 'partie publique : « invincible » sans effet'); pub.M.state = 'end'; }
+  // déconnexion de session et sanction (journalisées)
+  w = B.wait('admin_kick'); D2.send({ t: 'dv_kick', pid: B.pid, reason: 'test' }); ok(!!(await w.catch(() => null)), 'administration : session déconnectée');
+  w = A2.wait('banned'); D2.send({ t: 'dv_ban', pid: A2.pid, hours: 1, reason: 'test' }); ok(!!(await w.catch(() => null)), 'administration : compte sanctionné');
+  const A3 = new Cl('Alice-retour'); await A3.open(url); w = A3.wait('banned', null, 3000); A3.send({ t: 'auth', token: tok.al, device: 'devBBB' }); ok(!!(await w.catch(() => null)), 'compte sanctionné : reconnexion refusée par le serveur');
+  w = D2.wait('dv_audit'); D2.send({ t: 'dv_audit' }); m = await w; ok(['Déconnexion de session', 'Sanction (1 h)', 'Arrêt de partie', 'Avertissement'].every((x) => m.list.some((e) => e.action === x)), 'journal d\'activité : chaque intervention est enregistrée (' + m.list.length + ')');
+  await sleep(1800); const aud = await svc('/rest/v1/game_config?key=eq.audit'); ok(aud[0] && aud[0].value.length >= 4, 'journal enregistré dans la base');
+  w = D2.wait('dv_bans'); D2.send({ t: 'dv_bans' }); m = await w; const bk = m.list[0] && m.list[0].key; w = D2.wait('dv_bans'); D2.send({ t: 'dv_unban', key: bk }); m = await w; ok(!m.list.length, 'sanction levée');
+  w = D2.wait('dv_selftest', null, 30000); D2.send({ t: 'dv_selftest' }); m = await w.catch(() => null); ok(m && m.res.every((r) => r.ok), 'tests automatiques côté serveur : ' + (m ? m.res.filter((r) => r.ok).length + '/' + m.res.length + ' modes' : 'échec'));
   console.log(fails ? '\n' + fails + ' ÉCHEC(S)' : '\nTOUS LES TESTS COMPTES/SOCIAL/CLASSÉ PASSENT');
   mock.kill(); process.exit(fails ? 1 : 0);
 })().catch((e) => { console.error('ERREUR', e.message); process.exit(2); });

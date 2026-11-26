@@ -168,6 +168,7 @@
     if (!tgt.alive || tgt.invuln > 0 || tgt.jump || amt <= 0) return 0;
     if (M.state === 'end') return 0;
     if (G.Dev && !M.online && !M.net) { amt = G.Dev.onDamage(M, tgt, amt, src); if (amt <= 0) return 0; }
+    if (M.cheats) { amt = M.cheats.onDamage(M, tgt, amt, src); if (amt <= 0) return 0; } // serveur : parties de test uniquement
     tgt.hp -= amt; tgt.flash = 0.12; tgt.revealT = 0.9; tgt.lastHitBy = src || tgt.lastHitBy;
     if (tgt.hasBall) dropBall(M, tgt);
     if (M.online) { M.evq.push(['d', Math.round(tgt.x), Math.round(tgt.y - 40), Math.round(amt), tgt.idx, tgt.team, src ? src.idx : -1]); }
@@ -577,6 +578,7 @@
     if (M.hitstop > 0) { M.hitstop -= dt; return; }
     M.t += dt; M.tick++;
     if (G.Dev && !M.online) G.Dev.onUpdate(M, dt);
+    if (M.cheats) M.cheats.onUpdate(M, dt);
     // caméra, particules, textes
     updateFx(M, dt);
     if (M.state === 'countdown') {
@@ -736,7 +738,7 @@
       if (q.t <= 0) { b.queue.splice(i, 1); if (b.stun <= 0 && b.freeze <= 0) volley(M, b, q.spec, q.ang, q.dist, q.dmgMul, q.isSuper); }
     }
     // décisions / entrées
-    if (!b.isPlayer && active && M.state === 'play' && !(G.Dev && G.Dev.passive(M, b))) G.AI.update(M, b, dt);
+    if (!b.isPlayer && active && M.state === 'play' && !(G.Dev && G.Dev.passive(M, b)) && !(M.cheats && M.cheats.passive(M, b))) G.AI.update(M, b, dt);
     if (M.state !== 'play') { b.input.mx = 0; b.input.my = 0; }
     // saut
     if (b.jump) {
@@ -791,6 +793,7 @@
     const blockedMove = b.stun > 0 || b.freeze > 0 || (M.state === 'countdown');
     let spd = b.def.speed * T * b.slowF * b.boostF * (b.hasBall ? 0.93 : 1) * (M.event === 'turbo' ? 1.2 : 1);
     if (G.Dev && !M.online) spd *= G.Dev.speedMul(M, b);
+    if (M.cheats) spd *= M.cheats.speedMul(M, b);
     if (b.sprintT > 0) spd *= 1.6;
     if (M.mode === 'showdown') spd *= 1;
     if (blockedMove) { mx = my = 0; }
