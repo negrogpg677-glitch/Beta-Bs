@@ -6,7 +6,7 @@
   const C3 = (G.Char3D = { ok: false, models: {}, pokeT: -9, pokeId: null });
   if (!THREE) return;
   const OUTC = 0x1a1530;
-  let R = null, CV = null, S = 640;
+  let R = null, CV = null, S = 1024; // 1024 : atlas de 5×5 tuiles pour les personnages en combat
   function renderer() {
     if (R || C3.failed) return R;
     try {
@@ -17,7 +17,7 @@
     } catch (e) { C3.failed = true; C3.ok = false; R = null; }
     return R;
   }
-  C3.enabled = (inMatch) => { const s = G.Save.data.settings; if (s.chars3d === false) return false; if (inMatch && (!s.chars3dMatch || G.Render.q < 1)) return false; return !!renderer(); };
+  C3.enabled = (inMatch) => { const s = G.Save.data.settings; if (s.chars3d === false) return false; if (inMatch && (s.chars3dMatch === false || G.Render.q < 1)) return false; /* 3D en combat par défaut (repli 2D si l'appareil ralentit) */ return !!renderer(); };
 
   /* ---------- matériaux toon ---------- */
   const grad = (() => { const d = new Uint8Array([90, 90, 90, 255, 175, 175, 175, 255, 255, 255, 255, 255]); const t = new THREE.DataTexture(d, 3, 1, THREE.RGBAFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
@@ -292,7 +292,10 @@
 
   // personnage en combat : rendu dans une tuile puis copié dans le canevas 2D (les murs passent ensuite par-dessus)
   const TILE = 200;
-  C3.drawMatch = function (c, id, skin, o) {
+  // Tous les personnages visibles sont rendus EN UNE FOIS au début de l'image suivante dans un atlas (5×5 tuiles),
+  // puis copiés à leur position : une seule synchronisation GPU par image au lieu d'une par personnage.
+  const AC = Math.floor(S / TILE), Q = []; let slots = new Map();
+  function renderTo(slot, id, skin, o) {
     const inst = o.key !== undefined ? getInst(o.key, ents, id, skin) : null;
     if (inst) {
       const fire = (o.recoil || 0) > (inst.rec || 0) + 0.2; inst.rec = o.recoil || 0;
@@ -301,16 +304,32 @@
       stepInst(inst, want, o.t); show(inst);
       const a = o.deathT !== undefined ? o.deathAng : o.aim; inst.root.rotation.y = Math.atan2(Math.cos(a), Math.sin(a));
     } else {
-    const m = model(id, skin); show(m);
-    pose(m, { t: o.t, seed: o.seed, moving: o.moving, walk: o.walk, recoil: o.recoil, flash: o.flash, frozen: o.frozen, angry: o.angry, roll: o.roll, deathT: o.deathT, pose: o.pose, look: false });
-    const a = o.deathT !== undefined ? o.deathAng : o.aim;
-    m.root.rotation.y = Math.atan2(Math.cos(a), Math.sin(a));
+      const m = model(id, skin); show(m);
+      pose(m, { t: o.t, seed: o.seed, moving: o.moving, walk: o.walk, recoil: o.recoil, flash: o.flash, frozen: o.frozen, angry: o.angry, roll: o.roll, deathT: o.deathT, pose: o.pose, look: false });
+      const a = o.deathT !== undefined ? o.deathAng : o.aim; m.root.rotation.y = Math.atan2(Math.cos(a), Math.sin(a));
     }
     camM.position.set(0, 1.1 + 6 * Math.sin(0.82), 6 * Math.cos(0.82)); camM.lookAt(0, 1.1, 0);
-    draw(TILE, TILE, camM);
-    const sz = 132 * (o.sc || 1), al = o.deathT !== undefined ? Math.max(0, 1 - o.deathT / 0.8) : (o.alpha === undefined ? 1 : o.alpha);
+    const r = renderer(), col = slot % AC, row = (slot / AC) | 0;
+    r.setViewport(col * TILE, row * TILE, TILE, TILE); r.setScissor(col * TILE, row * TILE, TILE, TILE); r.clear(); r.render(scene, camM);
+  }
+  function blitTile(c, o, slot) {
+    const col = slot % AC, row = (slot / AC) | 0, sz = 132 * (o.sc || 1), al = o.deathT !== undefined ? Math.max(0, 1 - o.deathT / 0.8) : (o.alpha === undefined ? 1 : o.alpha);
     c.save(); c.globalAlpha = 0.3 * al; c.fillStyle = '#000'; c.beginPath(); c.ellipse(o.x, o.y + 12, 22 * (o.sc || 1), 9 * (o.sc || 1), 0, 0, Math.PI * 2); c.fill();
-    c.globalAlpha = al; c.drawImage(CV, 0, S - TILE, TILE, TILE, o.x - sz / 2, o.y - (o.z || 0) - sz * 0.74, sz, sz); c.restore();
+    c.globalAlpha = al; c.drawImage(CV, col * TILE, S - (row + 1) * TILE, TILE, TILE, o.x - sz / 2, o.y - (o.z || 0) - sz * 0.74, sz, sz); c.restore();
+  }
+  C3.drawMatch = function (c, id, skin, o) {
+    const k = o.key !== undefined ? o.key : 'm:' + id + ':' + skin;
+    Q.push({ k, id, skin, o: Object.assign({}, o) });
+    const sl = slots.get(k);
+    if (!sl || sl.id !== id || sl.skin !== skin) { renderTo(0, id, skin, o); blitTile(c, o, 0); return; } // première apparition : rendu immédiat (tuile 0)
+    blitTile(c, o, sl.i);
+  };
+  C3.flushMatch = function () { // au début de l'image : rend tous les personnages demandés à l'image précédente
+    if (!Q.length) return;
+    const seen = new Map(); for (const q of Q) seen.set(q.k, q); Q.length = 0;
+    slots = new Map(); let i = 1;
+    for (const q of seen.values()) { if (i >= AC * AC) break; try { renderTo(i, q.id, q.skin, q.o); slots.set(q.k, { i, id: q.id, skin: q.skin }); i++; } catch (e) { /* tuile ignorée */ } }
+    C3.lastBatch = i - 1;
   };
 
   // branchement : portraits animés des menus en 3D

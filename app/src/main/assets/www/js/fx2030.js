@@ -33,3 +33,13 @@
   }
   setInterval(tick, 90);
 })();
+
+/* ---------- transitions : entrée en combat (saut néon), fin de partie (éclair), changement d'écran ---------- */
+(function () {
+  const G = window.G, App = G.App; if (!App) return;
+  function fx(cls, ms) { const d = document.createElement('div'); d.className = cls; document.getElementById('app').appendChild(d); setTimeout(() => d.remove(), ms); }
+  const baseBegin = App.begin;
+  App.begin = function (M) { const r = baseBegin.apply(this, arguments); if (!(M && M.spectate) && !(G.Save.data.settings.quality === 'eco')) fx('neo-warp', 900); return r; };
+  const baseFinish = App.finish;
+  App.finish = function () { const won = App.M && App.M.result && App.M.result.win; const r = baseFinish.apply(this, arguments); fx('neo-endflash ' + (won ? 'win' : 'lose'), 700); return r; };
+})();

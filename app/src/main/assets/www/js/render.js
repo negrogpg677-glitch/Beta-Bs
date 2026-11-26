@@ -472,6 +472,7 @@
   R.viewScale = function (W, H) { return H / (T * 10.4); };
 
   R.drawMatch = function (c, M, W, H, time) {
+    if (G.Char3D && G.Char3D.flushMatch && G.Char3D.enabled(true)) { try { G.Char3D.flushMatch(); } catch (e) { /* repli 2D */ } }
     const T0 = T, th = G.THEMES[M.map.theme], S = R.getSprites(M.map.theme);
     const sc = R.viewScale(W, H) * M.cam.zoom;
     // caméra
@@ -540,6 +541,7 @@
     if (M.potato && M.potato.holder >= 0) { const h = M.ents[M.potato.holder]; if (h && h.alive) drawPotato(c, h, M.potato.t, time); }
     // particules
     for (const p of M.parts) {
+      if (R.vfxSkip && R.vfxSkip(p)) continue; // nouvelles particules : vfx.js
       const k = p.t / p.dur;
       if (p.type === 'smoke') { c.globalAlpha = (1 - k) * 0.45; circ(c, p.x, p.y, p.r0 * (1 + k * 2)); c.fillStyle = '#bbb'; c.fill(); }
       else if (p.type === 'fire') { const r = p.r0 * (1 + k * 0.7) * 2; glowAt(c, p.x, p.y, r, k < 0.35 ? '#ffd86a' : k < 0.7 ? '#ff7a2a' : '#7a2a1a', (1 - k) * 0.95); }
@@ -552,6 +554,7 @@
     // marqueurs de touche (vos tirs qui touchent)
     for (const h of M.hitmarks || []) { const k = h.t / 0.22, r = (h.big ? 13 : 9) * (1 + k * 0.4); c.globalAlpha = 1 - k; c.strokeStyle = h.big ? '#ffd21f' : '#fff'; c.lineWidth = h.big ? 4 : 3; c.lineCap = 'round'; c.beginPath(); c.moveTo(h.x - r, h.y - r); c.lineTo(h.x - r * 0.4, h.y - r * 0.4); c.moveTo(h.x + r, h.y - r); c.lineTo(h.x + r * 0.4, h.y - r * 0.4); c.moveTo(h.x - r, h.y + r); c.lineTo(h.x - r * 0.4, h.y + r * 0.4); c.moveTo(h.x + r, h.y + r); c.lineTo(h.x + r * 0.4, h.y + r * 0.4); c.stroke(); }
     c.globalAlpha = 1;
+    if (R.vfxHook) R.vfxHook(c, M); // ondes de choc, poussière, esprits + éclairage dynamique (vfx.js)
     // textes flottants
     c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineJoin = 'round';
     for (const t of M.texts) {

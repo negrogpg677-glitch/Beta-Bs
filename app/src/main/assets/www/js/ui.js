@@ -310,7 +310,7 @@
       const tg = (k, label) => `<div class="setrow"><span>${label}</span><div class="toggle ${s[k] ? 'on' : ''}" data-act="toggle" data-k="${k}"></div></div>`;
       return `<h2>Réglages</h2>${tg('sound', 'Effets sonores')}${tg('music', 'Musique')}${tg('vibrate', 'Vibrations')}${tg('aimAssist', 'Aide à la visée')}${tg('lefty', 'Mode gaucher')}
         <div class="setrow"><span>Personnages 3D (menus)</span><button class="btn small ${s.chars3d === false ? 'gray' : 'green'}" data-act="t3d">${s.chars3d === false ? 'Non' : 'Oui'}</button></div>
-        <div class="setrow"><span>3D en combat (expérimental)</span><button class="btn small ${s.chars3dMatch ? 'green' : 'gray'}" data-act="t3dm">${s.chars3dMatch ? 'Oui' : 'Non'}</button></div>
+        <div class="setrow"><span>Éclairage dynamique</span><button class="btn small ${s.lighting !== false ? 'green' : 'gray'}" data-act="tlight">${s.lighting !== false ? 'Oui' : 'Non'}</button></div><div class="setrow"><span>Personnages 3D en combat</span><button class="btn small ${s.chars3dMatch !== false ? 'green' : 'gray'}" data-act="t3dm">${s.chars3dMatch !== false ? 'Oui' : 'Non'}</button></div>
         ${G.UI.devStatusRow ? G.UI.devStatusRow() : ''}
         <div class="setrow"><span>Commandes (position, taille, transparence)</span><button class="btn small green" data-act="ctrlEdit">Personnaliser</button></div>
         <div class="setrow"><span>Taille des commandes</span><button class="btn small blue" data-act="ctrlSize">${(s.ctrlScale || 1) < 0.95 ? 'Petite' : (s.ctrlScale || 1) > 1.05 ? 'Grande' : 'Normale'}</button></div>
@@ -334,7 +334,8 @@
     const m = o.querySelector('.modal'); const x = m.querySelector('.x'); m.innerHTML = ''; m.appendChild(x); m.insertAdjacentHTML('beforeend', UI._settingsRender());
   }
   ACT.t3d = () => { const s = S().settings; s.chars3d = s.chars3d === false; G.Save.commit(); refreshSettings(); };
-  ACT.t3dm = () => { const s = S().settings; s.chars3dMatch = !s.chars3dMatch; G.Save.commit(); refreshSettings(); };
+  ACT.tlight = () => { const s = S().settings; s.lighting = s.lighting === false; G.Save.commit(); refreshSettings(); };
+  ACT.t3dm = () => { const s = S().settings; s.chars3dMatch = s.chars3dMatch === false; G.Save.commit(); refreshSettings(); };
   ACT.ctrlSize = () => { const s = S().settings, v = s.ctrlScale || 1; s.ctrlScale = v < 0.95 ? 1 : v > 1.05 ? 0.88 : 1.14; G.Save.commit(); refreshSettings(); };
   ACT.quality = () => { const s = S().settings; s.quality = s.quality === 'high' ? 'medium' : s.quality === 'medium' ? 'low' : 'high'; G.Save.commit(); G.App.resize(); refreshSettings(); };
   ACT.rename = () => {
