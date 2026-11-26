@@ -1,4 +1,4 @@
-/* Brawl Rush - effets de combat « NEO 2030 » : fil des éliminations (verre néon), annonces de séries
+/* Brawl Rush - effets de combat « NEO 2030 » : annonces de séries
    (DOUBLE / TRIPLE / MÉGA ÉLIMINATION), éclair d'écran à la super. Basé sur l'état des brawlers : marche hors ligne et en ligne. */
 (function () {
   const G = window.G;
@@ -24,14 +24,7 @@
     if (!M || !M.ents || !M.player) { if (lastM) { lastM = null; if (feed) feed.innerHTML = ''; } return; }
     if (M !== lastM) { lastM = M; alive = M.ents.map((e) => !!(e && e.alive)); kills = M.player.kills || 0; streak = []; superWas = false; if (feed) feed.innerHTML = ''; return; }
     const me = M.player;
-    M.ents.forEach((e, i) => {
-      if (!e) return; const was = alive[i]; alive[i] = !!e.alive;
-      if (was && !e.alive && !e.isBoss) {
-        const k = e.lastHitBy, mine = (x) => x && x.team === me.team;
-        const kn = k ? `<span class="${mine(k) ? 'b' : 'r'}">${esc(k === me ? 'Vous' : k.name)}</span>` : '';
-        push(`${kn}<i>✖</i><span class="${mine(e) ? 'b' : 'r'}">${esc(e === me ? 'Vous' : e.name)}</span>`, e === me ? 'me-dead' : k === me ? 'me-kill' : '');
-      }
-    });
+    // (le fil des éliminations existe déjà dans le rendu du jeu)
     // séries du joueur
     const nk = me.kills || 0;
     if (nk > kills) { const now = performance.now(); for (let j = kills; j < nk; j++) streak.push(now); streak = streak.filter((t) => now - t < 5000); kills = nk; const w = WORDS[Math.min(5, streak.length)]; if (w && streak.length >= 2) announce(w[0], streak.length + ' en série', w[1]); }

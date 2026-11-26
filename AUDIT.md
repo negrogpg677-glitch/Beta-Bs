@@ -169,3 +169,8 @@ Tests : `tools/test-duel.js` 7/7, modes simulés jusqu'au bout (11 modes), serve
 - Protocole 2 : le serveur refuse les parties aux anciennes versions (cartes horizontales) avec le message « mettez le jeu à jour ».
 - Vérifié : les 11 modes simulés 3 fois jusqu'à la fin, sans erreur (buts et coffres dans les deux sens).
 - Reste à faire : pour l'équipe rouge (en haut), la vue n'est pas encore retournée (elle attaque vers le bas).
+
+## v3.8 — refonte visuelle « NEO 2030 » et menu développeur façon référence
+- **Menu développeur** au style de la vidéo de référence (verre sombre) : en-tête logo + version, « Bibliothèque » (Bibliothèque / Favoris / ancien panneau), boutons Amis (joueurs, cadeaux), Paramètres, Modifier l'interface, fermer ; colonne Bataille / Affichage / En ligne / Divers avec compteurs + recherche ; onglets en pilules avec compteurs ; « Profil 1/2/3 » (jeux de réglages) ; cartes OUI/NON avec ⓘ et réglages ; page de détail (Activé, description, PARAMÈTRES, Retour) ; en partie « ⚡ Accès rapide » + FPS. Toutes les fonctions précédentes sont des cartes (42), aucune supprimée.
+- **Salon** : fond animé (aurore, grille néon en perspective qui défile, faisceaux, particules), plateforme holographique (anneaux, scan, faisceau), panneaux en verre aux bordures néon avec reflet, bouton JOUER lumineux avec balayage, entrées animées en cascade ; écrans et fenêtres au même style. Fond allégé en qualité « éco ».
+- **Combat** : annonces néon des séries (DOUBLE / TRIPLE / MÉGA / INARRÊTABLE), éclair doré sur les bords quand la super est prête.
