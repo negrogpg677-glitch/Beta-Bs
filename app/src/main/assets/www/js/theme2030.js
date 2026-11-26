@@ -27,6 +27,7 @@
     raf = requestAnimationFrame(frame);
     const home = document.getElementById('home'), visible = home && UI.screen === 'home' && !(G.App && G.App.state === 'match');
     if (!visible || document.hidden) return;
+    if (document.body.classList.contains('prism')) { if (cv) cv.style.display = 'none'; return; } // v4.4 : le fond PRISM (teinté par le personnage) prend le relais
     if (now - last < 33) return; const dt = Math.min(0.05, (now - last) / 1000); last = now;
     if (!ensure()) return;
     if (cv.clientWidth !== W || cv.clientHeight !== H) resize();

@@ -24,7 +24,7 @@ const getJSON = async (p) => (await fetch(URLM + p)).json();
       window.AndroidBridge = { kvGet: (k) => x('GET', k), kvSet: (k, v) => { x('PUT', k, v); }, kvDel: (k) => { x('DELETE', k); } };
     }, [URLM, name]);
     const p = await ctx.newPage(); p.on('pageerror', (e) => errs.push(name + ': ' + e.message));
-    await p.goto(GAME); await p.waitForTimeout(3300); await p.mouse.click(640, 300); await p.waitForTimeout(1200);
+    await p.goto(GAME); await p.waitForTimeout(1500); await p.waitForSelector('#splash[data-ready="1"]', { timeout: 20000 }).catch(() => {}); await p.mouse.click(640, 300); await p.waitForTimeout(1200); // l'écran-titre doit être prêt avant de toucher
     p.ctx = ctx; return p;
   }
   const state = (p) => p.evaluate(() => ({ logged: G.Account.loggedIn(), status: G.Account.status, name: G.Save.data.name, coins: G.Save.data.coins, gems: G.Save.data.gems, tr: G.Save.totalTrophies(), unlocked: G.Save.data.unlocked.length }));

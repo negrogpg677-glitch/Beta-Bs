@@ -115,11 +115,13 @@
     }
     return w;
   }
-  function model(id, skin) { const k = id + '|' + skin; if (!C3.models[k]) C3.models[k] = build(id, skin); return C3.models[k]; }
+  function model(id, skin, lite) { const cu = C3.CUSTOM[id], k = id + '|' + skin + (cu && lite ? '|lite' : ''); if (!C3.models[k]) C3.models[k] = cu ? cu.build(skin, !!lite) : build(id, skin); return C3.models[k]; } // lite : version allégée pour le combat
+  C3.CUSTOM = {}; // personnages PRISM : modèles et animations dédiés (js/heroes.js)
 
   /* ---------- animation ---------- */
   const lerp = (a, b, k) => a + (b - a) * k;
   function pose(m, st) {
+    if (m.custom) return m.custom.animate(m, st);
     const t = st.t || 0, sd = (st.seed || 0) * 1.3, run = !!st.moving, w = st.walk || t * 6;
     const { body, hips, torso, head, legs, arms, eyes, brows, mouth } = m;
     body.position.set(0, 0, 0); body.rotation.set(0, 0, 0); body.scale.set(1, 1, 1); torso.rotation.set(0, 0, 0); head.rotation.set(0, 0, 0);
@@ -153,7 +155,7 @@
 
   /* ---------- scènes et caméras ---------- */
   const scene = new THREE.Scene();
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x5a62a8, 0.6));
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x5a62a8, 0.6); scene.add(hemi);
   const key = new THREE.DirectionalLight(0xfff4e0, 1.2); key.position.set(-2, 4, 5); scene.add(key);
   const rim = new THREE.DirectionalLight(0xa8d8ff, 0.8); rim.position.set(3, 2, -4); scene.add(rim);
   const camP = new THREE.PerspectiveCamera(26, 1, 0.1, 50), camM = new THREE.OrthographicCamera(-1.6, 1.6, 1.6, -1.6, 0.1, 50);
@@ -255,12 +257,13 @@
     camP.aspect = w / h; camP.fov = 26; camP.updateProjectionMatrix();
     const dist = ht / (2 * Math.tan((camP.fov * Math.PI) / 360)), cy = 1.25 + (0.76 - (opts.y || 0.76)) * ht;
     camP.position.set(0, cy + dist * 0.12, dist); camP.lookAt(0, cy, 0);
+    if (C3.camHook) C3.camHook(camP, cv, opts, opts._t || 0, cy, dist);
     return { W, H, w, h };
   }
   function blit(cv, f, opts) {
     draw(f.w, f.h, camP);
     const c = cv.getContext('2d'); c.clearRect(0, 0, f.W, f.H);
-    c.save(); c.globalAlpha = 0.35; c.fillStyle = '#000'; c.beginPath(); c.ellipse(f.W / 2, f.H * (opts.y || 0.76) + f.H * 0.12, f.W * 0.2, f.W * 0.05, 0, 0, Math.PI * 2); c.fill(); c.restore();
+    if (!opts.stage) { c.save(); c.globalAlpha = 0.35; c.fillStyle = '#000'; c.beginPath(); c.ellipse(f.W / 2, f.H * (opts.y || 0.76) + f.H * 0.12, f.W * 0.2, f.W * 0.05, 0, 0, Math.PI * 2); c.fill(); c.restore(); }
     c.drawImage(CV, 0, S - f.h, f.w, f.h, 0, 0, f.W, f.H);
   }
   function portraitRig(cv, inst, t, opts) {
@@ -269,23 +272,24 @@
     if (pk >= 0 && pk < 0.05) want = { k: 'poke', once: true, force: true };
     stepInst(inst, want, t); show(inst);
     inst.root.rotation.y = (opts.yaw !== undefined ? opts.yaw : -0.35) + rotYaw(cv) + (opts.spin ? t * 0.6 : 0);
-    blit(cv, frame(cv, opts), opts);
+    opts._t = t; blit(cv, frame(cv, opts), opts);
   }
   function portraitProc(cv, id, skin, t, opts) {
     opts = opts || {};
     const W = cv.width, H = cv.height, w = Math.min(S, W), h = Math.min(S, Math.round(w * H / W));
     const m = model(id, skin); show(m);
-    pose(m, { t, seed: 0, pose: opts.pose, happy: opts.happy, poke: C3.pokeId === cv ? (performance.now() - C3._pokeAt) / 1000 : -1, attackPose: opts.attackPose });
-    m.root.rotation.y = (opts.yaw !== undefined ? opts.yaw : -0.35) + (opts.spin ? t * 0.6 : 0);
+    pose(m, { t, seed: 0, pose: opts.pose, happy: opts.happy, poke: C3.pokeId === cv ? (performance.now() - C3._pokeAt) / 1000 : -1, attackPose: opts.attackPose, key: cv, opts });
+    m.root.rotation.y = (opts.yaw !== undefined ? opts.yaw : -0.35) + rotYaw(cv) + (opts.spin ? t * 0.6 : 0);
     const z = opts.zoom || 1, ht = 3.2 / z;
     camP.aspect = w / h; camP.fov = 26; camP.updateProjectionMatrix();
     const dist = ht / (2 * Math.tan((camP.fov * Math.PI) / 360));
     const cy = 1.25 + (0.76 - (opts.y || 0.76)) * ht;
     camP.position.set(0, cy + dist * 0.12, dist); camP.lookAt(0, cy, 0);
+    if (C3.camHook) C3.camHook(camP, cv, opts, t, cy, dist);
     draw(w, h, camP);
     const c = cv.getContext('2d'); c.clearRect(0, 0, W, H);
     // ombre au sol
-    c.save(); c.globalAlpha = 0.35; c.fillStyle = '#000'; c.beginPath(); c.ellipse(W / 2, H * (opts.y || 0.76) + H * 0.12, W * 0.2, W * 0.05, 0, 0, Math.PI * 2); c.fill(); c.restore();
+    if (!opts.stage) { c.save(); c.globalAlpha = 0.35; c.fillStyle = '#000'; c.beginPath(); c.ellipse(W / 2, H * (opts.y || 0.76) + H * 0.12, W * 0.2, W * 0.05, 0, 0, Math.PI * 2); c.fill(); c.restore(); }
     c.drawImage(CV, 0, S - h, w, h, 0, 0, W, H);
   }
   C3.poke = function (cv) { C3.pokeId = cv; C3.pokeT = performance.now() / 1000 - 0; C3._pokeAt = performance.now(); };
@@ -304,8 +308,8 @@
       stepInst(inst, want, o.t); show(inst);
       const a = o.deathT !== undefined ? o.deathAng : o.aim; inst.root.rotation.y = Math.atan2(Math.cos(a), Math.sin(a));
     } else {
-      const m = model(id, skin); show(m);
-      pose(m, { t: o.t, seed: o.seed, moving: o.moving, walk: o.walk, recoil: o.recoil, flash: o.flash, frozen: o.frozen, angry: o.angry, roll: o.roll, deathT: o.deathT, pose: o.pose, look: false });
+      const m = model(id, skin, true); show(m);
+      pose(m, m.custom ? Object.assign({}, o, { key: 'e' + o.key, look: false, match: true }) : { t: o.t, seed: o.seed, moving: o.moving, walk: o.walk, recoil: o.recoil, flash: o.flash, frozen: o.frozen, angry: o.angry, roll: o.roll, deathT: o.deathT, pose: o.pose, look: false });
       const a = o.deathT !== undefined ? o.deathAng : o.aim; m.root.rotation.y = Math.atan2(Math.cos(a), Math.sin(a));
     }
     camM.position.set(0, 1.1 + 6 * Math.sin(0.82), 6 * Math.cos(0.82)); camM.lookAt(0, 1.1, 0);
@@ -332,6 +336,7 @@
     C3.lastBatch = i - 1;
   };
 
+  C3._h = { THREE, part, grp, mat, geo, outMat, scene, hemi, key, rim, camP, camM, renderer, canvas: () => CV, S, pose, model };
   // branchement : portraits animés des menus en 3D
   const base = G.Render.portrait;
   G.Render.portrait = function (cv, id, skin, t, opts) {

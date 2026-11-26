@@ -274,7 +274,7 @@ function onMessage(c, raw) {
   if (acc.handle(c, msg)) return;
   if (devops.handle(c, msg)) return;
   if (devsrv.handle(c, msg)) return;
-  if (c.v < 3 && (msg.t === 'party_start' || msg.t === 'resume' || msg.t === 'party_join')) return err(c, 'update', 'Nouvelle version de Brawl Rush disponible : mettez le jeu à jour pour jouer en ligne.');
+  if (c.v < 4 && (msg.t === 'party_start' || msg.t === 'resume' || msg.t === 'party_join')) return err(c, 'update', 'Nouvelle version de Brawl Rush disponible : mettez le jeu à jour pour jouer en ligne.');
   switch (msg.t) {
     case 'ping': if (isFinite(+msg.p) && +msg.p > 0) c.ping = Math.min(5000, Math.round(+msg.p)); send(c, { t: 'pong', ts: msg.ts }); break;
     case 'input': {

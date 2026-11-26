@@ -148,6 +148,35 @@
       atk: { name: 'Griffes de givre', n: 5, spread: 50, range: 3.8, speed: 15, dmg: 520, r: 9, reload: 1.15, shape: 'ice', color: '#c8f0ff', slow: { f: 0.55, t: 1.4 }, sfx: 'shotgun' },
       sup: { name: 'Avalanche', type: 'jump', dist: 5.2, dmg: 1200, splash: 2.3, freeze: 1.3, knock: 120, color: '#c8f0ff' },
     },
+    /* ---------- PRISM : personnages originaux (v4.4) — modèles 3D dédiés dans js/heroes.js ---------- */
+    {
+      id: 'ignis', name: 'Ignis', role: 'Forgeron', rarity: 'epic', price: 170, hp: 8400, speed: 3.85, superCost: 3700, voice: 0.62, prism: true,
+      desc: 'Un forgeron né dans un volcan. Son marteau crache des braises, et il s\'écrase en météore sur ses ennemis.', aiRange: 3.3,
+      look: { skin: '#3b302c', body: '#2c2729', body2: '#151214', hair: '#ff6a1a', accent: '#ffb21a', hat: 'forge', weapon: 'hammer', win: 'flex' },
+      atk: { name: 'Frappe de forge', n: 5, spread: 58, range: 3.5, speed: 15, dmg: 540, r: 10, reload: 1.25, shape: 'ember', color: '#ff7a1a', poison: { dps: 160, t: 2 }, sfx: 'shotgun' },
+      sup: { name: 'Chute de magma', type: 'jump', dist: 6.0, dmg: 1250, splash: 2.1, knock: 150, poison: { dps: 340, t: 3 }, color: '#ff5a1a', fx: 'magma' },
+    },
+    {
+      id: 'nyx', name: 'Nyx-7', role: 'Assassin', rarity: 'mythic', price: 350, hp: 3500, speed: 4.7, superCost: 3000, voice: 1.25, prism: true,
+      desc: 'Une androïde spectrale. Ses lames d\'énergie tranchent en croix, et elle traverse le champ de bataille en phase fantôme.', aiRange: 4.0,
+      look: { skin: '#e9eef6', body: '#f3f6fb', body2: '#283246', hair: '#36f0ff', accent: '#36f0ff', hat: 'visor', weapon: 'blades', win: 'spin' },
+      atk: { name: 'Lames spectrales', n: 2, spread: 24, range: 4.4, speed: 26, dmg: 760, r: 9, reload: 0.95, shape: 'blade', color: '#36f0ff', pierce: true, sfx: 'zap' },
+      sup: { name: 'Phase fantôme', type: 'dash', dist: 7.4, speed: 22, dmg: 1100, stun: 0.5, knock: 80, color: '#36f0ff', fx: 'phase' },
+    },
+    {
+      id: 'lumen', name: 'Lumen', role: 'Mage prismatique', rarity: 'legend', price: 700, hp: 4200, speed: 4.0, superCost: 3400, voice: 1.1, prism: true,
+      desc: 'Une mage qui lévite au milieu de ses cristaux. Ses rayons se divisent en arc-en-ciel, sa supernova soigne les alliés.', aiRange: 7.2,
+      look: { skin: '#dff4ff', body: '#5b3fe0', body2: '#22145e', hair: '#bffff4', accent: '#ff7af0', hat: 'prism', weapon: 'crystal', win: 'spin' },
+      atk: { name: 'Rayon prismatique', n: 3, spread: 16, range: 8.2, speed: 24, dmg: 430, r: 8, reload: 1.35, shape: 'prism', color: '#c8a8ff', pierce: true, sfx: 'magic' },
+      sup: { name: 'Supernova', type: 'aura', radius: 4.4, dmg: 950, heal: 1600, stun: 0.4, color: '#e0b8ff', sfx: 'super', fx: 'nova' },
+    },
+    {
+      id: 'krank', name: 'Krank', role: 'Mécha', rarity: 'superrare', price: 80, hp: 6200, speed: 3.75, superCost: 3600, voice: 1.45, prism: true,
+      desc: 'Un petit pilote très sûr de lui dans son marcheur blindé. Son canon à rivets mitraille, ses mortiers pleuvent.', aiRange: 6.6,
+      look: { skin: '#f2c49c', body: '#f0a81c', body2: '#3a3f4c', hair: '#6a3a1e', accent: '#3affb0', hat: 'pilot', weapon: 'rivetgun', win: 'flex' },
+      atk: { name: 'Canon à rivets', n: 1, burst: 4, burstDelay: 0.08, spread: 6, range: 7.6, speed: 24, dmg: 330, r: 7, reload: 1.4, shape: 'rivet', color: '#ffd26a', knock: 30, sfx: 'shoot' },
+      sup: { name: 'Pluie de mortiers', type: 'barrage', range: 10, count: 6, area: 2.0, dmg: 1000, splash: 1.15, duration: 1.2, shape: 'rocket', color: '#3affb0', fx: 'mortar' },
+    },
   ];
   G.BRAWLER = {};
   // le boss n'est pas jouable : il n'apparaît pas dans la liste des brawlers
@@ -166,7 +195,7 @@
     pulse: { name: 'Onde répulsive', icon: '💥', color: '#ff7ad8', desc: 'repousse, blesse et ralentit les ennemis proches' },
     reload: { name: 'Recharge éclair', icon: '🔋', color: '#ffb21a', desc: 'recharge toutes les munitions et +30 % de super' },
   };
-  G.GADGET_OF = { sherry: 'reload', rex: 'sprint', taurus: 'shield', boomer: 'pulse', luna: 'heal', spiky: 'shield', corbeau: 'sprint', frost: 'pulse', pyro: 'reload', volt: 'sprint', maree: 'heal', nimbus: 'reload', grimm: 'sprint', tictac: 'pulse', zen: 'heal', scarab: 'shield', bumper: 'pulse', jongleur: 'reload', yeti: 'heal' };
+  G.GADGET_OF = { sherry: 'reload', rex: 'sprint', taurus: 'shield', boomer: 'pulse', luna: 'heal', spiky: 'shield', corbeau: 'sprint', frost: 'pulse', pyro: 'reload', volt: 'sprint', maree: 'heal', nimbus: 'reload', grimm: 'sprint', tictac: 'pulse', zen: 'heal', scarab: 'shield', bumper: 'pulse', jongleur: 'reload', yeti: 'heal', ignis: 'shield', nyx: 'sprint', lumen: 'heal', krank: 'pulse' };
   G.BRAWLERS.forEach((b) => { b.gadget = G.GADGET_OF[b.id] || 'heal'; });
   G.EMOTES = ['😂', '😡', '👍', '😭', '🔥', '👋', '🤝', '💀'];
   /* comptes joueurs (Supabase) : URL du projet + clé publique « anon ». Voir COMPTES.md */

@@ -15,7 +15,7 @@ const api = async (p, o) => { o = o || {}; const r = await fetch('http://127.0.0
 const svc = (p, o) => api(p, Object.assign({ key: 'service-test-key' }, o));
 class Cl {
   constructor(name) { this.name = name; this.msgs = []; this.w = []; }
-  open(url) { return new Promise((res) => { this.ws = new WebSocket(url); this.ws.on('open', () => this.ws.send(JSON.stringify({ t: 'hello', name: this.name, v: 3 }))); this.ws.on('message', (raw) => { const m = JSON.parse(raw); if (this.on) this.on(m); if (m.t === 'snap') return; this.msgs.push(m); if (m.t === 'welcome') { this.pid = m.pid; res(); } this.w = this.w.filter((x) => { if (x.t === m.t && (!x.f || x.f(m))) { x.r(m); return false; } return true; }); }); }); }
+  open(url) { return new Promise((res) => { this.ws = new WebSocket(url); this.ws.on('open', () => this.ws.send(JSON.stringify({ t: 'hello', name: this.name, v: 4 }))); this.ws.on('message', (raw) => { const m = JSON.parse(raw); if (this.on) this.on(m); if (m.t === 'snap') return; this.msgs.push(m); if (m.t === 'welcome') { this.pid = m.pid; res(); } this.w = this.w.filter((x) => { if (x.t === m.t && (!x.f || x.f(m))) { x.r(m); return false; } return true; }); }); }); }
   send(o) { this.ws.send(JSON.stringify(o)); }
   wait(t, f, ms = 5000) { return new Promise((r, j) => { const to = setTimeout(() => j(new Error('délai : ' + t)), ms); this.w.push({ t, f, r: (m) => { clearTimeout(to); r(m); } }); }); }
   last(t) { return [...this.msgs].reverse().find((m) => m.t === t); }

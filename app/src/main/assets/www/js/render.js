@@ -463,7 +463,7 @@
       case 'scythe': { c.rotate(a + p.age * 14); c.beginPath(); c.arc(0, 0, 13, 0.2, 2.6); c.lineWidth = 7; c.strokeStyle = OUT; c.lineCap = 'round'; c.stroke(); c.lineWidth = 4; c.strokeStyle = p.color; c.stroke(); break; }
       case 'orb': { const pu = 1 + Math.sin(p.age * 18) * 0.12; circ(c, 0, 0, 12 * pu); fillStroke(c, '#fff8d8', 2.4); circ(c, 0, 0, 6 * pu); c.fillStyle = p.color; c.fill(); break; }
       case 'gear': { c.rotate(p.age * 16); for (let i = 0; i < 6; i++) { c.rotate(1.047); rrect(c, -2.2, -9.5, 4.4, 5, 1); fillStroke(c, p.color, 1.4); } circ(c, 0, 0, 6.5); fillStroke(c, p.color, 2); circ(c, 0, 0, 2.4); c.fillStyle = OUT; c.fill(); break; }
-      default: circ(c, 0, 0, 6); fillStroke(c, p.color, 2);
+      default: if (R.projShape && R.projShape[p.shape]) R.projShape[p.shape](c, p, a); else { circ(c, 0, 0, 6); fillStroke(c, p.color, 2); }
     }
     c.restore();
   }
@@ -712,7 +712,7 @@
     const o = { key: b.idx, x: b.x, y: b.y, sc: 1.08 * (b.big || 1), aim: b.ang, t: time + b.idx * 1.7, seed: b.idx * 0.9, walk: b.walkT, moving: b.moving, flash: b.flash, recoil: b.recoil, z: b.z || 0,
       roll: b.roll ? b.roll.t / b.roll.dur : (b.rollT >= 0 && b.rollT < 0.3 ? b.rollT / 0.3 : undefined),
       alpha: b.invuln > 0 && !b.jump && !b.roll && !(b.rollT >= 0 && b.rollT < 0.3) ? 0.6 + Math.sin(time * 30) * 0.2 : (inBush && isMe ? 0.7 : 1), frozen: b.freeze > 0, angry: M.state === 'play',
-      lean: b.moving ? Math.sign(Math.cos(b.face)) : 0, superReady: b.superCharge >= 1 && b.alive, deathT: b.alive ? undefined : b.deathT, deathAng: b.deathAng !== undefined ? b.deathAng : b.face, pose };
+      lean: b.moving ? Math.sign(Math.cos(b.face)) : 0, face: b.face, ammo: b.ammo, hpK: b.hp / (b.maxhp || 1), stun: b.stun > 0, dashing: !!b.dash, jumping: !!b.jump, superReady: b.superCharge >= 1 && b.alive, deathT: b.alive ? undefined : b.deathT, deathAng: b.deathAng !== undefined ? b.deathAng : b.face, pose };
     if (!b.alive) { // animation d'élimination : le brawler tombe et s'efface
       charDraw(c, b.id, b.skin, Object.assign(o, { shadow: true }));
       return;
@@ -858,15 +858,18 @@
     const mm = Math.max(0, Math.floor(M.left / 60)), ss = Math.max(0, Math.ceil(M.left % 60));
     const tstr = mm + ':' + (ss < 10 ? '0' : '') + (ss === 60 ? '00' : ss);
     if (M.mode === 'showdown') {
-      rrect(c, W / 2 - 14 * u, top, 28 * u, 7 * u, 3.5 * u); c.fillStyle = 'rgba(10,10,30,0.7)'; c.fill();
+      facet(c, W / 2 - 14 * u, top, 28 * u, 7 * u, 2.6 * u, 0.8 * u); c.fillStyle = 'rgba(14,11,34,0.85)'; c.fill(); c.strokeStyle = 'rgba(255,255,255,0.3)'; c.lineWidth = 1.5; c.stroke();
       text('☠ ' + M.alive + ' / 10', W / 2 - 5 * u, top + 3.5 * u, 4.2 * u, '#fff');
       text(tstr, W / 2 + 8.5 * u, top + 3.5 * u, 3.6 * u, '#ffd21f');
     } else {
       // scores
       const bw = 13 * u, bh = 7 * u;
-      rrect(c, W / 2 - bw * 1.5 - 1 * u, top, bw, bh, 2 * u); c.fillStyle = 'rgba(40,110,255,0.9)'; c.fill(); c.strokeStyle = OUT; c.lineWidth = 3; c.stroke();
-      rrect(c, W / 2 + bw * 0.5 + 1 * u, top, bw, bh, 2 * u); c.fillStyle = 'rgba(255,60,70,0.9)'; c.fill(); c.stroke();
-      rrect(c, W / 2 - bw / 2, top, bw, bh, 2 * u); c.fillStyle = 'rgba(10,10,30,0.85)'; c.fill(); c.stroke();
+      // PRISM : capsules taillées (coins alternés), dégradés d'équipe, arête lumineuse
+      const cap = (x, w, a, b, glow) => { facet(c, x, top, w, bh, 2.6 * u, 0.8 * u); const g = c.createLinearGradient(0, top, 0, top + bh); g.addColorStop(0, a); g.addColorStop(1, b); c.fillStyle = g; c.shadowColor = glow; c.shadowBlur = 2.4 * u; c.fill(); c.shadowBlur = 0; c.strokeStyle = 'rgba(255,255,255,0.35)'; c.lineWidth = 1.5; c.stroke(); };
+      cap(W / 2 - bw * 1.5 - 1 * u, bw, 'rgba(70,150,255,0.95)', 'rgba(26,60,168,0.95)', 'rgba(60,140,255,0.8)');
+      cap(W / 2 + bw * 0.5 + 1 * u, bw, 'rgba(255,100,110,0.95)', 'rgba(168,24,42,0.95)', 'rgba(255,80,100,0.8)');
+      cap(W / 2 - bw / 2, bw, 'rgba(38,30,78,0.92)', 'rgba(12,10,30,0.95)', 'rgba(138,92,255,0.6)');
+      { const pg = c.createLinearGradient(W / 2 - bw / 2, 0, W / 2 + bw / 2, 0); pg.addColorStop(0, '#36f0ff'); pg.addColorStop(0.33, '#8a5cff'); pg.addColorStop(0.66, '#ff4fd8'); pg.addColorStop(1, '#ffb21a'); c.fillStyle = pg; c.fillRect(W / 2 - bw / 2 + 2 * u, top + bh - 0.5 * u, bw - 4 * u, 0.35 * u); }
       text(tstr, W / 2, top + bh / 2, 4 * u, M.left < 15 ? '#ff6a6a' : '#fff');
       let s0, s1;
       if (M.mode === 'gemgrab') { s0 = Sim_gems(M, 0); s1 = Sim_gems(M, 1); }
@@ -1084,11 +1087,23 @@
     if (!(s.active && s.drag)) {
       c.save(); c.translate(L.supX, L.supY);
       if (!ready) { c.beginPath(); c.arc(0, 0, L.supR * 1.22, 0, TAU); c.strokeStyle = 'rgba(0,0,0,0.45)'; c.lineWidth = 6; c.stroke();
-        c.beginPath(); c.arc(0, 0, L.supR * 1.22, -Math.PI / 2, -Math.PI / 2 + TAU * p.superCharge); c.strokeStyle = '#ffd21f'; c.lineWidth = 5; c.lineCap = 'round'; c.stroke(); }
-      else { const pl = (time * 1.6) % 1; c.globalAlpha = 0.7 * (1 - pl); circ(c, 0, 0, L.supR * (1.1 + pl * 0.6)); c.strokeStyle = '#fff3a0'; c.lineWidth = 4; c.stroke(); c.globalAlpha = 1; }
+        c.beginPath(); c.arc(0, 0, L.supR * 1.22, -Math.PI / 2, -Math.PI / 2 + TAU * p.superCharge); c.strokeStyle = prismStroke(c, 0, -Math.PI / 2, '#ffd21f'); c.lineWidth = 5; c.lineCap = 'round'; c.stroke(); }
+      else { const pl = (time * 1.6) % 1; c.globalAlpha = 0.7 * (1 - pl); circ(c, 0, 0, L.supR * (1.1 + pl * 0.6)); c.strokeStyle = '#fff3a0'; c.lineWidth = 4; c.stroke(); c.globalAlpha = 1;
+        circ(c, 0, 0, L.supR * 1.2); c.strokeStyle = prismStroke(c, 0, time * 3, '#ffd21f'); c.lineWidth = 5; c.shadowColor = '#ff8af0'; c.shadowBlur = 14; c.stroke(); c.shadowBlur = 0; }
       c.restore();
     }
     actionStick(c, L, s, L.supX, L.supY, L.supR * (ready && !s.active ? 1 + Math.sin(time * 8) * 0.05 : 1), ready ? ['#fff27a', '#ff9f1a'] : ['#7a7a98', '#3a3a58'], iconBolt, now);
+  }
+  // rectangle aux coins alternés (grand / petit rayon) : signature visuelle PRISM
+  function facet(c, x, y, w, h, r1, r2) {
+    c.beginPath(); c.moveTo(x + r1, y); c.lineTo(x + w - r2, y); c.quadraticCurveTo(x + w, y, x + w, y + r2); c.lineTo(x + w, y + h - r1); c.quadraticCurveTo(x + w, y + h, x + w - r1, y + h);
+    c.lineTo(x + r2, y + h); c.quadraticCurveTo(x, y + h, x, y + h - r2); c.lineTo(x, y + r1); c.quadraticCurveTo(x, y, x + r1, y); c.closePath();
+  }
+  R.facet = facet;
+  // dégradé conique du spectre (repli : couleur unie si le navigateur ne le gère pas)
+  function prismStroke(c, cx, a0, fb) {
+    if (!c.createConicGradient) return fb;
+    const g = c.createConicGradient(a0, cx, 0); ['#36f0ff', '#8a5cff', '#ff4fd8', '#ffb21a', '#36f0ff'].forEach((k, i) => g.addColorStop(i / 4, k)); return g;
   }
   function iconCross(c, r) {
     c.strokeStyle = '#fff'; c.lineWidth = Math.max(3, r * 0.09); c.lineCap = 'round';
@@ -1118,8 +1133,13 @@
       const pr = b.active ? Math.min(1, (now - (b.t0 || 0)) / 80) : 0, sc = 1 - 0.08 * pr;
       c.translate(cx, cy); c.scale(sc, sc);
       circ(c, 2, 5, R0); c.fillStyle = 'rgba(0,0,0,0.25)'; c.fill();
+      circ(c, 0, 0, R0 * 1.06); c.fillStyle = 'rgba(14,11,34,0.55)'; c.fill(); // anneau de verre
       circ(c, 0, 0, R0); const g = c.createRadialGradient(0, -R0 * 0.35, 2, 0, 0, R0); g.addColorStop(0, cols[0]); g.addColorStop(1, cols[1]);
       c.fillStyle = g; c.fill(); c.strokeStyle = OUT; c.lineWidth = 5; c.stroke();
+      // facettes de gemme (PRISM)
+      c.save(); circ(c, 0, 0, R0 - 2); c.clip(); c.globalAlpha = 0.16; c.fillStyle = '#fff';
+      c.beginPath(); c.moveTo(-R0, -R0 * 0.1); c.lineTo(-R0 * 0.2, -R0); c.lineTo(R0 * 0.25, -R0); c.lineTo(-R0, R0 * 0.35); c.closePath(); c.fill();
+      c.globalAlpha = 0.1; c.fillStyle = '#000'; c.beginPath(); c.moveTo(R0, R0 * 0.1); c.lineTo(R0 * 0.2, R0); c.lineTo(R0, R0); c.closePath(); c.fill(); c.restore();
       c.beginPath(); c.arc(0, 0, R0 * 0.8, Math.PI * 1.1, Math.PI * 1.9); c.strokeStyle = 'rgba(255,255,255,0.5)'; c.lineWidth = 3; c.lineCap = 'round'; c.stroke();
       icon(c, R0);
     }

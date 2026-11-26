@@ -45,7 +45,7 @@
       clearTimeout(to);
       const n = G.Save.data.net || {};
       const A0 = G.App, inM = A0 && A0.state === 'match' && A0.M && A0.M.net ? Net.matchId : null;
-      ws.send(JSON.stringify({ t: 'hello', pid: n.pid, token: n.token, name: G.Save.data.name, v: 3, inMatch: inM, plat: window.AndroidBridge ? 'android' : /iPhone|iPad|iPod/.test(navigator.userAgent) ? 'ios' : 'web' }));
+      ws.send(JSON.stringify({ t: 'hello', pid: n.pid, token: n.token, name: G.Save.data.name, v: 4, inMatch: inM, plat: window.AndroidBridge ? 'android' : /iPhone|iPad|iPod/.test(navigator.userAgent) ? 'ios' : 'web' }));
     };
     ws.onmessage = (ev) => {
       let m; try { m = JSON.parse(ev.data); } catch (e) { return; }

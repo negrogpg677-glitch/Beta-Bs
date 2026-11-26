@@ -6,8 +6,27 @@
    ⚠ À chaque nouvelle version : ajouter une entrée EN TÊTE de G.CHANGELOG et mettre G.VERSION à jour. */
 (function () {
   const G = window.G, UI = G.UI;
-  G.VERSION = '4.3'; G.VERSION_NAME = G.VERSION;
+  G.VERSION = '4.4'; G.VERSION_NAME = G.VERSION;
   G.CHANGELOG = [
+    { v: '4.4', date: '2026-11-26', title: 'PRISM : nouveaux héros et nouvelle interface',
+      players: [
+        '4 nouveaux héros originaux : Ignis le forgeron volcanique, Nyx-7 l\'androïde spectrale, Lumen la mage prismatique et Krank le pilote de marcheur — chacun avec son attaque, sa super et son style.',
+        'Animations entièrement nouvelles pour ces héros : course avec du poids, pas chassés, attaque, rechargement, réaction aux coups, victoire, défaite, apparition, élimination et petits gestes quand ils attendent.',
+        'Vraies matières en 3D : métal qui reflète la lumière, céramique, tissu brodé, cristal, lignes d\'énergie lumineuses.',
+        'Salon : chaque personnage est présenté sur une scène à son image (forge, grille holographique, île de cristal, hangar), avec caméra animée et transition quand on change de personnage.',
+        'Flèches ‹ › autour du nom pour changer de brawler directement depuis le salon.',
+        'Nouvelle interface « PRISM » : salon, brawlers, boutique, modes, réglages, résultats de victoire et de défaite, tout a été redessiné ; la couleur d\'ambiance suit votre personnage.',
+        'Combat : traînées lumineuses des tirs, explosions avec fumée et traces au sol, éclats à l\'élimination, caisses qui volent en éclats, effets uniques des supers, feu d\'artifice à la victoire.',
+        'Commandes de combat redessinées (boutons taillés, jauge de super arc-en-ciel).',
+        'Mise à jour obligatoire pour jouer en ligne (les nouveaux héros peuvent apparaître dans les parties).',
+      ],
+      dev: [
+        'js/heroes.js : modèles 3D procéduraux (textures dessinées au lancement, carte d\'environnement générée), moteur d\'animation à états mélangés.',
+        'En combat, version allégée de chaque héros : géométrie réduite et « squelette rigide » (une seule maille par matériau) → autant d\'appels de dessin que les anciens personnages.',
+        'js/stage.js (scènes du salon), js/prism_fx.js (effets de combat, purement visuels), js/prism_ui.js + css/prism.css (interface joueur).',
+        'Le Dev Hub n\'est pas modifié. Protocole client v4 (le serveur refuse les anciennes versions pour jouer en ligne).',
+        'Qualité « économie » : héros PRISM en 2D, aucun effet supplémentaire.',
+      ] },
     { v: '4.3', date: '2026-11-26', title: 'Graphismes nouvelle génération',
       players: [
         'Personnages en 3D animée pendant les combats (course, tir, roulade, victoire, défaite, élimination) — les téléphones moins puissants repassent automatiquement en 2D.',

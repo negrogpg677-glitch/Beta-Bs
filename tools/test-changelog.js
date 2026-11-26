@@ -17,16 +17,16 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   // 1. joueur normal qui passe de la 3.9 à la 4.0
   let p = await launch('3.9', true, false);
   let st = await p.evaluate(() => ({ open: !!document.querySelector('.clm'), vers: [...document.querySelectorAll('.cl-vh b')].map((x) => x.textContent), players: !!document.querySelector('.cl-sec:not(.dev)'), dev: !!document.querySelector('.cl-sec.dev'), seen: localStorage.getItem('br_seen_version') }));
-  ok(st.open && st.vers.join() === 'Version 4.3,Version 4.2,Version 4.1,Version 4.0' && st.players && !st.dev, 'mise à jour 3.9 → 4.3 : nouveautés pour les joueurs, sans la partie développeurs');
-  ok(st.seen === '4.3', 'version marquée comme vue');
+  ok(st.open && st.vers.join() === 'Version 4.4,Version 4.3,Version 4.2,Version 4.1,Version 4.0' && st.players && !st.dev, 'mise à jour 3.9 → 4.4 : nouveautés pour les joueurs, sans la partie développeurs');
+  ok(st.seen === '4.4', 'version marquée comme vue');
   await p.screenshot({ path: path.join(OUT, 'changelog_joueur.png') });
-  await p.evaluate(() => { while (G.UI.modals.length) G.UI.closeModal(); }); await sleep(2500); await p.goto(GAME + '?relance=1'); await sleep(2300); await p.mouse.click(422, 200); await sleep(5000); { const d = await p.evaluate(() => ({ cl: !!document.querySelector('.clm'), h: (document.querySelector('.clm h2') || {}).textContent, seen: localStorage.getItem('br_seen_version'), vers: [...document.querySelectorAll('.cl-vh b')].map((x) => x.textContent).join() })); ok(!d.cl, 'relance suivante : la fenêtre ne réapparaît pas' + (d.cl ? ' ' + JSON.stringify(d) : '')); }
+  await p.evaluate(() => { while (G.UI.modals.length) G.UI.closeModal(); }); await sleep(1500); { const cx = p.context(); await p.close(); p = await cx.newPage(); p.on('pageerror', (e) => errs.push(e.message)); } await sleep(500); await p.goto(GAME + '?relance=1'); // fermer la page = le stockage est réellement enregistré, comme quand on quitte le jeu await sleep(2300); await p.mouse.click(422, 200); await sleep(5000); { const d = await p.evaluate(() => ({ cl: !!document.querySelector('.clm'), h: (document.querySelector('.clm h2') || {}).textContent, seen: localStorage.getItem('br_seen_version'), vers: [...document.querySelectorAll('.cl-vh b')].map((x) => x.textContent).join() })); ok(!d.cl, 'relance suivante : la fenêtre ne réapparaît pas' + (d.cl ? ' ' + JSON.stringify(d) : '')); }
   // 2. versions sautées
   p = await launch('3.6', true, false); st = await p.evaluate(() => [...document.querySelectorAll('.cl-vh b')].map((x) => x.textContent));
-  ok(st.join() === 'Version 4.3,Version 4.2,Version 4.1,Version 4.0,Version 3.9,Version 3.8,Version 3.7', 'versions sautées (3.6 → 4.3) : toutes les nouveautés manquées (' + st.length + ')');
+  ok(st.join() === 'Version 4.4,Version 4.3,Version 4.2,Version 4.1,Version 4.0,Version 3.9,Version 3.8,Version 3.7', 'versions sautées (3.6 → 4.4) : toutes les nouveautés manquées (' + st.length + ')');
   // 3. première installation : rien
   p = await launch(null, false, false); await sleep(3000);
-  ok(!(await p.evaluate(() => !!document.querySelector('.clm'))) && (await p.evaluate(() => localStorage.getItem('br_seen_version'))) === '4.3', 'première installation : pas de fenêtre, version enregistrée');
+  ok(!(await p.evaluate(() => !!document.querySelector('.clm'))) && (await p.evaluate(() => localStorage.getItem('br_seen_version'))) === '4.4', 'première installation : pas de fenêtre, version enregistrée');
   // 4. développeur : partie « Développeurs » en plus
   p = await launch('3.9', true, true); st = await p.evaluate(() => ({ open: !!document.querySelector('.clm'), dev: !!document.querySelector('.cl-sec.dev'), badge: !!document.querySelector('.cl-devb') }));
   ok(st.open && st.dev && st.badge, 'compte développeur : nouveautés joueurs + partie « Développeurs »');
@@ -34,9 +34,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   // 5. consultable plus tard : Réglages et Dev Hub
   await p.evaluate(() => { while (G.UI.modals.length) G.UI.closeModal(); G.UI.ACT.settings(); }); await sleep(300);
   await p.click('[data-act=changelog]', { force: true }); await sleep(300);
-  ok((await p.evaluate(() => document.querySelectorAll('.clm .cl-v').length)) === 8, 'Réglages → « Nouveautés » : historique complet des versions');
+  ok((await p.evaluate(() => document.querySelectorAll('.clm .cl-v').length)) === 9, 'Réglages → « Nouveautés » : historique complet des versions');
   await p.evaluate(() => { while (G.UI.modals.length) G.UI.closeModal(); G.DevPro.open('notes'); }); await sleep(300);
-  ok(await p.evaluate(() => document.querySelectorAll('.dh-notes .cl-v').length === 8 && !!document.querySelector('.dh-notes .cl-sec.dev')), 'Dev Hub → Accueil → « Notes de version »');
+  ok(await p.evaluate(() => document.querySelectorAll('.dh-notes .cl-v').length === 9 && !!document.querySelector('.dh-notes .cl-sec.dev')), 'Dev Hub → Accueil → « Notes de version »');
   ok(!errs.length, 'aucune erreur JavaScript' + (errs.length ? ' : ' + errs.slice(0, 2).join(' | ') : ''));
   await b.close(); process.exit(fails ? 1 : 0);
 })().catch((e) => { console.error('ERREUR', e); process.exit(2); });
