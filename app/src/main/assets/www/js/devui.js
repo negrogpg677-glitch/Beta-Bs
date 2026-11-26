@@ -1,239 +1,199 @@
-/* Brawl Rush - interface du MENU DÉVELOPPEUR « verre sombre » (modèle : vidéo de référence)
-   En-tête (logo, version, Bibliothèque, Amis, Paramètres, Modifier l'interface, fermer) · colonne de catégories avec compteurs
-   et recherche · onglets en pilules avec compteurs · sélecteur de profil · grille de cartes OUI/NON avec ⓘ et réglages ·
-   page de détail (Activé, description, PARAMÈTRES, Retour) · « Accès rapide » + FPS en partie.
-   Toutes les fonctions du menu développeur (devpro.js) sont reprises : chaque outil est une carte. */
+/* Brawl Rush - INTERFACE DU MODE DÉVELOPPEUR (refonte « Dev Hub »)
+   Design moderne et espaces strictement séparés : chaque domaine a son propre espace, ses pages et sa couleur.
+   Accueil · Supervision · Modération · Labo en ligne · Bac à sable (hors ligne) · Création · Debug · Profils & réglages.
+   Aucune fonction supprimée : les outils de devpro.js (I) et de devconsole.js (vues serveur) sont rangés dans ces espaces.
+   Les droits (observer / administrer / développer) restent vérifiés par le serveur ; l'interface affiche des verrous. */
 (function () {
   const G = window.G, DP = G.DevPro; if (!DP) return;
   const Net = G.Net;
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const LS = { get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* ignore */ } } };
-  const SV = (p, w) => `<svg viewBox="0 0 24 24" width="${w || 24}" height="${w || 24}" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+  const SV = (p, w) => `<svg viewBox="0 0 24 24" width="${w || 22}" height="${w || 22}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
   const IC = {
-    battle: SV('<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>'),
-    eye: SV('<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>'),
-    globe: SV('<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/>'),
-    wrench: SV('<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/>'),
-    search: SV('<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>'),
-    info: SV('<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>'),
-    sliders: SV('<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/>'),
-    chev: SV('<path d="M6 9l6 6 6-6"/>', 18), back: SV('<path d="M15 6l-6 6 6 6"/>', 20), x: SV('<path d="M6 6l12 12M18 6L6 18"/>', 30),
-    friends: SV('<circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><path d="M2 20c0-3 3-5 6-5s6 2 6 5M14 15c3 0 8 1 8 5"/>'),
-    gear: SV('<circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>'),
-    brush: SV('<path d="M14 4l6 6-9 9H5v-6z"/><path d="M12 6l6 6"/>'), layout: SV('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/>', 20),
-    bolt: SV('<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>', 20), star: SV('<path d="M12 3l2.8 5.8 6.2.9-4.5 4.4 1 6.2L12 17.4 6.5 20.3l1-6.2L3 9.7l6.2-.9z"/>', 22),
+    home: SV('<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>'),
+    monitor: SV('<path d="M3 12h4l3-8 4 16 3-8h4"/>'),
+    shield: SV('<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>'),
+    flask: SV('<path d="M9 3h6M10 3v6L4 19a1 1 0 0 0 .9 1.5h14.2A1 1 0 0 0 20 19l-6-10V3"/><path d="M7 15h10"/>'),
+    gamepad: SV('<rect x="2" y="7" width="20" height="11" rx="5"/><path d="M7 11v3M5.5 12.5h3M15 12h.01M18 13h.01"/>'),
+    brush: SV('<path d="M14 4l6 6-9 9H5v-6z"/><path d="M12 6l6 6"/>'),
+    bug: SV('<rect x="7" y="7" width="10" height="13" rx="5"/><path d="M12 7V4M8 4l2 3M16 4l-2 3M3 12h4M17 12h4M4 18l3-2M20 18l-3-2"/>'),
+    user: SV('<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>'),
+    search: SV('<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>'), x: SV('<path d="M6 6l12 12M18 6L6 18"/>', 24),
+    star: SV('<path d="M12 3l2.8 5.8 6.2.9-4.5 4.4 1 6.2L12 17.4 6.5 20.3l1-6.2L3 9.7l6.2-.9z"/>', 20), lock: SV('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>', 16),
+    chev: SV('<path d="M9 6l6 6-6 6"/>', 18), bolt: SV('<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>', 20),
   };
-  const GROUPS = [
-    { k: 'observe', n: 'Observer', ic: 'eye', tabs: [['dash', 'Tableau de bord'], ['players', 'Joueurs'], ['games', 'Parties'], ['diag', 'Diagnostics']] },
-    { k: 'admin', n: 'Administrer', ic: 'gear', tabs: [['mod', 'Modération'], ['log', 'Journal']] },
-    { k: 'studio', n: 'Studio', ic: 'battle', tabs: [['lab', 'Labo'], ['combat', 'Triches de test'], ['modes', 'Modes'], ['chars', 'Personnages'], ['maps', 'Cartes'], ['overlay', 'Affichage'], ['mods', 'Mods'], ['adv', 'Avancé']] },
+  const B = { off: ['Hors ligne', 'b-off'], lab: ['En ligne · labo / privé', 'b-lab'], srv: ['Serveur', 'b-srv'], blocked: ['Bloqué en public', 'b-blk'], dev: ['Droit : développer', 'b-role'], obs: ['Droit : observer', 'b-role'], adm: ['Droit : administrer', 'b-role'] };
+  const badge = (k) => `<span class="dh-b ${B[k][1]}">${B[k][0]}</span>`;
+
+  /* ---------- espaces et pages ---------- */
+  // page : { id, t (titre), d (description), role, view: 'console:clé' | 'item:id' | 'items:a,b' | fonction }
+  const toggles = (list, scope) => () => list.map(([k, title, desc, sc]) => `<div class="dh-row"><div class="dh-rt"><b>${title}</b><small>${desc}</small><span class="dh-bs">${(sc || scope).map(badge).join('')}</span></div><button class="dh-sw ${G.Dev.cfg[k] ? 'on' : ''}" data-tg="${k}" aria-label="${title}"><i></i></button></div>`).join('');
+  const sliders = (list) => list.map(([k, l, a, b, s]) => `<div class="dh-row"><div class="dh-rt"><b>${l} <span class="dp-v">${G.Dev.cfg[k]}</span></b></div><input type="range" data-r="${k}" min="${a}" max="${b}" step="${s}" value="${G.Dev.cfg[k]}"></div>`).join('');
+  const CHEATS = [['god', 'Invincible', 'Aucun dégât reçu.'], ['ammo', 'Munitions infinies', 'Trois munitions en permanence.'], ['sup', 'Super toujours prête', 'La super se recharge instantanément.'], ['ohk', 'Un coup = élimination', 'Chaque tir élimine.'], ['aim', 'Aimbot', 'Vise l\'ennemi le plus proche (anticipation en ligne).'], ['dodge', 'Esquive automatique', 'Roulade quand un projectile va toucher.'], ['auto', 'Tir automatique', 'Tire dès qu\'un ennemi est à portée.'], ['gad', 'Gadgets infinis', 'Le gadget se recharge sans limite.']];
+  const W = [
+    { k: 'home', n: 'Accueil', s: 'Vue d\'ensemble', ic: 'home', c: '#7c8cff', pages: [{ id: 'home', t: 'Accueil', d: 'État, droits, favoris et accès rapide aux espaces.', view: () => homeView() }] },
+    { k: 'monitor', n: 'Supervision', s: 'Joueurs, parties, replays', ic: 'monitor', c: '#22d3ee', role: 'observe', pages: [
+      { id: 'dash', t: 'Tableau de bord', d: 'Données réelles du serveur, en direct.', role: 'observe', view: 'console:dash' },
+      { id: 'players', t: 'Joueurs', d: 'Connectés et récents, recherche, profil, historique.', role: 'observe', view: 'console:players' },
+      { id: 'matches', t: 'Parties en direct', d: 'Observer une partie en spectateur (caméra libre).', role: 'observe', view: 'console:matches' },
+      { id: 'replays', t: 'Replays', d: 'Revoir les dernières parties terminées.', role: 'observe', view: 'console:replays' },
+      { id: 'srvstate', t: 'Serveur', d: 'Parties, groupes, mémoire, sessions.', role: 'observe', view: 'item:srvstate' }] },
+    { k: 'moderation', n: 'Modération', s: 'Sanctions, signalements, journal', ic: 'shield', c: '#f87171', role: 'admin', pages: [
+      { id: 'mplayers', t: 'Joueurs', d: 'Avertir, déconnecter, sanctionner (confirmation + journal).', role: 'admin', view: 'console:players' },
+      { id: 'mmatches', t: 'Interventions', d: 'Arrêter une partie en cas de problème grave.', role: 'admin', view: 'console:matches' },
+      { id: 'reports', t: 'Signalements', d: 'Signalements envoyés par les joueurs.', role: 'admin', view: 'console:reports' },
+      { id: 'bans', t: 'Sanctions', d: 'Comptes suspendus, levée des sanctions.', role: 'admin', view: 'console:bans' },
+      { id: 'audit', t: 'Journal', d: 'Toutes les interventions, enregistrées dans la base.', role: 'admin', view: 'console:audit' },
+      { id: 'grant', t: 'Droits & cadeaux', d: 'Accorder des droits (compte principal), offrir des brawlers.', role: 'admin', view: 'item:grant' }] },
+    { k: 'lab', n: 'Labo en ligne', s: 'Parties de test sur le serveur', ic: 'flask', c: '#a78bfa', role: 'dev', pages: [
+      { id: 'lab', t: 'Partie de test', d: 'Mode, carte, équipes, bots, carte modifiée ; réglages en direct.', role: 'dev', view: 'console:lab' },
+      { id: 'cheats', t: 'Triches en ligne', d: 'Appliquées par le serveur, seulement dans le labo et vos parties privées.', role: 'dev', view: 'console:cheats' },
+      { id: 'testers', t: 'Joueurs de test', d: 'Simuler des joueurs, groupes, invitations, déconnexions.', role: 'dev', view: 'items:simgroup,simnet,privtest' },
+      { id: 'livecfg', t: 'Paramètres serveur', d: 'Délai d\'inactivité, fenêtre de reconnexion.', role: 'dev', view: 'item:livecfg' },
+      { id: 'selftest', t: 'Tests serveur', d: 'Tous les modes simulés par le serveur.', role: 'dev', view: 'console:selftest' }] },
+    { k: 'sandbox', n: 'Bac à sable', s: 'Hors ligne, contre les bots', ic: 'gamepad', c: '#34d399', pages: [
+      { id: 'play', t: 'Lancer', d: 'N\'importe quel mode et carte, ou l\'entraînement.', view: 'items:launch,training' },
+      { id: 'scheats', t: 'Triches', d: 'Hors ligne contre les bots. Les mêmes réglages servent dans le labo en ligne.', view: () => toggles(CHEATS.concat([['passive', 'Ennemis passifs', 'Les bots ne tirent plus.']]), ['off'])() + sliders([['dmg', 'Dégâts ×', 0.25, 10, 0.25], ['speed', 'Vitesse du joueur ×', 0.5, 3, 0.1], ['ts', 'Vitesse du jeu ×', 0.2, 3, 0.1]]) },
+      { id: 'acts', t: 'Actions en partie', d: 'Soigner, éliminer, ajouter des bots, gagner…', view: () => actsView() },
+      { id: 'mods', t: 'Mods', d: 'Géants, minis… et mods JavaScript personnalisés.', view: () => modsView() }] },
+    { k: 'create', n: 'Création', s: 'Cartes, personnages, commandes', ic: 'brush', c: '#fb923c', pages: [
+      { id: 'mapedit', t: 'Éditeur de cartes', d: 'Créer, modifier, valider, publier vers le labo.', view: 'item:mapedit' },
+      { id: 'charedit', t: 'Personnages', d: 'Vie, vitesse, dégâts, portée, recharge ; déblocages.', view: 'items:charedit,unlock' },
+      { id: 'controls', t: 'Commandes', d: 'Joystick (mode, sensibilité, taille) et position des boutons.', view: () => `<div class="dh-actions"><button class="btn small blue" data-x="ctrl">Modifier la position des commandes</button><button class="btn small" data-x="joy">Réglages du joystick</button></div>` }] },
+    { k: 'debug', n: 'Debug', s: 'Diagnostics et outils techniques', ic: 'bug', c: '#60a5fa', pages: [
+      { id: 'diag', t: 'Diagnostics', d: 'FPS, ping, pertes, mémoire, erreurs, synchronisation.', view: 'item:diag_live' },
+      { id: 'overlays', t: 'Superpositions', d: 'Informations affichées pendant la partie.', view: toggles([['fps', 'Compteur FPS', 'FPS et nombre d\'entités.'], ['hit', 'Hitbox, murs et portées', 'Zones de collision et de portée.'], ['ai', 'IA visible', 'Cibles, chemins, objectifs des bots.'], ['esp', 'Vision des cachés', 'Ennemis dans les buissons.']], ['off']) },
+      { id: 'errors', t: 'Erreurs', d: 'Erreurs JavaScript récentes.', view: 'item:errors' },
+      { id: 'traffic', t: 'Réseau', d: 'Messages reçus et envoyés.', view: 'item:traffic' },
+      { id: 'console', t: 'Console', d: 'Exécuter du code dans le jeu.', view: 'item:console' },
+      { id: 'autotests', t: 'Tests client', d: 'Tous les modes joués dans l\'appareil.', view: 'item:autotests' },
+      { id: 'export', t: 'Rapport', d: 'Exporter un rapport de diagnostic (sans secret).', view: 'item:export' },
+      { id: 'flags', t: 'Options', d: 'Fonctionnalités activables.', view: 'item:flags' }] },
+    { k: 'profiles', n: 'Profils & réglages', s: 'Profils de test, configurations', ic: 'user', c: '#94a3b8', pages: [
+      { id: 'testprof', t: 'Profils de test', d: 'Profils locaux jamais envoyés dans le cloud.', view: 'item:testprof' },
+      { id: 'teststats', t: 'Statistiques', d: 'Trophées, pièces, gemmes, progression.', view: 'item:teststats' },
+      { id: 'device', t: 'Appareil', d: 'Identifiant d\'appareil, simulation d\'un autre appareil.', view: 'item:device' },
+      { id: 'configs', t: 'Configurations', d: 'Jeux de réglages : enregistrer, restaurer, comparer.', view: () => slotsView() + itemHtml('configs') },
+      { id: 'prefs', t: 'Préférences', d: 'Niveau d\'affichage, pause en partie, réinitialisation.', view: 'item:uiprefs' }] },
   ];
-  /* ---------- cartes : chaque outil du menu développeur ---------- */
-  const C = [];
-  const card = (id, g, tab, title, desc, o) => C.push(Object.assign({ id, g, tab, title, desc, lvl: 1 }, o || {}));
-  const OFF = 'Hors ligne contre les bots · en ligne : labo et parties privées (serveur) · bloqué en public';
-  const T = (id, g, tab, title, desc, key, lvl, scope) => card(id, g, tab, title, desc, { key, lvl: lvl || 1, scope });
-  // 1. OBSERVER ET ANALYSER (données réelles du serveur)
-  card('dash', 'observe', 'dash', 'Tableau de bord', 'Joueurs connectés, en partie, groupes, parties, état des services, latence, erreurs, alertes, statistiques et activité en direct.', { custom: 'dash', role: 'observe' });
-  card('players', 'observe', 'players', 'Joueurs', 'Liste des joueurs connectés et récents, recherche, profil, session, historique, groupe, modération.', { custom: 'players', role: 'observe' });
-  card('matches', 'observe', 'games', 'Parties en cours', 'Joueurs, équipes, carte, mode, état ; observer en spectateur (caméra libre).', { custom: 'matches', role: 'observe' });
-  card('replays', 'observe', 'games', 'Replays', 'Revoir les dernières parties : évènements, joueur à suivre, résultats ; recherche par joueur, date ou mode.', { custom: 'replays', role: 'observe' });
-  card('diag_live', 'observe', 'diag', 'Diagnostics client', 'FPS, ping, pertes de paquets, mémoire, erreurs et synchronisation.', { item: 'diag_live' });
-  card('srvstate', 'observe', 'diag', 'État du serveur', 'Parties, équipes, mémoire, sessions et relais d\'appareil.', { item: 'srvstate', role: 'observe' });
-  card('errors', 'observe', 'diag', 'Erreurs du client', 'Erreurs JavaScript récentes.', { item: 'errors', lvl: 2 });
-  card('traffic', 'observe', 'diag', 'Trafic réseau', 'Messages reçus et envoyés, derniers évènements.', { item: 'traffic', lvl: 2 });
-  card('export', 'observe', 'diag', 'Rapport de diagnostic', 'Exporter un rapport complet (sans secret).', { item: 'export' });
-  // 2. ADMINISTRER ET INTERVENIR (droit « administrer », confirmation + journal)
-  card('players_adm', 'admin', 'mod', 'Gestion des joueurs', 'Avertir, déconnecter une session, sanctionner (avec confirmation et journal).', { custom: 'players', role: 'admin', alias: 'players' });
-  card('matches_adm', 'admin', 'mod', 'Interventions sur les parties', 'Arrêter une partie en cas de problème grave.', { custom: 'matches', role: 'admin', alias: 'matches' });
-  card('reports', 'admin', 'mod', 'Signalements', 'Signalements des joueurs, à traiter.', { custom: 'reports', role: 'admin' });
-  card('bans', 'admin', 'mod', 'Sanctions actives', 'Comptes suspendus et levée des sanctions.', { custom: 'bans', role: 'admin' });
-  card('audit', 'admin', 'log', 'Journal d\'activité', 'Toutes les interventions (qui, quoi, quand, pourquoi), enregistrées dans la base.', { custom: 'audit', role: 'admin' });
-  card('grant', 'admin', 'log', 'Droits développeur', 'Accorder ou retirer des droits (compte principal uniquement).', { item: 'grant', lvl: 3, role: 'admin' });
-  // 3. STUDIO DE DÉVELOPPEMENT
-  card('lab', 'studio', 'lab', 'Laboratoire de test (en ligne)', 'Partie de test : mode, carte, équipes, bots, niveau, carte modifiée ; réglages en direct, réinitialisation, déconnexion/inactivité.', { custom: 'lab', role: 'dev' });
-  card('cheats', 'studio', 'lab', 'Triches de test en ligne', 'Aimbot, esquive auto, invincible… appliqués par le serveur en labo et en privé.', { custom: 'cheats', role: 'dev' });
-  card('selftest', 'studio', 'lab', 'Tests serveur', 'Simule tous les modes avec la simulation du serveur.', { custom: 'selftest', role: 'dev' });
-  card('autotests', 'studio', 'lab', 'Tests automatiques (client)', 'Joue tous les modes dans l\'appareil, avec historique.', { item: 'autotests' });
-  card('simgroup', 'studio', 'lab', 'Bots et joueurs de test', 'Joueurs de test, invitations, départs, chef, demandes d\'ami (identifiés TEST).', { item: 'simgroup', role: 'dev' });
-  card('simnet', 'studio', 'lab', 'Connexion et partie', 'Déconnexion, inactivité, reprise, victoire, défaite, abandon.', { item: 'simnet', role: 'dev', lvl: 2 });
-  card('livecfg', 'studio', 'lab', 'Paramètres serveur en direct', 'Délai d\'inactivité et fenêtre de reconnexion.', { item: 'livecfg', role: 'dev', lvl: 2 });
-  T('god', 'studio', 'combat', 'Invincible', 'Vous ne subissez aucun dégât.', 'god', 1, OFF);
-  T('ammo', 'studio', 'combat', 'Munitions infinies', 'Vos trois munitions sont toujours pleines.', 'ammo', 1, OFF);
-  T('sup', 'studio', 'combat', 'Super toujours prête', 'La super est rechargée en permanence.', 'sup', 1, OFF);
-  T('ohk', 'studio', 'combat', 'Un coup = élimination', 'Chaque tir élimine la cible.', 'ohk', 1, OFF);
-  T('aim', 'studio', 'combat', 'Aimbot', 'Chaque tir vise l\'ennemi le plus proche (avec anticipation en ligne).', 'aim', 1, OFF);
-  T('dodge', 'studio', 'combat', 'Esquive automatique', 'Roulade automatique quand un projectile ennemi va vous toucher.', 'dodge', 1, OFF);
-  T('auto', 'studio', 'combat', 'Tir automatique', 'Tire tout seul dès qu\'un ennemi est à portée.', 'auto', 1, OFF);
-  T('gad', 'studio', 'combat', 'Gadgets infinis', 'Le gadget se recharge sans limite.', 'gad', 1, OFF);
-  T('passive', 'studio', 'combat', 'Ennemis passifs', 'Les adversaires ne tirent plus (hors ligne ; en ligne : option du labo).', 'passive', 1, 'Hors ligne · en ligne via le labo');
-  card('mult', 'studio', 'combat', 'Multiplicateurs', 'Dégâts, vitesse de votre brawler et vitesse du jeu.', { custom: 'mult', scope: OFF });
-  card('matchacts', 'studio', 'combat', 'Actions en partie', 'Soigner, super immédiate, éliminer, ajouter des bots, gagner ou perdre.', { custom: 'acts', scope: 'Hors ligne (contre les bots)' });
-  card('launch', 'studio', 'modes', 'Lancer un mode', 'Toutes les cartes de tous les modes, hors ligne.', { item: 'launch' });
-  card('training', 'studio', 'modes', 'Entraînement', 'Ennemis passifs et invincibilité, puis lancement.', { item: 'training' });
-  card('privtest', 'studio', 'modes', 'Partie privée de test', 'Partie réelle sur le serveur avec 2 joueurs de test.', { item: 'privtest', lvl: 2, role: 'dev' });
-  card('charedit', 'studio', 'chars', 'Éditeur de personnages', 'Vie, vitesse, dégâts, portée et recharge (hors ligne et labo en ligne).', { item: 'charedit' });
-  card('unlock', 'studio', 'chars', 'Déblocages', 'Tout débloquer, niveau maximum.', { item: 'unlock' });
-  card('joy', 'studio', 'chars', 'Joystick', 'Mode, sensibilité, taille et position des commandes.', { act: 'joyOpen' });
-  card('mapedit', 'studio', 'maps', 'Éditeur de cartes', 'Créer, modifier, annuler/rétablir, versions, validation, test hors ligne ou dans le labo en ligne.', { item: 'mapedit' });
-  T('fps', 'studio', 'overlay', 'Compteur FPS', 'Affiche les FPS et le nombre d\'entités en jeu.', 'fps');
-  T('hit', 'studio', 'overlay', 'Hitbox, murs et portées', 'Affiche les zones de collision et de portée.', 'hit');
-  T('aiov', 'studio', 'overlay', 'IA visible', 'Cibles, chemins et objectifs des bots.', 'ai', 2);
-  T('esp', 'studio', 'overlay', 'Vision des cachés', 'Montre les ennemis dans les buissons (hors ligne).', 'esp');
-  card('flags', 'studio', 'overlay', 'Options de fonctionnalités', '3D en combat, aide à la visée, gaucher, vibrations…', { item: 'flags', lvl: 2 });
-  card('testprof', 'studio', 'adv', 'Profils de test', 'Profils locaux jamais envoyés dans le cloud.', { item: 'testprof' });
-  card('teststats', 'studio', 'adv', 'Statistiques du profil', 'Trophées, pièces, gemmes, progression, récompenses.', { item: 'teststats' });
-  card('device', 'studio', 'adv', 'Multi-appareils', 'Identifiant d\'appareil et simulation d\'un autre appareil.', { item: 'device', lvl: 2 });
-  card('console', 'studio', 'adv', 'Console JavaScript', 'Exécuter du code dans le jeu.', { item: 'console', lvl: 3 });
-  card('configs', 'studio', 'adv', 'Configurations', 'Enregistrer, restaurer et comparer des réglages.', { item: 'configs', lvl: 3 });
-  card('legacy', 'studio', 'adv', 'Mods personnalisés', 'Éditeur de mods JavaScript (ancien panneau).', { act: 'legacy', lvl: 3 });
-  card('uiprefs', 'studio', 'adv', 'Préférences du menu', 'Niveau d\'affichage, pause en partie, réinitialisation.', { item: 'uiprefs' });
-  const modCards = () => (G.Dev && G.Dev.BUILTIN ? G.Dev.BUILTIN.map((m) => ({ id: 'mod_' + m.id, g: 'studio', tab: 'mods', title: m.name, desc: m.desc, mod: m.id, lvl: 1 })) : []);
-  const all = () => C.concat(modCards()).filter((c) => c.lvl <= DP.lvl);
-  const isOn = (c) => (c.key ? !!G.Dev.cfg[c.key] : c.mod ? !!(G.Dev.cfg.mods || {})[c.mod] : false);
-  const itemOf = (id) => DP._I.find((x) => x.id === id);
+  const PAGES = []; W.forEach((w) => w.pages.forEach((p) => PAGES.push(Object.assign({ ws: w.k }, p))));
+  const roles = () => (G.DevConsole ? G.DevConsole.roles() : []);
+  const locked = (r) => r && !roles().includes(r);
+  const itemHtml = (id) => { const it = DP._I.find((x) => x.id === id); if (!it) return ''; try { return it.html(); } catch (e) { return '<div class="dh-note">Erreur : ' + esc(e.message) + '</div>'; } };
 
-  /* ---------- état de l'interface ---------- */
-  const U = { g: 'observe', tab: 'dash', detail: null, search: false, q: '', view: 'lib', pop: null };
-  const PROF = { cur: () => LS.get('br_dev_prof', 1), all: () => LS.get('br_dev_profiles', {}) };
-
-  const pill = (c) => c.key || c.mod ? `<span class="rg-pill ${isOn(c) ? 'on' : ''}">${isOn(c) ? 'OUI' : 'NON'}</span>` : `<span class="rg-pill tool">${c.act ? 'ACTION' : 'OUTIL'}</span>`;
-  const locked = (c) => c.role && !(G.DevConsole && G.DevConsole.roles().includes(c.role));
-  const cardHtml = (c) => `<div class="rg-card ${isOn(c) ? 'on' : ''} ${locked(c) ? 'lock' : ''}" data-card="${c.id}"><div class="rg-ct"><b>${locked(c) ? '🔒 ' : ''}${esc(c.title)}</b>${pill(c)}${c.scope ? `<small class="rg-scope">${esc(c.scope)}</small>` : ''}</div>
-    <div class="rg-cb"><button class="rg-ib" data-info="${c.id}" aria-label="Infos">${IC.info}</button>${c.key || c.mod ? '' : `<button class="rg-ib" data-info="${c.id}" aria-label="Réglages">${IC.sliders}</button>`}</div></div>`;
-  function section(title, list) { return `<div class="rg-sec"><div class="rg-sh">${esc(title)}</div><div class="rg-grid">${list.map(cardHtml).join('') || '<div class="rg-empty">Aucun outil à ce niveau d\'affichage (Paramètres → niveau Expert).</div>'}</div></div>`; }
-  function customHtml(c) {
-    const cfg = G.Dev.cfg;
-    if (c.custom === 'mult') return ['dmg', 'speed', 'ts'].map((k) => { const lab = { dmg: 'Dégâts ×', speed: 'Vitesse du joueur ×', ts: 'Vitesse du jeu ×' }[k], mm = { dmg: [0.25, 10, 0.25], speed: [0.5, 3, 0.1], ts: [0.2, 3, 0.1] }[k];
-      return `<div class="rg-row"><span>${lab} <b class="dp-v">${cfg[k]}</b></span><input type="range" data-r="${k}" min="${mm[0]}" max="${mm[1]}" step="${mm[2]}" value="${cfg[k]}"></div>`; }).join('');
-    if (c.custom === 'acts') { const inM = G.App.state === 'match' && G.App.M && !G.App.M.net;
-      return (inM ? '' : '<div class="rg-note">Lancez une partie hors ligne (Bataille → Modes de test) pour utiliser ces actions.</div>') +
-        `<div class="dp-chips">${[['heal', 'Soigner'], ['superNow', 'Super prête'], ['maxhp', '+5000 PV max'], ['killAll', 'Éliminer les ennemis'], ['center', 'Aller au centre'], ['skipTime', '−30 s'], ['botFriend', '+ Bot allié'], ['botFoe', '+ Bot ennemi'], ['cubes', '+5 cubes'], ['win', 'Gagner'], ['lose', 'Perdre']].map(([a, l]) => `<button class="btn small" data-a="${a}" ${inM ? '' : 'disabled'}>${l}</button>`).join('')}</div>`; }
-    if (G.DevConsole && G.DevConsole.render(c.custom)) return G.DevConsole.render(c.custom);
+  /* ---------- vues spéciales ---------- */
+  function homeView() {
+    const r = roles(), on = Net.status === 'online', me = Net.me;
+    const favs = PAGES.filter((p) => DP.fav.includes(p.id));
+    return `<div class="dh-hero"><div><h2>Bonjour ${esc((me && me.name) || G.Save.data.name || '')}</h2><p>${on ? 'Connecté au serveur · ' + (Net.ping || '?') + ' ms' : 'Hors ligne'} · ${r.length ? 'Droits : ' + r.map((x) => ({ observe: 'observer', admin: 'administrer', dev: 'développer' }[x])).join(', ') : (G.DEV ? 'Édition DEV (outils hors ligne)' : 'Aucun droit serveur')}</p></div>
+      <div class="dh-pills"><span class="dh-pill ${on ? 'ok' : 'ko'}">${on ? '● Serveur en ligne' : '● Serveur injoignable'}</span>${G.App.state === 'match' ? '<span class="dh-pill">En partie</span>' : ''}</div></div>
+      <div class="dh-sec">Espaces</div><div class="dh-tiles">${W.filter((w) => w.k !== 'home').map((w) => `<button class="dh-tile" data-ws="${w.k}" style="--ac:${w.c}"><i>${IC[w.ic]}</i><b>${esc(w.n)}${locked(w.role) ? ' ' + IC.lock : ''}</b><small>${esc(w.s)}</small><span>${w.pages.length} outils</span></button>`).join('')}</div>
+      <div class="dh-sec">Favoris</div>${favs.length ? `<div class="dh-favs">${favs.map((p) => { const w = W.find((x) => x.k === p.ws); return `<button class="dh-fav" data-go="${p.id}" style="--ac:${w.c}">${IC[w.ic]}<b>${esc(p.t)}</b><small>${esc(w.n)}</small></button>`; }).join('')}</div>` : '<div class="dh-note">Touchez ☆ en haut d\'une page pour l\'épingler ici.</div>'}`;
+  }
+  function actsView() {
+    const inM = G.App.state === 'match' && G.App.M && !G.App.M.net;
+    return (inM ? '' : '<div class="dh-note">Lancez une partie hors ligne (Bac à sable → Lancer) pour utiliser ces actions.</div>') + `<div class="dh-actions">${[['heal', 'Soigner'], ['superNow', 'Super prête'], ['maxhp', '+5000 PV max'], ['killAll', 'Éliminer les ennemis'], ['center', 'Aller au centre'], ['skipTime', '−30 s'], ['botFriend', '+ Bot allié'], ['botFoe', '+ Bot ennemi'], ['cubes', '+5 cubes'], ['win', 'Gagner'], ['lose', 'Perdre']].map(([a, l]) => `<button class="btn small" data-a="${a}" ${inM ? '' : 'disabled'}>${l}</button>`).join('')}</div>`;
+  }
+  function modsView() {
+    const mods = (G.Dev && G.Dev.BUILTIN) || [];
+    return mods.map((m) => `<div class="dh-row"><div class="dh-rt"><b>${esc(m.name)}</b><small>${esc(m.desc)}</small><span class="dh-bs">${badge('off')}</span></div><button class="dh-sw ${(G.Dev.cfg.mods || {})[m.id] ? 'on' : ''}" data-mod="${m.id}"><i></i></button></div>`).join('') + `<div class="dh-actions"><button class="btn small" data-a="legacy">Éditeur de mods JavaScript</button></div>`;
+  }
+  function slotsView() {
+    const cur = LS.get('br_dev_prof', 1), all = LS.get('br_dev_profiles', {});
+    return `<div class="dh-sub">Jeux de réglages rapides</div><div class="dh-seg">${[1, 2, 3].map((n) => `<button class="${cur === n ? 'on' : ''}" data-slot="${n}">Réglages ${n}${all[n] ? '' : ' (vide)'}</button>`).join('')}</div><div class="dh-note">Changer d'emplacement enregistre l'actuel puis charge le suivant.</div>`;
+  }
+  function setSlot(n) {
+    const all = LS.get('br_dev_profiles', {}), cur = LS.get('br_dev_prof', 1), cfg = G.Dev.cfg;
+    all[cur] = JSON.parse(JSON.stringify(cfg));
+    if (all[n]) { const keep = cfg.custom; Object.keys(cfg).forEach((k) => delete cfg[k]); Object.assign(cfg, JSON.parse(JSON.stringify(all[n])), { custom: keep }); }
+    LS.set('br_dev_profiles', all); LS.set('br_dev_prof', n); G.Dev.persist && G.Dev.persist(); G.UI.toast('Réglages ' + n + (all[n] ? ' chargés' : ' créés'), 1600);
+  }
+  function viewHtml(p) {
+    if (locked(p.role)) return `<div class="dh-locked">${IC.lock}<b>Accès réservé</b><p>Cette page demande le droit « ${{ observe: 'observer', admin: 'administrer', dev: 'développer' }[p.role]} ». Il est vérifié par le serveur : se connecter avec le compte développeur.</p></div>`;
+    const v = p.view;
+    if (typeof v === 'function') return v();
+    if (v.startsWith('console:')) return G.DevConsole ? G.DevConsole.render(v.slice(8)) : '';
+    if (v.startsWith('item:')) return itemHtml(v.slice(5));
+    if (v.startsWith('items:')) return v.slice(6).split(',').map((id) => { const it = DP._I.find((x) => x.id === id); return it ? `<div class="dh-card"><div class="dh-ct">${esc(it.title)}</div>${itemHtml(id)}</div>` : ''; }).join('');
     return '';
   }
-  function detailHtml(c) {
-    let body = '';
-    if (c.item) { const it = itemOf(c.item); try { body = it ? it.html() : ''; } catch (e) { body = '<div class="rg-note">Erreur : ' + esc(e.message) + '</div>'; } }
-    else if (c.custom) body = customHtml(c);
-    else if (c.act) body = `<div class="dp-chips"><button class="btn small" data-a="${c.act}">Ouvrir</button></div>`;
-    else body = '<div class="rg-note">Aucun paramètre supplémentaire : utilisez l\'interrupteur « Activé ».</div>';
-    const fav = DP.fav.includes(c.id);
-    return `<div class="rg-dt"><div class="rg-dh"><h3>${esc(c.title)}</h3><button class="rg-fav ${fav ? 'on' : ''}" data-favc="${c.id}" aria-label="Favori">${IC.star}</button>
-      ${c.key || c.mod ? `<label class="rg-act">Activé <span class="rg-tg ${isOn(c) ? 'on' : ''}" data-tgc="${c.id}"><i></i></span></label>` : ''}</div>
-      <div class="rg-desc">${IC.info}<span>${esc(c.desc)}${c.scope ? '<br><b>Où :</b> ' + esc(c.scope) : ''}${c.role ? '<br><b>Droit requis :</b> ' + ({ observe: 'observer', admin: 'administrer', dev: 'développer' }[c.role]) + ' (vérifié par le serveur)' : ''}</span></div>
-      <div class="rg-sec"><div class="rg-sh">${c.custom && ['dash', 'players', 'matches', 'replays', 'reports', 'bans', 'audit'].includes(c.custom) ? 'DONNÉES DU SERVEUR (EN DIRECT)' : 'PARAMÈTRES'}</div><div class="rg-params">${body}</div></div>
-      <div class="rg-foot"><button class="rg-back" data-back="1">${IC.back} Retour</button></div></div>`;
+
+  /* ---------- état ---------- */
+  const U = { ws: 'home', page: 'home', q: '', detail: null };
+  const pageOf = (id) => PAGES.find((p) => p.id === id);
+  function go(id) {
+    const p = pageOf(id); if (!p) return; U.ws = p.ws; U.page = p.id; U.q = '';
+    const v = typeof p.view === 'string' && p.view.startsWith('console:') ? p.view.slice(8) : null;
+    U.detail = v; // compatibilité devconsole : actualisation en direct des vues serveur
+    if (v && G.DevConsole && !locked(p.role)) { if (v === 'players') G.DevConsole.view.pid = null; G.DevConsole.open(v); }
+    render(); const b = DP.panel && DP.panel.querySelector('#rgBody'); if (b) b.scrollTop = 0;
   }
-  function counts(g) { return all().filter((c) => c.g === g).length; }
+
+  /* ---------- rendu ---------- */
   function render() {
     const o = DP.panel; if (!o) return;
-    const body = o.querySelector('#rgBody'), tabs = o.querySelector('#rgTabs'), g = GROUPS.find((x) => x.k === U.g);
-    o.querySelectorAll('.rg-side .rg-cat').forEach((b) => { b.classList.toggle('on', b.dataset.g === U.g && !U.search && U.view === 'lib'); const n = b.querySelector('.rg-n'); if (n) n.textContent = counts(b.dataset.g); });
-    o.querySelector('.rg-sbtn').classList.toggle('on', U.search);
-    o.querySelector('#rgLib').firstChild.textContent = U.view === 'fav' ? 'Favoris ' : 'Bibliothèque ';
-    o.querySelector('#rgProf').firstChild.nextSibling.textContent = ' Profil ' + PROF.cur() + ' ';
-    o.querySelector('.rg-content').classList.toggle('detail', !!U.detail);
-    if (U.detail) { const c = all().concat(C).find((x) => x.id === U.detail); tabs.innerHTML = ''; tabs.hidden = true; body.innerHTML = c ? detailHtml(c) : ''; return; }
-    tabs.hidden = false;
-    if (U.search) {
-      tabs.innerHTML = `<div class="rg-search">${IC.search}<input id="rgQ" placeholder="Rechercher un outil…" value="${esc(U.q)}" autocomplete="off"></div>`;
-      const q = U.q.trim().toLowerCase(), hits = all().filter((c) => (c.title + ' ' + c.desc).toLowerCase().includes(q));
-      body.innerHTML = section(q ? hits.length + ' résultat(s)' : 'Tous les outils', q ? hits : all());
-      const i = tabs.querySelector('#rgQ'); i.addEventListener('input', () => { U.q = i.value; const p = i.selectionStart; render(); const j = DP.panel.querySelector('#rgQ'); if (j) { j.focus(); try { j.setSelectionRange(p, p); } catch (e) { /* ignore */ } } }); setTimeout(() => i.focus(), 30);
+    const w = W.find((x) => x.k === U.ws), p = pageOf(U.page) || w.pages[0];
+    o.style.setProperty('--ac', w.c);
+    o.querySelectorAll('.dh-ws').forEach((b) => b.classList.toggle('on', b.dataset.ws === U.ws));
+    const net = o.querySelector('#dhNet'); if (net) { const on = Net.status === 'online'; net.className = 'dh-net ' + (on ? 'ok' : 'ko'); net.textContent = on ? 'En ligne · ' + (Net.ping || '?') + ' ms' : 'Hors ligne'; }
+    const head = o.querySelector('#dhHead'), tabs = o.querySelector('#dhTabs'), body = o.querySelector('#rgBody');
+    if (U.q) {
+      const q = U.q.toLowerCase(), hits = PAGES.filter((x) => (x.t + ' ' + x.d + ' ' + W.find((y) => y.k === x.ws).n).toLowerCase().includes(q));
+      const tg = CHEATS.filter(([, t, d]) => (t + ' ' + d).toLowerCase().includes(q));
+      head.innerHTML = `<div class="dh-ht"><span class="dh-ic">${IC.search}</span><div><h1>Recherche</h1><p>${hits.length + tg.length} résultat(s) pour « ${esc(U.q)} »</p></div></div>`; tabs.innerHTML = '';
+      body.innerHTML = hits.map((x) => { const ww = W.find((y) => y.k === x.ws); return `<button class="dh-res" data-go="${x.id}" style="--ac:${ww.c}"><i>${IC[ww.ic]}</i><div><b>${esc(x.t)}</b><small>${esc(ww.n)} — ${esc(x.d)}</small></div>${IC.chev}</button>`; }).join('') +
+        (tg.length ? `<div class="dh-sec">Triches (bac à sable et labo)</div>` + toggles(tg, ['off'])() : '') || '<div class="dh-note">Aucun résultat.</div>';
       return;
     }
-    if (U.view === 'fav') { tabs.innerHTML = '<span class="rg-tab on">★ Favoris</span>'; body.innerHTML = section('FAVORIS', all().filter((c) => DP.fav.includes(c.id))); return; }
-    tabs.innerHTML = g.tabs.map(([k, n]) => { const cnt = all().filter((c) => c.g === g.k && c.tab === k).length; return `<button class="rg-tab ${U.tab === k ? 'on' : ''}" data-tab="${k}">${n}${cnt ? `<span class="rg-c">${cnt}</span>` : ''}</button>`; }).join('');
-    // toutes les sections du groupe, l'onglet choisi en premier (comme la référence : on fait défiler les sections)
-    const order = g.tabs.slice().sort((a, b) => (a[0] === U.tab ? -1 : b[0] === U.tab ? 1 : 0));
-    body.innerHTML = order.map(([k, n]) => section(n.toUpperCase(), all().filter((c) => c.g === g.k && c.tab === k))).join('');
-    body.scrollTop = 0;
+    const fav = DP.fav.includes(p.id);
+    head.innerHTML = `<div class="dh-ht"><span class="dh-ic">${IC[w.ic]}</span><div><h1>${esc(p.t)}</h1><p>${esc(w.n)} · ${esc(p.d)}</p></div>${p.id !== 'home' ? `<button class="dh-star ${fav ? 'on' : ''}" data-fav2="${p.id}" aria-label="Épingler">${IC.star}</button>` : ''}</div>`;
+    tabs.innerHTML = w.pages.length > 1 ? w.pages.map((x) => `<button class="dh-tab ${x.id === p.id ? 'on' : ''}" data-go="${x.id}">${esc(x.t)}${locked(x.role) ? IC.lock : ''}</button>`).join('') : '';
+    if (w.k === 'lab' || p.id === 'scheats') tabs.insertAdjacentHTML('beforeend', `<span class="dh-scope">${w.k === 'lab' ? badge('lab') + badge('blocked') : badge('off')}</span>`);
+    body.innerHTML = `<div class="dh-page" data-page="${p.id}">${viewHtml(p)}</div>`;
+    if (DP._meDraw) DP._meDraw(); const con = body.querySelector('#dpCon'); if (con) con.scrollTop = 1e9; // carte de l'éditeur, console
   }
-  function popup(kind, anchor) {
-    const o = DP.panel; o.querySelectorAll('.rg-pop').forEach((x) => x.remove());
-    if (U.pop === kind) { U.pop = null; return; } U.pop = kind;
-    const r = anchor.getBoundingClientRect(), pr = o.querySelector('.rg').getBoundingClientRect();
-    const items = kind === 'lib' ? [['lib', 'Bibliothèque'], ['fav', 'Favoris'], ['legacy', 'Ancien panneau']] : [1, 2, 3].map((n) => ['p' + n, 'Profil ' + n + (PROF.all()[n] ? '' : ' (vide)')]);
-    const d = document.createElement('div'); d.className = 'rg-pop';
-    d.style.left = (r.left - pr.left) + 'px'; d.style.top = (r.bottom - pr.top + 6) + 'px'; d.style.minWidth = r.width + 'px';
-    d.innerHTML = items.map(([k, l]) => `<button data-popk="${k}">${esc(l)}</button>`).join('');
-    o.querySelector('.rg').appendChild(d);
-  }
-  function setProfile(n) {
-    const all0 = PROF.all(), cur = PROF.cur(), cfg = G.Dev.cfg;
-    all0[cur] = JSON.parse(JSON.stringify(cfg)); // le profil actuel garde ses réglages
-    if (all0[n]) { const keep = cfg.custom; Object.keys(cfg).forEach((k) => delete cfg[k]); Object.assign(cfg, JSON.parse(JSON.stringify(all0[n])), { custom: keep }); }
-    LS.set('br_dev_profiles', all0); LS.set('br_dev_prof', n); G.Dev.persist && G.Dev.persist();
-    G.UI.toast('Profil ' + n + (all0[n] ? ' chargé' : ' créé (copie des réglages actuels)'), 1800);
-  }
-  function toggleCard(c) {
-    const cfg = G.Dev.cfg;
-    if (c.key) cfg[c.key] = !cfg[c.key]; else if (c.mod) { cfg.mods = cfg.mods || {}; cfg.mods[c.mod] = !cfg.mods[c.mod]; }
-    G.Dev.persist && G.Dev.persist();
-  }
-  function onClick(e) {
-    const t = e.target.closest('[data-g],[data-tab],[data-card],[data-info],[data-back],[data-tgc],[data-favc],[data-hdr],[data-popk],[data-sbtn]');
-    if (!t) { if (U.pop && !e.target.closest('.rg-pop')) { U.pop = null; DP.panel.querySelectorAll('.rg-pop').forEach((x) => x.remove()); } return false; }
-    const d = t.dataset; G.Audio.unlock && G.Audio.unlock();
-    if (d.g) { G.Audio.sfx('ui'); U.g = d.g; U.tab = GROUPS.find((x) => x.k === d.g).tabs[0][0]; U.detail = null; U.search = false; U.view = 'lib'; }
-    else if (d.tab) { G.Audio.sfx('ui'); U.tab = d.tab; }
-    else if (d.sbtn) { G.Audio.sfx('ui'); U.search = !U.search; U.detail = null; U.view = 'lib'; }
-    else if (d.info) { G.Audio.sfx('ui'); U.detail = d.info; openView(d.info); }
-    else if (d.back) { G.Audio.sfx('back'); U.detail = null; }
-    else if (d.tgc) { const c = all().concat(modCards()).find((x) => x.id === d.tgc); if (c) { toggleCard(c); G.Audio.sfx(isOn(c) ? 'pickup' : 'back'); if (G.Net.me && G.Net.me.roles && G.Net.me.roles.includes('dev')) G.Net.send({ t: 'dv_cheats', cheats: G.Dev.cfg }); } }
-    else if (d.favc) { const i = DP.fav.indexOf(d.favc); if (i >= 0) DP.fav.splice(i, 1); else DP.fav.push(d.favc); LS.set('br_dev_fav', DP.fav); G.Audio.sfx('ui'); }
-    else if (d.card) {
-      if (e.target.closest('button, input, .rg-tg')) return true;
-      const c = all().find((x) => x.id === d.card); if (!c) return true;
-      if (c.key || c.mod) { toggleCard(c); G.Audio.sfx(isOn(c) ? 'pickup' : 'back'); if (G.Net.me && G.Net.me.roles && G.Net.me.roles.includes('dev')) G.Net.send({ t: 'dv_cheats', cheats: G.Dev.cfg }); } else if (c.act === 'joyOpen') { closeUI(); G.UI.ACT.settings(); return true; } else if (c.act) { const b = document.createElement('button'); b.dataset.a = c.act; DP._click({ target: b }); return true; } else { G.Audio.sfx('ui'); U.detail = c.id; openView(c.id); }
-    } else if (d.hdr) {
-      G.Audio.sfx('ui');
-      if (d.hdr === 'close') { closeUI(); return true; }
-      if (d.hdr === 'friends') { closeUI(); G.UI.devPanel && G.UI.devPanel(); return true; }
-      if (d.hdr === 'settings') { U.detail = 'uiprefs'; }
-      if (d.hdr === 'iface') { closeUI(); G.UI.ACT.ctrlEdit && G.UI.ACT.ctrlEdit(); return true; }
-      if (d.hdr === 'lib' || d.hdr === 'prof') { popup(d.hdr, t); return true; }
-    } else if (d.popk) {
-      U.pop = null; DP.panel.querySelectorAll('.rg-pop').forEach((x) => x.remove()); G.Audio.sfx('ui');
-      if (d.popk === 'legacy') { closeUI(); DP.legacy && DP.legacy(); return true; }
-      if (d.popk === 'lib' || d.popk === 'fav') { U.view = d.popk; U.detail = null; U.search = false; }
-      else setProfile(+d.popk.slice(1));
-    }
-    render(); return true;
-  }
-  function closeUI() { DP.close(); }
-  function openView(id) { const c = C.find((x) => x.id === id); if (c && c.custom && G.DevConsole) { if (c.alias === 'players' || c.custom === 'players') G.DevConsole.view.pid = null; G.DevConsole.open(c.custom); } }
 
-  /* ---------- ouverture ---------- */
-  function open() {
+  /* ---------- interactions ---------- */
+  function onClick(e) {
+    const t = e.target.closest('[data-ws],[data-go],[data-tg],[data-fav2],[data-x],[data-slot],[data-close],[data-mod]');
+    if (!t) return false; const d = t.dataset; G.Audio.unlock && G.Audio.unlock();
+    if (d.close !== undefined) { G.Audio.sfx('back'); DP.close(); return true; }
+    if (d.ws) { G.Audio.sfx('ui'); const w = W.find((x) => x.k === d.ws); go(w.pages[0].id); return true; }
+    if (d.go) { G.Audio.sfx('ui'); go(d.go); return true; }
+    if (d.tg) { const cfg = G.Dev.cfg; cfg[d.tg] = !cfg[d.tg]; G.Dev.persist && G.Dev.persist(); G.Audio.sfx(cfg[d.tg] ? 'pickup' : 'back'); if (roles().includes('dev')) Net.send({ t: 'dv_cheats', cheats: cfg }); render(); return true; }
+    if (d.mod) { const cfg = G.Dev.cfg; cfg.mods = cfg.mods || {}; cfg.mods[d.mod] = !cfg.mods[d.mod]; G.Dev.persist && G.Dev.persist(); G.Audio.sfx('ui'); render(); return true; }
+    if (d.fav2) { const i = DP.fav.indexOf(d.fav2); if (i >= 0) DP.fav.splice(i, 1); else DP.fav.push(d.fav2); LS.set('br_dev_fav', DP.fav); G.Audio.sfx('ui'); render(); return true; }
+    if (d.slot) { setSlot(+d.slot); render(); return true; }
+    if (d.x === 'ctrl') { DP.close(); G.UI.ACT.ctrlEdit && G.UI.ACT.ctrlEdit(); return true; }
+    if (d.x === 'joy') { DP.close(); G.UI.ACT.settings(); return true; }
+    return false;
+  }
+  function open(where) {
     if (DP.panel) { DP.close(); return; }
     DP._hookNet(); DP._hookDev();
     const inM = G.App.state === 'match' && G.App.M;
     DP.wasPaused = G.App.paused;
     if (inM && !G.App.M.net && DP.pause) { G.App.paused = true; G.Input.reset(); }
-    const o = document.createElement('div'); o.className = 'rg-ov' + (inM ? ' inmatch' : '');
-    o.innerHTML = `<div class="rg"><header class="rg-hd"><div class="rg-logo">BR</div><div class="rg-name"><b>Brawl Rush DEV</b><small>BRDEV ${esc(G.VERSION_NAME || '3.9')}</small></div>
-        <button class="rg-dd" id="rgLib" data-hdr="lib">Bibliothèque ${IC.chev}</button><div class="rg-sp"></div>
-        <button class="rg-hb purple" data-hdr="friends">${IC.friends}<span>Amis</span></button><button class="rg-hb orange" data-hdr="settings">${IC.gear}<span>Paramètres</span></button>
-        <button class="rg-hb blue" data-hdr="iface">${IC.brush}<span>Modifier l'interface</span></button><button class="rg-hb red rg-close" data-hdr="close" aria-label="Fermer">${IC.x}</button></header>
-      <div class="rg-main"><nav class="rg-side">${GROUPS.map((g) => `<button class="rg-cat" data-g="${g.k}"><span class="rg-n">0</span>${IC[g.ic]}<b>${g.n}</b></button>`).join('')}<div class="rg-fill"></div><button class="rg-cat rg-sbtn" data-sbtn="1" aria-label="Rechercher">${IC.search}</button></nav>
-        <section class="rg-content"><div class="rg-top"><div class="rg-tabs" id="rgTabs"></div><button class="rg-dd" id="rgProf" data-hdr="prof">${IC.layout} Profil 1 ${IC.chev}</button></div><div class="rg-body" id="rgBody"></div></section></div></div>`;
+    const o = document.createElement('div'); o.className = 'dh-ov' + (inM ? ' inmatch' : '');
+    o.innerHTML = `<div class="dh"><aside class="dh-rail"><div class="dh-brand"><span>BR</span><div><b>Dev Hub</b><small>Brawl Rush ${esc(G.VERSION_NAME || '4.0')}</small></div></div>
+        <nav>${W.map((w) => `<button class="dh-ws" data-ws="${w.k}" style="--wc:${w.c}"><i>${IC[w.ic]}</i><span><b>${esc(w.n)}</b><small>${esc(w.s)}</small></span>${locked(w.role) ? '<em>' + IC.lock + '</em>' : ''}</button>`).join('')}</nav>
+        <div class="dh-net" id="dhNet"></div></aside>
+      <section class="dh-main"><header class="dh-top"><div class="dh-search">${IC.search}<input id="dhQ" placeholder="Rechercher un outil, une page…" autocomplete="off"></div><button class="dh-x" data-close="1" aria-label="Fermer">${IC.x}</button></header>
+        <div class="dh-head" id="dhHead"></div><div class="dh-tabs" id="dhTabs"></div><div class="dh-body" id="rgBody"></div></section></div>`;
     document.getElementById('ui').appendChild(o); DP._setPanel(o);
     o.addEventListener('click', (e) => { if (!onClick(e)) DP._click(e); });
-    o.addEventListener('input', (e) => DP._input(e));
+    o.addEventListener('input', (e) => { if (e.target.id === 'dhQ') { U.q = e.target.value.trim(); render(); return; } DP._input(e); });
     o.addEventListener('change', () => G.Dev.persist && G.Dev.persist());
-    o.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.id === 'dpIn') DP._runCon(); });
+    o.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.id === 'dpIn') DP._runCon(); if (e.key === 'Escape') DP.close(); });
     o.addEventListener('pointerdown', (e) => { const cv = e.target.closest('#meCv'); if (!cv) return; if (cv.setPointerCapture) cv.setPointerCapture(e.pointerId); cv._down = true; DP._mePaint({ currentTarget: cv, clientX: e.clientX, clientY: e.clientY, first: true }); });
     o.addEventListener('pointermove', (e) => { const cv = e.target.closest('#meCv'); if (cv && cv._down) DP._mePaint({ currentTarget: cv, clientX: e.clientX, clientY: e.clientY }); });
     o.addEventListener('pointerup', () => { const cv = o.querySelector('#meCv'); if (cv && cv._down) { cv._down = false; DP._meUp(); DP._render(); } });
     if (G.Account && G.Account.loggedIn && G.Account.loggedIn()) Net.send({ t: 'dv_state' });
-    DP._render();
-    DP._live(() => { if (!DP.panel) return; const k = DP.panel.querySelector('#dpKpis'); if (k) { const it = itemOf('diag_live'), tmp = document.createElement('div'); tmp.innerHTML = it.html(); const nk = tmp.querySelector('#dpKpis'); if (nk) k.innerHTML = nk.innerHTML; } });
+    go(typeof where === 'string' && pageOf(where) ? where : U.page || 'home');
+    DP._live(() => { if (!DP.panel) return; const k = DP.panel.querySelector('#dpKpis'); if (k) { const it = DP._I.find((x) => x.id === 'diag_live'), tmp = document.createElement('div'); tmp.innerHTML = it.html(); const nk = tmp.querySelector('#dpKpis'); if (nk) k.innerHTML = nk.innerHTML; } const n = DP.panel.querySelector('#dhNet'); if (n) { const on = Net.status === 'online'; n.className = 'dh-net ' + (on ? 'ok' : 'ko'); n.textContent = on ? 'En ligne · ' + (Net.ping || '?') + ' ms' : 'Hors ligne'; } });
   }
-  DP.renderHook = render;
-  DP.open = open;
-  DP.ui = U; DP.cards = () => all();
+  DP.renderHook = render; DP.open = open; DP.ui = U; DP.go = go; DP.pages = () => PAGES;
+  Net.on('me', () => { if (DP.panel) render(); });
 
   /* ---------- en partie : « Accès rapide » + FPS ---------- */
   function quick() {
@@ -242,7 +202,7 @@
       q = document.createElement('div'); q.id = 'rgQuick';
       q.innerHTML = `<button class="rg-qa" aria-label="Accès rapide">${IC.bolt}<span>Accès rapide</span></button><span class="rg-fps">— FPS</span>`;
       document.getElementById('app').appendChild(q);
-      q.querySelector('.rg-qa').addEventListener('click', () => { if (G.Dev) { U.view = DP.fav.length ? 'fav' : 'lib'; U.detail = null; U.search = false; open(); } });
+      q.querySelector('.rg-qa').addEventListener('click', () => { if (G.Dev) open(G.App.M && G.App.M.net ? (G.App.M.lab ? 'lab' : 'diag') : 'acts'); });
     }
     return q;
   }

@@ -129,7 +129,7 @@
 
   /* ---------- confirmation (dans le menu) ---------- */
   function confirmBox(title, html, okLabel, onOk) {
-    const host = document.querySelector('.rg') || document.body, o = document.createElement('div'); o.className = 'dv-confirm';
+    const host = document.querySelector('.dh-main') || document.querySelector('.rg') || document.body, o = document.createElement('div'); o.className = 'dv-confirm';
     o.innerHTML = `<div class="dv-cb"><h3>${esc(title)}</h3>${html}<div class="dp-chips"><button class="btn small" data-c="no">Annuler</button><button class="btn small red" data-c="ok">${esc(okLabel)}</button></div><div class="dv-note">Action vérifiée par le serveur et enregistrée dans le journal.</div></div>`;
     host.appendChild(o); o.addEventListener('click', (e) => { const b = e.target.closest('[data-c]'); if (!b) return; e.stopPropagation(); if (b.dataset.c === 'ok') onOk(o); o.remove(); });
   }
@@ -137,7 +137,7 @@
 
   /* ---------- actions ---------- */
   document.addEventListener('click', (e) => {
-    const t = e.target.closest('[data-dv]'); if (!t || !t.closest('.rg')) return;
+    const t = e.target.closest('[data-dv]'); if (!t || !t.closest('.rg, .dh-ov')) return;
     e.stopPropagation(); const d = t.dataset, a = d.dv; G.Audio && G.Audio.sfx('ui');
     if (a === 'search') { D.view.q = val(document, 'dvQ'); Net.send({ t: 'dv_players', q: D.view.q, status: D.view.st || '' }); return; }
     if (a === 'st') { D.view.st = d.v; Net.send({ t: 'dv_players', q: D.view.q || '', status: d.v }); D.refresh(); return; }
@@ -169,7 +169,7 @@
     if (a === 'selftest') { UI.toast('Tests serveur en cours…', 1500); Net.send({ t: 'dv_selftest' }); return; }
   }, true);
   document.addEventListener('input', (e) => {
-    const t = e.target; if (!t.closest || !t.closest('.rg')) return;
+    const t = e.target; if (!t.closest || !t.closest('.rg, .dh-ov')) return;
     if (t.dataset.lab) { L[t.dataset.lab] = +t.value; const b = t.parentNode.querySelector('.dp-v'); if (b) b.textContent = t.value; }
     if (t.dataset.labset) { const b = t.parentNode.querySelector('.dp-v'); if (b) b.textContent = t.value; clearTimeout(D._ls); D._ls = setTimeout(() => Net.send({ t: 'dv_labset', ts: +t.value }), 250); }
   }, true);
