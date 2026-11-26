@@ -36,6 +36,11 @@
   function hookDev() {
     const Dev = G.Dev; if (!Dev || Dev._pro) return; Dev._pro = true;
     const sm = Dev.speedMul, od = Dev.onDamage, oms = Dev.onMatchStart;
+    const ou = Dev.onUpdate;
+    Dev.onUpdate = (M, dt) => { // esquive automatique (hors ligne) : roulade quand un projectile ennemi va toucher
+      ou(M, dt); const b = M.player; if (!G.Dev.cfg.dodge || !b || !b.alive || b.rollCd > 0) return;
+      for (const p of M.projs) { if (!p.owner || p.owner.team === b.team) continue; const vx = Math.cos(p.ang), vy = Math.sin(p.ang), rx = b.x - p.x, ry = b.y - p.y, along = rx * vx + ry * vy; if (along < 0 || along > 260) continue; const cr = rx * vy - ry * vx; if (Math.abs(cr) < (b.r || 21) + (p.r || 6) + 6) { G.Sim.tryDodge(M, b, p.ang + Math.PI / 2 * (cr > 0 ? -1 : 1)); break; } }
+    };
     Dev.speedMul = (M, b) => sm(M, b) * (((CE()[b.id] || {}).speed) || 1);
     Dev.onDamage = (M, t, a, s) => { let v = od(M, t, a, s); const e = s && CE()[s.id]; if (e && e.dmg) v *= e.dmg; return v; };
     Dev.onMatchStart = (M) => {

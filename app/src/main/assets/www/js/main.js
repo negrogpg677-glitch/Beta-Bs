@@ -65,7 +65,7 @@
     G.Audio.startMusic('battle');
     App.last = performance.now();
     if (G.Dev) G.Dev.onMatchStart(M);
-    if (!G.Save.data.tutorialDone) { G.UI.showTutorial(); } else if (G.UI.vsScreen) G.UI.vsScreen(M);
+    if (M.spectate) { G.Input.enabled = false; } else if (!G.Save.data.tutorialDone) { G.UI.showTutorial(); } else if (G.UI.vsScreen) G.UI.vsScreen(M);
   };
   App.beginOnline = function (init) {
     G.UI.hideAll();
@@ -153,6 +153,7 @@
   App.updateCam = function (M, dt) {
     const p = M.player, cam = M.cam;
     let tx, ty;
+    if (M.freeCam) { const fc = M.freeCam; cam.x += (fc.x - cam.x) * Math.min(1, dt * 12); cam.y += (fc.y - cam.y) * Math.min(1, dt * 12); cam.kick = 0; cam.zoom = fc.zoom || 1; return; } // caméra libre (spectateur / replay)
     if (M.state === 'goal' && M.ball) { tx = M.ball.x; ty = M.ball.y; }
     else if (p.alive) {
       tx = p.x + p.input.mx * 46; ty = p.y + p.input.my * 36;
@@ -165,13 +166,14 @@
     }
     const k = Math.min(1, dt * (M.state === 'goal' ? 3 : 6));
     cam.x += (tx - cam.x) * k; cam.y += (ty - cam.y) * k;
-    cam.kick = Math.max(0, (cam.kick || 0) - dt * 4); cam.zoom = 1 + cam.kick * 0.035; // à-coup de caméra (tirs, K.O.)
+    cam.kick = Math.max(0, (cam.kick || 0) - dt * 4); cam.zoom = (M.zoomMul || 1) * (1 + cam.kick * 0.035); // à-coup de caméra (tirs, K.O.)
   };
 
   /* ----- fin de match, récompenses ----- */
   const SD_TROPHY = [10, 8, 6, 4, 2, 0, -1, -2, -3, -4];
   const SD_COINS = [95, 75, 60, 48, 38, 30, 24, 18, 14, 10];
   App.finish = function () {
+    if (App.M && App.M.spectate) { if (G.Spectate) G.Spectate.ended(); return; } // spectateur / replay : pas de récompense
     if (App.resultShown) return;
     App.resultShown = true;
     const M = App.M, r = M.result, p = M.player, save = G.Save.data, id = p.id;
@@ -222,6 +224,7 @@
   /* ----- évènements réseau ----- */
   G.Net.on('snap', (s) => G.NetMatch.onSnap(s));
   G.Net.on('match', (init) => {
+    if (init.spectate) { if (G.Spectate) G.Spectate.start(init); return; } // mode spectateur (développeur)
     if (App.state === 'match' && App.M && App.M.net) { App.M = G.NetMatch.begin(init); G.UI.netOverlay(false); return; }
     if (App.state === 'match') return;
     App.beginOnline(init); G.UI.versusRoster(init);

@@ -15,6 +15,7 @@
     map.dirty = true;
     const M = Sim.makeM(mode, init.mapKey, map, 0);
     M.net = true; M.online = false; M.id = init.id; M.ready = false;
+    M.spectate = !!init.spectate; M.replay = !!init.replay; M.cheatsOK = !!init.cheatsOK; M.lab = !!init.lab; M.info = init.info || null; // spectateur / replay / partie de test
     init.roster.forEach((r) => {
       const b = Sim.mkBrawler(M, G.BRAWLER[r.brawler], r.team, r.name, r.level, r.skin, r.idx === init.you, { x: -999, y: -999 }, r.idx);
       b.isBot = r.bot; b.human = !r.bot; b.code = r.code || null; M.ents[r.idx] = b;
@@ -156,9 +157,9 @@
   NM.update = function (M, dt) {
     if (NM.off === null) return;
     Sim.updateFx(M, dt);
-    const me = M.player;
-    // horloge de rendu = horloge serveur estimée - délai d'interpolation adaptatif
-    if (NM.off !== null) NM.tr = (performance.now() - NM.off) / 1000 - NM.delay;
+    const me = M.spectate ? null : M.player; // spectateur : tout le monde est interpolé, aucune prédiction
+    // horloge de rendu = horloge serveur estimée - délai d'interpolation adaptatif (replay : horloge du lecteur)
+    if (M.replay && G.Replay) NM.tr = G.Replay.time() - NM.delay; else if (NM.off !== null) NM.tr = (performance.now() - NM.off) / 1000 - NM.delay;
     // faire avancer A/B : on applique chaque instantané quand il devient « passé »
     const q = NM.queue;
     while (q.length && q[0].tm <= NM.tr) { const s = q.shift(); NM.prev = NM.A; NM.A = s; NM.apply(M, s); }
@@ -198,7 +199,7 @@
       if (me.alive && !(me.freeze > 0 && 0)) {
         if (NM.P.forced) { me.x = lerp(me.x, NM.P.x, Math.min(1, dt * 20)); me.y = lerp(me.y, NM.P.y, Math.min(1, dt * 20)); }
         else {
-          const spd = me.def.speed * T * (f & 32 ? 0.5 : 1) * (f & 64 ? 1.35 : 1) * (f & 256 ? 0.93 : 1);
+          const spd = me.def.speed * T * (f & 32 ? 0.5 : 1) * (f & 64 ? 1.35 : 1) * (f & 256 ? 0.93 : 1) * (M.cheatsOK && G.Dev && G.Dev.cfg ? +G.Dev.cfg.speed || 1 : 1);
           const mx = inp.mx, my = inp.my;
           const P = NM.P; Sim.tryMove(M, P, mx * spd * dt, my * spd * dt); NM.P = { x: P.x, y: P.y, forced: false, r: me.r };
           const h = NM.hist[NM.hist.length - 1];
@@ -238,6 +239,7 @@
     }
   };
   NM.sendInput = function (M, extra) {
+    if (M.spectate) return; // un spectateur n'envoie jamais de commande
     const me = M.player; NM.seq++;
     const o = Object.assign({ t: 'input', seq: NM.seq, mx: +me.input.mx.toFixed(3), my: +me.input.my.toFixed(3), face: +me.face.toFixed(2) }, extra || {});
     G.Net.send(o); NM.lastIn = { mx: me.input.mx, my: me.input.my, face: me.face };

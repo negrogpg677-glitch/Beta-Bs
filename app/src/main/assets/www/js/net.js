@@ -45,7 +45,7 @@
       clearTimeout(to);
       const n = G.Save.data.net || {};
       const A0 = G.App, inM = A0 && A0.state === 'match' && A0.M && A0.M.net ? Net.matchId : null;
-      ws.send(JSON.stringify({ t: 'hello', pid: n.pid, token: n.token, name: G.Save.data.name, v: 3, inMatch: inM }));
+      ws.send(JSON.stringify({ t: 'hello', pid: n.pid, token: n.token, name: G.Save.data.name, v: 3, inMatch: inM, plat: window.AndroidBridge ? 'android' : /iPhone|iPad|iPod/.test(navigator.userAgent) ? 'ios' : 'web' }));
     };
     ws.onmessage = (ev) => {
       let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
@@ -77,7 +77,7 @@
         Net.pid = m.pid; Net.token = m.token; Net.welcome = m; Net.retry = 0; Net.online = m.online;
         G.Save.data.net = { pid: m.pid, token: m.token }; G.Save.commit();
         Net.setStatus('online'); Net.sendProfile();
-        if (!Net._pingIv) Net._pingIv = setInterval(() => Net.send({ t: 'ping', ts: Date.now() }), 3000);
+        if (!Net._pingIv) Net._pingIv = setInterval(() => Net.send({ t: 'ping', ts: Date.now(), p: Net.ping || 0 }), 3000);
         break;
       case 'pong': Net.ping = Date.now() - m.ts; break;
       case 'party': Net.party = m.party; break;

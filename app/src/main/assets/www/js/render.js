@@ -903,7 +903,7 @@
     if (R.lastCam) drawOffscreen(c, M, W, H, u);
     // --- barre du joueur ---
     // supers / attaque / joystick
-    withAlpha(c, G.clamp(G.Save.data.settings.ctrlAlpha || 0.8, 0.25, 1), () => drawControls(c, M, W, H, input, u, time, text));
+    if (!M.spectate) withAlpha(c, G.clamp(G.Save.data.settings.ctrlAlpha || 0.8, 0.25, 1), () => drawControls(c, M, W, H, input, u, time, text));
     // décompte & bannière
     if (M.state === 'countdown') {
       const n = Math.ceil(M.cd);

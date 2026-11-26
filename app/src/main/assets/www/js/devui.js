@@ -24,64 +24,82 @@
     bolt: SV('<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>', 20), star: SV('<path d="M12 3l2.8 5.8 6.2.9-4.5 4.4 1 6.2L12 17.4 6.5 20.3l1-6.2L3 9.7l6.2-.9z"/>', 22),
   };
   const GROUPS = [
-    { k: 'battle', n: 'Bataille', ic: 'battle', tabs: [['combat', 'Combat'], ['modes', 'Modes de test'], ['chars', 'Personnages'], ['mods', 'Mods']] },
-    { k: 'display', n: 'Affichage', ic: 'eye', tabs: [['overlay', 'Superpositions'], ['diag', 'Diagnostics'], ['flags', 'Options']] },
-    { k: 'online', n: 'En ligne', ic: 'globe', tabs: [['multi', 'Multijoueur'], ['server', 'Serveur'], ['accounts', 'Comptes']] },
-    { k: 'misc', n: 'Divers', ic: 'wrench', tabs: [['maps', 'Cartes'], ['adv', 'Avancé'], ['menu', 'Menu']] },
+    { k: 'observe', n: 'Observer', ic: 'eye', tabs: [['dash', 'Tableau de bord'], ['players', 'Joueurs'], ['games', 'Parties'], ['diag', 'Diagnostics']] },
+    { k: 'admin', n: 'Administrer', ic: 'gear', tabs: [['mod', 'Modération'], ['log', 'Journal']] },
+    { k: 'studio', n: 'Studio', ic: 'battle', tabs: [['lab', 'Labo'], ['combat', 'Triches de test'], ['modes', 'Modes'], ['chars', 'Personnages'], ['maps', 'Cartes'], ['overlay', 'Affichage'], ['mods', 'Mods'], ['adv', 'Avancé']] },
   ];
   /* ---------- cartes : chaque outil du menu développeur ---------- */
   const C = [];
   const card = (id, g, tab, title, desc, o) => C.push(Object.assign({ id, g, tab, title, desc, lvl: 1 }, o || {}));
-  const T = (id, g, tab, title, desc, key, lvl) => card(id, g, tab, title, desc, { key, lvl: lvl || 1 });
-  T('god', 'battle', 'combat', 'Invincible', 'Vous ne subissez aucun dégât (parties hors ligne uniquement).', 'god');
-  T('ammo', 'battle', 'combat', 'Munitions infinies', 'Vos trois munitions sont toujours pleines.', 'ammo');
-  T('sup', 'battle', 'combat', 'Super toujours prêt', 'La super est rechargée en permanence.', 'sup');
-  T('ohk', 'battle', 'combat', 'Un coup = élimination', 'Chaque tir élimine la cible.', 'ohk');
-  T('aim', 'battle', 'combat', 'Visée automatique', 'Chaque tir vise parfaitement l\'ennemi le plus proche (hors ligne).', 'aim');
-  T('auto', 'battle', 'combat', 'Tir automatique', 'Tire tout seul dès qu\'un ennemi est à portée.', 'auto');
-  T('gad', 'battle', 'combat', 'Gadgets infinis', 'Le gadget se recharge sans limite.', 'gad');
-  T('passive', 'battle', 'combat', 'Ennemis passifs', 'Les adversaires ne tirent plus.', 'passive');
-  card('mult', 'battle', 'combat', 'Multiplicateurs', 'Dégâts, vitesse de votre brawler et vitesse du jeu.', { custom: 'mult' });
-  card('matchacts', 'battle', 'combat', 'Actions en partie', 'Soigner, super immédiate, éliminer, ajouter des bots, gagner ou perdre (partie hors ligne en cours).', { custom: 'acts' });
-  card('launch', 'battle', 'modes', 'Lancer un mode', 'Toutes les cartes de tous les modes, sans recherche de joueurs.', { item: 'launch' });
-  card('training', 'battle', 'modes', 'Entraînement', 'Ennemis passifs et invincibilité, puis lancement.', { item: 'training' });
-  card('privtest', 'battle', 'modes', 'Partie privée de test', 'Partie réelle sur le serveur avec 2 joueurs de test.', { item: 'privtest', lvl: 2 });
-  card('charedit', 'battle', 'chars', 'Éditeur de personnages', 'Vie, vitesse, dégâts, portée et recharge de chaque brawler.', { item: 'charedit' });
-  card('unlock', 'battle', 'chars', 'Déblocages', 'Tout débloquer, niveau maximum.', { item: 'unlock' });
-  T('fps', 'display', 'overlay', 'Compteur FPS', 'Affiche les FPS et le nombre d\'entités en jeu.', 'fps');
-  T('hit', 'display', 'overlay', 'Hitbox et murs', 'Affiche les zones de collision.', 'hit');
-  T('aiov', 'display', 'overlay', 'IA visible', 'Affiche les cibles, chemins et objectifs des bots.', 'ai', 2);
-  T('esp', 'display', 'overlay', 'Vision des cachés', 'Montre les ennemis cachés dans les buissons (hors ligne).', 'esp');
-  card('diag_live', 'display', 'diag', 'Diagnostics en direct', 'FPS, ping, pertes de paquets, mémoire, erreurs et synchronisation.', { item: 'diag_live' });
-  card('errors', 'display', 'diag', 'Console d\'erreurs', 'Erreurs JavaScript récentes.', { item: 'errors', lvl: 2 });
-  card('export', 'display', 'diag', 'Rapport', 'Exporter un rapport complet (JSON).', { item: 'export' });
-  card('flags', 'display', 'flags', 'Options de fonctionnalités', '3D en combat, aide à la visée, gaucher, vibrations…', { item: 'flags', lvl: 2 });
-  card('simgroup', 'online', 'multi', 'Joueurs et groupes simulés', 'Joueurs de test, invitations, départs, chef, demandes d\'ami.', { item: 'simgroup' });
-  card('simnet', 'online', 'multi', 'Connexion et partie', 'Déconnexion, inactivité, reprise, victoire, défaite, abandon.', { item: 'simnet', lvl: 2 });
-  card('livecfg', 'online', 'multi', 'Paramètres en direct', 'Délai d\'inactivité et fenêtre de reconnexion du serveur.', { item: 'livecfg', lvl: 2 });
-  card('srvstate', 'online', 'server', 'État du serveur', 'Parties, équipes, mémoire, sessions et relais d\'appareil.', { item: 'srvstate' });
-  card('testprof', 'online', 'accounts', 'Profils de test', 'Profils locaux jamais envoyés dans le cloud.', { item: 'testprof' });
-  card('teststats', 'online', 'accounts', 'Statistiques', 'Trophées, pièces, gemmes, progression, récompenses.', { item: 'teststats' });
-  card('device', 'online', 'accounts', 'Multi-appareils', 'Identifiant d\'appareil et simulation d\'un autre appareil.', { item: 'device', lvl: 2 });
-  card('grant', 'online', 'accounts', 'Accès développeur', 'Autoriser un autre compte, offrir des brawlers.', { item: 'grant', lvl: 3 });
-  card('mapedit', 'misc', 'maps', 'Éditeur de cartes', 'Peignez murs, buissons, eau et caisses, puis jouez la carte.', { item: 'mapedit' });
-  card('console', 'misc', 'adv', 'Console JavaScript', 'Exécuter du code dans le jeu.', { item: 'console', lvl: 3 });
-  card('traffic', 'misc', 'adv', 'Trafic réseau', 'Messages reçus et envoyés, derniers événements.', { item: 'traffic', lvl: 2 });
-  card('configs', 'misc', 'adv', 'Configurations', 'Enregistrer, restaurer et comparer des réglages.', { item: 'configs', lvl: 3 });
-  card('autotests', 'misc', 'adv', 'Tests automatiques', 'Joue tous les modes et vérifie le jeu, avec historique.', { item: 'autotests', lvl: 2 });
-  card('legacy', 'misc', 'adv', 'Mods personnalisés', 'Éditeur de mods JavaScript (ancien panneau).', { act: 'legacy', lvl: 3 });
-  card('uiprefs', 'misc', 'menu', 'Préférences du menu', 'Niveau d\'affichage, pause en partie, réinitialisation.', { item: 'uiprefs' });
-  const modCards = () => (G.Dev && G.Dev.BUILTIN ? G.Dev.BUILTIN.map((m) => ({ id: 'mod_' + m.id, g: 'battle', tab: 'mods', title: m.name, desc: m.desc, mod: m.id, lvl: 1 })) : []);
+  const OFF = 'Hors ligne contre les bots · en ligne : labo et parties privées (serveur) · bloqué en public';
+  const T = (id, g, tab, title, desc, key, lvl, scope) => card(id, g, tab, title, desc, { key, lvl: lvl || 1, scope });
+  // 1. OBSERVER ET ANALYSER (données réelles du serveur)
+  card('dash', 'observe', 'dash', 'Tableau de bord', 'Joueurs connectés, en partie, groupes, parties, état des services, latence, erreurs, alertes, statistiques et activité en direct.', { custom: 'dash', role: 'observe' });
+  card('players', 'observe', 'players', 'Joueurs', 'Liste des joueurs connectés et récents, recherche, profil, session, historique, groupe, modération.', { custom: 'players', role: 'observe' });
+  card('matches', 'observe', 'games', 'Parties en cours', 'Joueurs, équipes, carte, mode, état ; observer en spectateur (caméra libre).', { custom: 'matches', role: 'observe' });
+  card('replays', 'observe', 'games', 'Replays', 'Revoir les dernières parties : évènements, joueur à suivre, résultats ; recherche par joueur, date ou mode.', { custom: 'replays', role: 'observe' });
+  card('diag_live', 'observe', 'diag', 'Diagnostics client', 'FPS, ping, pertes de paquets, mémoire, erreurs et synchronisation.', { item: 'diag_live' });
+  card('srvstate', 'observe', 'diag', 'État du serveur', 'Parties, équipes, mémoire, sessions et relais d\'appareil.', { item: 'srvstate', role: 'observe' });
+  card('errors', 'observe', 'diag', 'Erreurs du client', 'Erreurs JavaScript récentes.', { item: 'errors', lvl: 2 });
+  card('traffic', 'observe', 'diag', 'Trafic réseau', 'Messages reçus et envoyés, derniers évènements.', { item: 'traffic', lvl: 2 });
+  card('export', 'observe', 'diag', 'Rapport de diagnostic', 'Exporter un rapport complet (sans secret).', { item: 'export' });
+  // 2. ADMINISTRER ET INTERVENIR (droit « administrer », confirmation + journal)
+  card('players_adm', 'admin', 'mod', 'Gestion des joueurs', 'Avertir, déconnecter une session, sanctionner (avec confirmation et journal).', { custom: 'players', role: 'admin', alias: 'players' });
+  card('matches_adm', 'admin', 'mod', 'Interventions sur les parties', 'Arrêter une partie en cas de problème grave.', { custom: 'matches', role: 'admin', alias: 'matches' });
+  card('reports', 'admin', 'mod', 'Signalements', 'Signalements des joueurs, à traiter.', { custom: 'reports', role: 'admin' });
+  card('bans', 'admin', 'mod', 'Sanctions actives', 'Comptes suspendus et levée des sanctions.', { custom: 'bans', role: 'admin' });
+  card('audit', 'admin', 'log', 'Journal d\'activité', 'Toutes les interventions (qui, quoi, quand, pourquoi), enregistrées dans la base.', { custom: 'audit', role: 'admin' });
+  card('grant', 'admin', 'log', 'Droits développeur', 'Accorder ou retirer des droits (compte principal uniquement).', { item: 'grant', lvl: 3, role: 'admin' });
+  // 3. STUDIO DE DÉVELOPPEMENT
+  card('lab', 'studio', 'lab', 'Laboratoire de test (en ligne)', 'Partie de test : mode, carte, équipes, bots, niveau, carte modifiée ; réglages en direct, réinitialisation, déconnexion/inactivité.', { custom: 'lab', role: 'dev' });
+  card('cheats', 'studio', 'lab', 'Triches de test en ligne', 'Aimbot, esquive auto, invincible… appliqués par le serveur en labo et en privé.', { custom: 'cheats', role: 'dev' });
+  card('selftest', 'studio', 'lab', 'Tests serveur', 'Simule tous les modes avec la simulation du serveur.', { custom: 'selftest', role: 'dev' });
+  card('autotests', 'studio', 'lab', 'Tests automatiques (client)', 'Joue tous les modes dans l\'appareil, avec historique.', { item: 'autotests' });
+  card('simgroup', 'studio', 'lab', 'Bots et joueurs de test', 'Joueurs de test, invitations, départs, chef, demandes d\'ami (identifiés TEST).', { item: 'simgroup', role: 'dev' });
+  card('simnet', 'studio', 'lab', 'Connexion et partie', 'Déconnexion, inactivité, reprise, victoire, défaite, abandon.', { item: 'simnet', role: 'dev', lvl: 2 });
+  card('livecfg', 'studio', 'lab', 'Paramètres serveur en direct', 'Délai d\'inactivité et fenêtre de reconnexion.', { item: 'livecfg', role: 'dev', lvl: 2 });
+  T('god', 'studio', 'combat', 'Invincible', 'Vous ne subissez aucun dégât.', 'god', 1, OFF);
+  T('ammo', 'studio', 'combat', 'Munitions infinies', 'Vos trois munitions sont toujours pleines.', 'ammo', 1, OFF);
+  T('sup', 'studio', 'combat', 'Super toujours prête', 'La super est rechargée en permanence.', 'sup', 1, OFF);
+  T('ohk', 'studio', 'combat', 'Un coup = élimination', 'Chaque tir élimine la cible.', 'ohk', 1, OFF);
+  T('aim', 'studio', 'combat', 'Aimbot', 'Chaque tir vise l\'ennemi le plus proche (avec anticipation en ligne).', 'aim', 1, OFF);
+  T('dodge', 'studio', 'combat', 'Esquive automatique', 'Roulade automatique quand un projectile ennemi va vous toucher.', 'dodge', 1, OFF);
+  T('auto', 'studio', 'combat', 'Tir automatique', 'Tire tout seul dès qu\'un ennemi est à portée.', 'auto', 1, OFF);
+  T('gad', 'studio', 'combat', 'Gadgets infinis', 'Le gadget se recharge sans limite.', 'gad', 1, OFF);
+  T('passive', 'studio', 'combat', 'Ennemis passifs', 'Les adversaires ne tirent plus (hors ligne ; en ligne : option du labo).', 'passive', 1, 'Hors ligne · en ligne via le labo');
+  card('mult', 'studio', 'combat', 'Multiplicateurs', 'Dégâts, vitesse de votre brawler et vitesse du jeu.', { custom: 'mult', scope: OFF });
+  card('matchacts', 'studio', 'combat', 'Actions en partie', 'Soigner, super immédiate, éliminer, ajouter des bots, gagner ou perdre.', { custom: 'acts', scope: 'Hors ligne (contre les bots)' });
+  card('launch', 'studio', 'modes', 'Lancer un mode', 'Toutes les cartes de tous les modes, hors ligne.', { item: 'launch' });
+  card('training', 'studio', 'modes', 'Entraînement', 'Ennemis passifs et invincibilité, puis lancement.', { item: 'training' });
+  card('privtest', 'studio', 'modes', 'Partie privée de test', 'Partie réelle sur le serveur avec 2 joueurs de test.', { item: 'privtest', lvl: 2, role: 'dev' });
+  card('charedit', 'studio', 'chars', 'Éditeur de personnages', 'Vie, vitesse, dégâts, portée et recharge (hors ligne et labo en ligne).', { item: 'charedit' });
+  card('unlock', 'studio', 'chars', 'Déblocages', 'Tout débloquer, niveau maximum.', { item: 'unlock' });
+  card('joy', 'studio', 'chars', 'Joystick', 'Mode, sensibilité, taille et position des commandes.', { act: 'joyOpen' });
+  card('mapedit', 'studio', 'maps', 'Éditeur de cartes', 'Créer, modifier, annuler/rétablir, versions, validation, test hors ligne ou dans le labo en ligne.', { item: 'mapedit' });
+  T('fps', 'studio', 'overlay', 'Compteur FPS', 'Affiche les FPS et le nombre d\'entités en jeu.', 'fps');
+  T('hit', 'studio', 'overlay', 'Hitbox, murs et portées', 'Affiche les zones de collision et de portée.', 'hit');
+  T('aiov', 'studio', 'overlay', 'IA visible', 'Cibles, chemins et objectifs des bots.', 'ai', 2);
+  T('esp', 'studio', 'overlay', 'Vision des cachés', 'Montre les ennemis dans les buissons (hors ligne).', 'esp');
+  card('flags', 'studio', 'overlay', 'Options de fonctionnalités', '3D en combat, aide à la visée, gaucher, vibrations…', { item: 'flags', lvl: 2 });
+  card('testprof', 'studio', 'adv', 'Profils de test', 'Profils locaux jamais envoyés dans le cloud.', { item: 'testprof' });
+  card('teststats', 'studio', 'adv', 'Statistiques du profil', 'Trophées, pièces, gemmes, progression, récompenses.', { item: 'teststats' });
+  card('device', 'studio', 'adv', 'Multi-appareils', 'Identifiant d\'appareil et simulation d\'un autre appareil.', { item: 'device', lvl: 2 });
+  card('console', 'studio', 'adv', 'Console JavaScript', 'Exécuter du code dans le jeu.', { item: 'console', lvl: 3 });
+  card('configs', 'studio', 'adv', 'Configurations', 'Enregistrer, restaurer et comparer des réglages.', { item: 'configs', lvl: 3 });
+  card('legacy', 'studio', 'adv', 'Mods personnalisés', 'Éditeur de mods JavaScript (ancien panneau).', { act: 'legacy', lvl: 3 });
+  card('uiprefs', 'studio', 'adv', 'Préférences du menu', 'Niveau d\'affichage, pause en partie, réinitialisation.', { item: 'uiprefs' });
+  const modCards = () => (G.Dev && G.Dev.BUILTIN ? G.Dev.BUILTIN.map((m) => ({ id: 'mod_' + m.id, g: 'studio', tab: 'mods', title: m.name, desc: m.desc, mod: m.id, lvl: 1 })) : []);
   const all = () => C.concat(modCards()).filter((c) => c.lvl <= DP.lvl);
   const isOn = (c) => (c.key ? !!G.Dev.cfg[c.key] : c.mod ? !!(G.Dev.cfg.mods || {})[c.mod] : false);
   const itemOf = (id) => DP._I.find((x) => x.id === id);
 
   /* ---------- état de l'interface ---------- */
-  const U = { g: 'battle', tab: 'combat', detail: null, search: false, q: '', view: 'lib', pop: null };
+  const U = { g: 'observe', tab: 'dash', detail: null, search: false, q: '', view: 'lib', pop: null };
   const PROF = { cur: () => LS.get('br_dev_prof', 1), all: () => LS.get('br_dev_profiles', {}) };
 
   const pill = (c) => c.key || c.mod ? `<span class="rg-pill ${isOn(c) ? 'on' : ''}">${isOn(c) ? 'OUI' : 'NON'}</span>` : `<span class="rg-pill tool">${c.act ? 'ACTION' : 'OUTIL'}</span>`;
-  const cardHtml = (c) => `<div class="rg-card ${isOn(c) ? 'on' : ''}" data-card="${c.id}"><div class="rg-ct"><b>${esc(c.title)}</b>${pill(c)}</div>
+  const locked = (c) => c.role && !(G.DevConsole && G.DevConsole.roles().includes(c.role));
+  const cardHtml = (c) => `<div class="rg-card ${isOn(c) ? 'on' : ''} ${locked(c) ? 'lock' : ''}" data-card="${c.id}"><div class="rg-ct"><b>${locked(c) ? '🔒 ' : ''}${esc(c.title)}</b>${pill(c)}${c.scope ? `<small class="rg-scope">${esc(c.scope)}</small>` : ''}</div>
     <div class="rg-cb"><button class="rg-ib" data-info="${c.id}" aria-label="Infos">${IC.info}</button>${c.key || c.mod ? '' : `<button class="rg-ib" data-info="${c.id}" aria-label="Réglages">${IC.sliders}</button>`}</div></div>`;
   function section(title, list) { return `<div class="rg-sec"><div class="rg-sh">${esc(title)}</div><div class="rg-grid">${list.map(cardHtml).join('') || '<div class="rg-empty">Aucun outil à ce niveau d\'affichage (Paramètres → niveau Expert).</div>'}</div></div>`; }
   function customHtml(c) {
@@ -91,6 +109,7 @@
     if (c.custom === 'acts') { const inM = G.App.state === 'match' && G.App.M && !G.App.M.net;
       return (inM ? '' : '<div class="rg-note">Lancez une partie hors ligne (Bataille → Modes de test) pour utiliser ces actions.</div>') +
         `<div class="dp-chips">${[['heal', 'Soigner'], ['superNow', 'Super prête'], ['maxhp', '+5000 PV max'], ['killAll', 'Éliminer les ennemis'], ['center', 'Aller au centre'], ['skipTime', '−30 s'], ['botFriend', '+ Bot allié'], ['botFoe', '+ Bot ennemi'], ['cubes', '+5 cubes'], ['win', 'Gagner'], ['lose', 'Perdre']].map(([a, l]) => `<button class="btn small" data-a="${a}" ${inM ? '' : 'disabled'}>${l}</button>`).join('')}</div>`; }
+    if (G.DevConsole && G.DevConsole.render(c.custom)) return G.DevConsole.render(c.custom);
     return '';
   }
   function detailHtml(c) {
@@ -102,8 +121,8 @@
     const fav = DP.fav.includes(c.id);
     return `<div class="rg-dt"><div class="rg-dh"><h3>${esc(c.title)}</h3><button class="rg-fav ${fav ? 'on' : ''}" data-favc="${c.id}" aria-label="Favori">${IC.star}</button>
       ${c.key || c.mod ? `<label class="rg-act">Activé <span class="rg-tg ${isOn(c) ? 'on' : ''}" data-tgc="${c.id}"><i></i></span></label>` : ''}</div>
-      <div class="rg-desc">${IC.info}<span>${esc(c.desc)}</span></div>
-      <div class="rg-sec"><div class="rg-sh">PARAMÈTRES</div><div class="rg-params">${body}</div></div>
+      <div class="rg-desc">${IC.info}<span>${esc(c.desc)}${c.scope ? '<br><b>Où :</b> ' + esc(c.scope) : ''}${c.role ? '<br><b>Droit requis :</b> ' + ({ observe: 'observer', admin: 'administrer', dev: 'développer' }[c.role]) + ' (vérifié par le serveur)' : ''}</span></div>
+      <div class="rg-sec"><div class="rg-sh">${c.custom && ['dash', 'players', 'matches', 'replays', 'reports', 'bans', 'audit'].includes(c.custom) ? 'DONNÉES DU SERVEUR (EN DIRECT)' : 'PARAMÈTRES'}</div><div class="rg-params">${body}</div></div>
       <div class="rg-foot"><button class="rg-back" data-back="1">${IC.back} Retour</button></div></div>`;
   }
   function counts(g) { return all().filter((c) => c.g === g).length; }
@@ -160,14 +179,14 @@
     if (d.g) { G.Audio.sfx('ui'); U.g = d.g; U.tab = GROUPS.find((x) => x.k === d.g).tabs[0][0]; U.detail = null; U.search = false; U.view = 'lib'; }
     else if (d.tab) { G.Audio.sfx('ui'); U.tab = d.tab; }
     else if (d.sbtn) { G.Audio.sfx('ui'); U.search = !U.search; U.detail = null; U.view = 'lib'; }
-    else if (d.info) { G.Audio.sfx('ui'); U.detail = d.info; }
+    else if (d.info) { G.Audio.sfx('ui'); U.detail = d.info; openView(d.info); }
     else if (d.back) { G.Audio.sfx('back'); U.detail = null; }
-    else if (d.tgc) { const c = all().concat(modCards()).find((x) => x.id === d.tgc); if (c) { toggleCard(c); G.Audio.sfx(isOn(c) ? 'pickup' : 'back'); } }
+    else if (d.tgc) { const c = all().concat(modCards()).find((x) => x.id === d.tgc); if (c) { toggleCard(c); G.Audio.sfx(isOn(c) ? 'pickup' : 'back'); if (G.Net.me && G.Net.me.roles && G.Net.me.roles.includes('dev')) G.Net.send({ t: 'dv_cheats', cheats: G.Dev.cfg }); } }
     else if (d.favc) { const i = DP.fav.indexOf(d.favc); if (i >= 0) DP.fav.splice(i, 1); else DP.fav.push(d.favc); LS.set('br_dev_fav', DP.fav); G.Audio.sfx('ui'); }
     else if (d.card) {
       if (e.target.closest('button, input, .rg-tg')) return true;
       const c = all().find((x) => x.id === d.card); if (!c) return true;
-      if (c.key || c.mod) { toggleCard(c); G.Audio.sfx(isOn(c) ? 'pickup' : 'back'); } else if (c.act) { const b = document.createElement('button'); b.dataset.a = c.act; DP._click({ target: b }); return true; } else { G.Audio.sfx('ui'); U.detail = c.id; }
+      if (c.key || c.mod) { toggleCard(c); G.Audio.sfx(isOn(c) ? 'pickup' : 'back'); if (G.Net.me && G.Net.me.roles && G.Net.me.roles.includes('dev')) G.Net.send({ t: 'dv_cheats', cheats: G.Dev.cfg }); } else if (c.act === 'joyOpen') { closeUI(); G.UI.ACT.settings(); return true; } else if (c.act) { const b = document.createElement('button'); b.dataset.a = c.act; DP._click({ target: b }); return true; } else { G.Audio.sfx('ui'); U.detail = c.id; openView(c.id); }
     } else if (d.hdr) {
       G.Audio.sfx('ui');
       if (d.hdr === 'close') { closeUI(); return true; }
@@ -184,6 +203,7 @@
     render(); return true;
   }
   function closeUI() { DP.close(); }
+  function openView(id) { const c = C.find((x) => x.id === id); if (c && c.custom && G.DevConsole) { if (c.alias === 'players' || c.custom === 'players') G.DevConsole.view.pid = null; G.DevConsole.open(c.custom); } }
 
   /* ---------- ouverture ---------- */
   function open() {
