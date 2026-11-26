@@ -62,3 +62,10 @@ Product flavors Gradle `prod`/`dev` (dimension `edition`, `.dev` en suffixe d'ap
 - `main.js` : résolution dynamique `App.resScale` (0,65 → 1) avant la baisse de qualité.
 - `util.js` : compresseur + réverbération courte, variation de hauteur, anti-cacophonie (35 ms).
 - Test : `tools/test-touch.js` (toucher multipoint réel émulé).
+
+## Règle permanente : notes de version (demandée par le propriétaire)
+À CHAQUE nouvelle version :
+1. ajouter une entrée EN TÊTE de `G.CHANGELOG` dans `app/src/main/assets/www/js/changelog.js` avec `players` (ce qui change pour tous les joueurs, en langage simple) et `dev` (ce qui change pour les développeurs) ;
+2. mettre à jour `G.VERSION` (même fichier), `versionCode`/`versionName` (app/build.gradle), `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION` (ios/project.yml) et le cache `brawlrush-vNN` (sw.js) ;
+3. lancer `node tools/test-changelog.js`.
+La fenêtre « Nouveautés » s'affiche automatiquement au premier lancement après la mise à jour (partie « Développeurs » seulement pour le compte développeur / l'édition DEV).

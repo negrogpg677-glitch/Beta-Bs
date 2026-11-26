@@ -189,3 +189,8 @@ Tests : `tools/test-duel.js` 7/7, modes simulés jusqu'au bout (11 modes), serve
 - Chaque option affiche où elle s'applique (Hors ligne / En ligne · labo / Bloqué en public) ; pages verrouillées selon les droits du serveur.
 - Recherche globale (pages + triches), favoris épinglés à l'accueil, 3 jeux de réglages rapides, rail compact avec libellés sur téléphone.
 - Toutes les fonctions précédentes sont conservées (37 pages).
+
+## v4.1 — écran « Nouveautés » après chaque mise à jour
+- Fenêtre automatique au premier lancement après une mise à jour : « Pour tous les joueurs » + « Développeurs » (compte développeur / édition DEV uniquement) ; versions sautées rattrapées ; rien à la toute première installation ; au-dessus des autres fenêtres (jamais sur l'écran de connexion).
+- Consultable : Réglages → « Nouveautés » ; Dev Hub → Accueil → « Notes de version ».
+- Règle permanente ajoutée dans PROJECT_NOTES.md. Test : `tools/test-changelog.js` (9 vérifications).

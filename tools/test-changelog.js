@@ -20,7 +20,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   ok(st.open && st.vers.join() === 'Version 4.1,Version 4.0' && st.players && !st.dev, 'mise à jour 3.9 → 4.1 : nouveautés pour les joueurs, sans la partie développeurs');
   ok(st.seen === '4.1', 'version marquée comme vue');
   await p.screenshot({ path: path.join(OUT, 'changelog_joueur.png') });
-  await p.reload(); await sleep(2300); await p.mouse.click(422, 200); await sleep(5000);
+  await p.reload(); await sleep(2300); await p.mouse.click(422, 200); await sleep(5000); ok(!(await p.evaluate(() => !!document.querySelector('.clm'))), 'relance suivante : la fenêtre ne réapparaît pas');
   // 2. versions sautées
   p = await launch('3.6', true, false); st = await p.evaluate(() => [...document.querySelectorAll('.cl-vh b')].map((x) => x.textContent));
   ok(st.join() === 'Version 4.1,Version 4.0,Version 3.9,Version 3.8,Version 3.7', 'versions sautées (3.6 → 4.1) : toutes les nouveautés manquées (' + st.length + ')');
