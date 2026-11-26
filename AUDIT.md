@@ -194,3 +194,8 @@ Tests : `tools/test-duel.js` 7/7, modes simulés jusqu'au bout (11 modes), serve
 - Fenêtre automatique au premier lancement après une mise à jour : « Pour tous les joueurs » + « Développeurs » (compte développeur / édition DEV uniquement) ; versions sautées rattrapées ; rien à la toute première installation ; au-dessus des autres fenêtres (jamais sur l'écran de connexion).
 - Consultable : Réglages → « Nouveautés » ; Dev Hub → Accueil → « Notes de version ».
 - Règle permanente ajoutée dans PROJECT_NOTES.md. Test : `tools/test-changelog.js` (9 vérifications).
+
+## v4.2 — accès au mode développeur
+- Bouton « DEV » (en haut à gauche) et bouton « 🎁 Joueurs » retirés ; remplacés par le **logo carré du Dev Hub** (« BR », dégradé indigo → cyan, petite étiquette « DEV ») **en bas à gauche** du salon, respectant les zones sûres de l'écran.
+- Caché en partie et en spectateur (le joystick reste libre ; accès par « ⚡ Accès rapide ») ; étiquette « COMPTE DÉVELOPPEUR » retirée (elle chevauchait les boutons).
+- Cadeaux de brawlers : Dev Hub → Modération → Droits & cadeaux.

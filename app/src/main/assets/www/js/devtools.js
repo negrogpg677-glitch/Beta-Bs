@@ -234,8 +234,8 @@
       const st = document.createElement('style');
       st.textContent = '#devBtn{position:fixed;left:2rem;top:9.6rem;z-index:96;padding:.5rem 1.6rem;font-size:2.4rem;border-radius:1.2rem;background:linear-gradient(#ff7ae0,#a82ad0);border:.3rem solid #14123a;box-shadow:0 .4rem 0 #5a1a8a} .skins{flex-wrap:wrap}.skin{flex:1 1 22%} .devbadge{position:fixed;right:1.6rem;bottom:1rem;z-index:5;font-size:2rem;color:#ff7ae0;pointer-events:none}';
       document.head.appendChild(st);
-      const b = document.createElement('button'); b.id = 'devBtn'; b.textContent = 'DEV'; b.onclick = open; document.getElementById('app').appendChild(b);
-      const g = document.createElement('button'); g.id = 'devGiftBtn'; g.textContent = '🎁 Joueurs'; g.onclick = () => G.UI.devPanel && G.UI.devPanel(); document.getElementById('app').appendChild(g);
+      const b = document.createElement('button'); b.id = 'devBtn'; b.className = 'dh-launch'; b.setAttribute('aria-label', 'Mode développeur'); b.title = 'Mode développeur'; b.innerHTML = '<span>BR</span>'; b.onclick = open; document.getElementById('app').appendChild(b); // logo carré du Dev Hub, en bas à gauche
+      // (les cadeaux de brawlers sont dans Dev Hub → Modération → Droits & cadeaux)
       const badge = document.createElement('div'); badge.className = 'devbadge'; badge.textContent = label || 'COMPTE DÉVELOPPEUR'; document.getElementById('app').appendChild(badge);
       G.DevReady = true;
     } catch (e) { console.error('dev init', e); }

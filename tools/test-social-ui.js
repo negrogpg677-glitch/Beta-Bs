@@ -37,7 +37,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const md = await D.evaluate(() => G.Net.me), mb = await B.evaluate(() => G.Net.me);
   ok(md && /^[A-Z]{4,16}$/.test(md.handle) && md.dev === true, 'connexion du compte développeur : identifiant ' + (md && md.handle) + ', droits développeur reconnus');
   ok(mb && /^[A-Z]{4,16}$/.test(mb.handle) && !mb.dev, 'connexion de Bob : identifiant ' + (mb && mb.handle));
-  ok(await D.evaluate(() => !!(G.DevReady && G.Dev && document.getElementById('devBtn') && document.getElementById('devGiftBtn'))), 'compte développeur : menu DEV (outils + cadeaux) activé automatiquement à la connexion');
+  ok(await D.evaluate(() => { const b = document.getElementById('devBtn'), r = b && b.getBoundingClientRect(); return !!(G.DevReady && G.Dev && b && Math.abs(r.width - r.height) < 1 && r.left < 60 && r.bottom > innerHeight - 60); }), 'compte développeur : logo carré du mode développeur en bas à gauche, activé à la connexion');
   ok(await B.evaluate(() => !G.Dev && !document.getElementById('devBtn')), 'compte normal : pas de menu DEV');
   B.clear && 0; await B.evaluate(() => G.Net.send({ t: 'dv_sim', act: 'join' })); await sleep(300); ok(await B.evaluate(() => !(G.Net.party && G.Net.party.members.length > 1)), 'compte normal : outils développeur refusés par le serveur même en envoyant la commande');
   await B.evaluate(() => G.UI.ACT.settings()); await sleep(300);

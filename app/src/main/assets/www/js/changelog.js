@@ -6,8 +6,17 @@
    ⚠ À chaque nouvelle version : ajouter une entrée EN TÊTE de G.CHANGELOG et mettre G.VERSION à jour. */
 (function () {
   const G = window.G, UI = G.UI;
-  G.VERSION = '4.1'; G.VERSION_NAME = G.VERSION;
+  G.VERSION = '4.2'; G.VERSION_NAME = G.VERSION;
   G.CHANGELOG = [
+    { v: '4.2', date: '2026-11-26', title: 'Accès au mode développeur',
+      players: [
+        'Améliorations techniques de l\'interface.',
+      ],
+      dev: [
+        'Le bouton « DEV » est remplacé par le logo carré du Dev Hub, en bas à gauche du salon.',
+        'Le bouton « 🎁 Joueurs » est retiré : les cadeaux sont dans Dev Hub → Modération → Droits & cadeaux.',
+        'En partie, le logo se cache (le joystick reste libre) : utilisez « ⚡ Accès rapide » en haut.',
+      ] },
     { v: '4.1', date: '2026-11-26', title: 'Écran des nouveautés',
       players: [
         'Nouveau : un écran « Nouveautés » s\'affiche juste après chaque mise à jour, avec tout ce qui a changé.',
