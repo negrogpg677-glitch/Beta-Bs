@@ -227,6 +227,7 @@
   }
   function render() {
     const p = DP.panel; if (!p) return;
+    if (DP.renderHook) { DP.renderHook(); meDraw(); const con0 = p.querySelector('#dpCon'); if (con0) con0.scrollTop = 1e9; return; } // nouvelle interface (devui.js)
     const body = p.querySelector('#dpBody'), q = DP.q.trim().toLowerCase();
     p.querySelectorAll('.dp-cat').forEach((b) => b.classList.toggle('on', b.dataset.cat === DP.cat));
     let h = '';
@@ -342,10 +343,13 @@
     if (!G.Dev) return;
     hookNet(); hookDev(); tpGuardCloud(); tpBanner();
     if (!DP.legacy) DP.legacy = G.Dev.open;
-    G.Dev.open = open;
-    const b = document.getElementById('devBtn'); if (b) b.onclick = open;
+    G.Dev.open = () => DP.open();
+    const b = document.getElementById('devBtn'); if (b) b.onclick = () => DP.open();
   };
   // un profil de test reste actif après un redémarrage : la synchronisation du vrai compte reste coupée
   window.addEventListener('load', () => setTimeout(() => { if (TP.active()) { tpGuardCloud(); tpBanner(); } }, 500));
   DP.open = open; DP.close = close; DP.runAutoTests = runAutoTests; DP.report = report;
+  // accès internes pour l'interface « verre sombre » (devui.js)
+  Object.assign(DP, { _I: I, _click: onClick, _input: onInput, _meDraw: meDraw, _mePaint: mePaint, _runCon: runCon, _render: render, _hookNet: hookNet, _hookDev: hookDev, _ex: exportReport });
+  DP._setPanel = (o) => { DP.panel = o; }; DP._live = (fn) => { clearInterval(liveT); liveT = setInterval(fn, 700); };
 })();
