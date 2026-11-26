@@ -794,3 +794,94 @@ body.in-match #devGiftBtn { display: none; }
 .rg-ov { -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
 .rg-content.detail .rg-top { display: none; } .rg-content.detail .rg-body { padding-top: 1.8rem; }
 .rg-foot { position: sticky; bottom: -3rem; padding: 1.2rem 0 .4rem; background: linear-gradient(transparent, rgba(40,36,42,.96) 40%); }
+
+/* ======================= v3.8 : thème « NEO 2030 » ======================= */
+body.t2030 { --neo-c: #34f5ff; --neo-v: #8a5cff; --neo-m: #ff3dc8; --neo-glass: linear-gradient(135deg, rgba(255,255,255,.13), rgba(255,255,255,.035) 55%, rgba(120,200,255,.06));
+  --neo-line: rgba(140,225,255,.38); --neo-shadow: 0 1.2rem 3.4rem rgba(0,0,12,.5), 0 0 2.4rem rgba(52,245,255,.07); }
+body.t2030 #home .neo-bg { position: absolute; inset: 0; width: 100%; height: 100%; }
+body.t2030 #home .hm-bg .emblem, body.t2030 #home .hm-bg .spot { display: none; }
+body.t2030 #home, body.t2030 #home * { text-shadow: 0 .2rem .7rem rgba(0,0,10,.55); }
+/* panneaux en verre */
+body.t2030 #home .bspanel, body.t2030 #home .mbtn, body.t2030 #home .pill, body.t2030 #home .icon-btn, body.t2030 #home .modepanel, body.t2030 #home .hplate, body.t2030 #home .chip, body.t2030 #home .teambar {
+  background: var(--neo-glass) !important; border: .22rem solid var(--neo-line) !important; box-shadow: var(--neo-shadow), inset 0 .1rem 0 rgba(255,255,255,.25) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(1.3); backdrop-filter: blur(12px) saturate(1.3); }
+body.t2030 #home .bspanel, body.t2030 #home .mbtn, body.t2030 #home .modepanel { border-radius: 2.2rem; overflow: hidden; }
+body.t2030 #home .bspanel::before, body.t2030 #home .mbtn::before, body.t2030 #home .modepanel::before { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,.12) 45%, transparent 60%); background-size: 250% 100%; animation: neoSheen 7s ease-in-out infinite; }
+@keyframes neoSheen { 0%, 60% { background-position: 150% 0; } 100% { background-position: -100% 0; } }
+body.t2030 #home .mbtn { transition: transform .15s, border-color .2s, box-shadow .2s; }
+body.t2030 #home .mbtn .ic, body.t2030 #home .icon-btn .ic, body.t2030 #home .bspanel.trp .ic { color: var(--neo-c); filter: drop-shadow(0 0 .8rem rgba(52,245,255,.8)); }
+body.t2030 #home .mbtn span { font-size: 2rem; letter-spacing: .12rem; text-transform: uppercase; }
+body.t2030 #home .mbtn:active, body.t2030 #home .bspanel:active, body.t2030 #home .modepanel:active { transform: scale(.96); border-color: var(--neo-c) !important; box-shadow: 0 0 3rem rgba(52,245,255,.45) !important; }
+body.t2030 #home .badge { background: linear-gradient(#ff5fd2, #d81f9a) !important; border-color: #fff !important; box-shadow: 0 0 1.2rem rgba(255,61,200,.8); }
+body.t2030 #home .xpbar, body.t2030 #home .rbar { background: rgba(0,0,0,.45) !important; border: .15rem solid rgba(140,225,255,.3) !important; }
+body.t2030 #home .xpbar i, body.t2030 #home .rbar i { background: linear-gradient(90deg, var(--neo-c), var(--neo-v)) !important; box-shadow: 0 0 1.2rem rgba(52,245,255,.7); }
+body.t2030 #home .pav { border-radius: 1.6rem; box-shadow: 0 0 0 .25rem var(--neo-c), 0 0 2rem rgba(52,245,255,.55); }
+body.t2030 #home .plv { background: linear-gradient(var(--neo-v), #5a2bd0) !important; }
+body.t2030 #home .pill .plus { background: linear-gradient(var(--neo-c), #18b8e0) !important; color: #022 !important; text-shadow: none; }
+/* mode + bouton JOUER */
+body.t2030 #home .modepanel { position: relative; background: linear-gradient(100deg, color-mix(in srgb, var(--mc) 45%, transparent), rgba(255,255,255,.05) 65%) !important; }
+body.t2030 #home .modepanel .mi { border-radius: 1.6rem; box-shadow: 0 0 2rem color-mix(in srgb, var(--mc) 70%, transparent); }
+body.t2030 #home .btn.play { position: relative; overflow: hidden; border: .3rem solid rgba(255,255,255,.75) !important; border-radius: 2.6rem !important;
+  background: linear-gradient(100deg, #ffe45c 0%, #ffb01f 45%, #ff6a2a 100%) !important; color: #2a1200 !important; text-shadow: 0 .15rem 0 rgba(255,255,255,.45) !important;
+  box-shadow: 0 0 0 .3rem rgba(255,170,40,.35), 0 0 4rem rgba(255,150,40,.55), 0 1.2rem 2.4rem rgba(0,0,0,.45), inset 0 .3rem 0 rgba(255,255,255,.6) !important; animation: neoPlay 2.4s ease-in-out infinite; }
+body.t2030 #home .btn.play::after { content: ''; position: absolute; top: -20%; bottom: -20%; width: 30%; left: -40%; background: linear-gradient(100deg, transparent, rgba(255,255,255,.75), transparent); transform: skewX(-18deg); animation: neoSweep 2.8s ease-in-out infinite; }
+body.t2030 #home .btn.play small { color: #5a2a00 !important; letter-spacing: .3rem; text-transform: uppercase; }
+@keyframes neoPlay { 50% { box-shadow: 0 0 0 .6rem rgba(255,170,40,.18), 0 0 6rem rgba(255,150,40,.75), 0 1.2rem 2.4rem rgba(0,0,0,.45), inset 0 .3rem 0 rgba(255,255,255,.6); } }
+@keyframes neoSweep { 0%, 55% { left: -40%; } 100% { left: 130%; } }
+body.t2030 #home .chip { color: #fff !important; border-radius: 1.6rem !important; }
+body.t2030 #home .evbanner { background: linear-gradient(100deg, rgba(255,61,200,.75), rgba(138,92,255,.7)) !important; border: .22rem solid rgba(255,190,240,.6) !important; box-shadow: 0 0 3rem rgba(255,61,200,.35) !important; border-radius: 2rem !important; }
+/* plateforme holographique sous le brawler */
+body.t2030 #home .hm-bg .podium { background: radial-gradient(ellipse at 50% 50%, rgba(52,245,255,.55), rgba(138,92,255,.25) 45%, transparent 70%) !important; box-shadow: none !important; border: none !important; filter: blur(.4rem); animation: neoPod 3s ease-in-out infinite; }
+@keyframes neoPod { 50% { opacity: .65; transform: translateX(-57%) scale(1.05); } }
+.neo-holo { position: absolute; left: 50%; bottom: 3%; width: 70%; height: 22%; transform: translateX(-50%); pointer-events: none; z-index: 0; }
+.neo-holo i { position: absolute; left: 50%; top: 50%; border-radius: 50%; transform: translate(-50%, -50%) rotateX(72deg); }
+.neo-holo .r1 { width: 100%; height: 300%; border: .35rem solid rgba(52,245,255,.75); box-shadow: 0 0 2.5rem rgba(52,245,255,.7), inset 0 0 2.5rem rgba(52,245,255,.45); }
+.neo-holo .r2 { width: 78%; height: 235%; border: .3rem dashed rgba(138,92,255,.9); animation: neoSpin 9s linear infinite; }
+.neo-holo .r3 { width: 120%; height: 360%; border: .2rem solid rgba(255,61,200,.35); animation: neoPulse 2.6s ease-out infinite; }
+.neo-holo .beam { width: 64%; height: 900%; top: -320%; border-radius: 40% 40% 50% 50%; transform: translate(-50%, 0); background: linear-gradient(0deg, rgba(52,245,255,.28), rgba(52,245,255,0)); filter: blur(.6rem); }
+.neo-holo .scan { width: 70%; height: .5rem; top: 0; border-radius: .4rem; transform: translate(-50%, 0); background: rgba(52,245,255,.8); box-shadow: 0 0 1.6rem rgba(52,245,255,.9); animation: neoScan 3.4s ease-in-out infinite; }
+@keyframes neoSpin { to { transform: translate(-50%, -50%) rotateX(72deg) rotateZ(360deg); } }
+@keyframes neoPulse { 0% { opacity: .9; width: 90%; height: 270%; } 100% { opacity: 0; width: 140%; height: 420%; } }
+@keyframes neoScan { 0% { top: 20%; opacity: 0; } 15% { opacity: 1; } 85% { opacity: .9; } 100% { top: -420%; opacity: 0; } }
+body.t2030 #home .hero { position: relative; z-index: 1; filter: drop-shadow(0 0 2.4rem rgba(52,245,255,.35)); }
+body.t2030 #home .tslot { background: rgba(255,255,255,.06) !important; border: .25rem dashed rgba(140,225,255,.55) !important; color: var(--neo-c) !important; box-shadow: 0 0 2rem rgba(52,245,255,.15) inset; }
+/* entrées animées */
+body.t2030 #home.neo-in .hm-left > * { animation: neoInL .55s cubic-bezier(.2,1,.3,1) both; } body.t2030 #home.neo-in .hm-left > *:nth-child(2) { animation-delay: .06s; } body.t2030 #home.neo-in .hm-left > *:nth-child(3) { animation-delay: .12s; }
+body.t2030 #home.neo-in .hm-right > * { animation: neoInR .5s cubic-bezier(.2,1,.3,1) both; }
+body.t2030 #home.neo-in .hm-right > *:nth-child(2) { animation-delay: .04s; } body.t2030 #home.neo-in .hm-right > *:nth-child(3) { animation-delay: .08s; } body.t2030 #home.neo-in .hm-right > *:nth-child(4) { animation-delay: .12s; } body.t2030 #home.neo-in .hm-right > *:nth-child(5) { animation-delay: .16s; } body.t2030 #home.neo-in .hm-right > *:nth-child(6) { animation-delay: .2s; }
+body.t2030 #home.neo-in .hm-br > * { animation: neoInB .55s cubic-bezier(.2,1,.3,1) both; } body.t2030 #home.neo-in .hm-br > *:nth-child(2) { animation-delay: .07s; } body.t2030 #home.neo-in .hm-br > *:nth-child(3) { animation-delay: .14s; } body.t2030 #home.neo-in .hm-br > *:nth-child(4) { animation-delay: .2s; }
+body.t2030 #home.neo-in .hm-top > * { animation: neoInT .5s cubic-bezier(.2,1,.3,1) both; }
+@keyframes neoInL { from { opacity: 0; transform: translateX(-6rem); filter: blur(.6rem); } } @keyframes neoInR { from { opacity: 0; transform: translateX(6rem); filter: blur(.6rem); } }
+@keyframes neoInB { from { opacity: 0; transform: translateY(5rem); filter: blur(.6rem); } } @keyframes neoInT { from { opacity: 0; transform: translateY(-4rem); } }
+/* fenêtres, écrans et en-têtes : même langage visuel */
+body.t2030 .overlay { background: radial-gradient(ellipse at 50% 40%, rgba(30,20,80,.55), rgba(4,6,20,.78)); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+body.t2030 .overlay .modal { background: linear-gradient(160deg, rgba(40,46,120,.94), rgba(18,20,58,.96)) !important; border: .25rem solid var(--neo-line) !important; border-radius: 3rem !important;
+  box-shadow: 0 0 0 .1rem rgba(255,255,255,.08) inset, 0 0 4rem rgba(52,245,255,.15), 0 3rem 6rem rgba(0,0,0,.6) !important; }
+body.t2030 .overlay .modal h2 { background: linear-gradient(90deg, #fff, #bff8ff); -webkit-background-clip: text; background-clip: text; }
+body.t2030 .modal .x { border-radius: 1.4rem; background: linear-gradient(#ff5a8a, #d8245a); border-color: rgba(255,255,255,.6); }
+body.t2030 .screen:not(#home) { background: radial-gradient(ellipse at 50% 0%, #2a2f8a 0%, #12154a 55%, #070a24 100%); }
+body.t2030 .toast { background: linear-gradient(135deg, rgba(40,46,120,.92), rgba(18,20,58,.94)) !important; border: .22rem solid var(--neo-line) !important; box-shadow: 0 0 2.4rem rgba(52,245,255,.25) !important; border-radius: 2rem !important; }
+@media (prefers-reduced-motion: reduce) { body.t2030 #home *, .neo-holo i { animation: none !important; } }
+body.t2030 #home .bspanel, body.t2030 #home .mbtn { overflow: visible; }
+body.t2030 #home .pass-btn span { color: #ffe27a !important; } body.t2030 #home .pass-btn .ic { color: #ffd21f; filter: drop-shadow(0 0 .8rem rgba(255,210,31,.8)); }
+body.t2030 #home .mbtn em { background: linear-gradient(#4fe3a0, #1fb46a) !important; border-color: #fff !important; box-shadow: 0 0 1.2rem rgba(79,227,160,.7); z-index: 2; }
+.neo-holo .beam { top: auto; bottom: 50%; height: 420%; transform: translate(-50%, 0); background: linear-gradient(0deg, rgba(52,245,255,.26), rgba(52,245,255,0)); }
+body.t2030 #home .hanger { background: var(--neo-glass) !important; border: .22rem solid var(--neo-line) !important; box-shadow: var(--neo-shadow) !important; color: var(--neo-c) !important; }
+body.t2030 #home .hplate { border-radius: 1.6rem !important; } body.t2030 #home .hplate .lvl { background: linear-gradient(var(--neo-v), #5a2bd0) !important; color: #fff !important; }
+/* effets de combat NEO 2030 */
+#neoFeed { position: fixed; right: calc(1.6rem + env(safe-area-inset-right)); top: 22%; z-index: 40; display: flex; flex-direction: column; align-items: flex-end; gap: .7rem; pointer-events: none; }
+body:not(.in-match) #neoFeed, body:not(.in-match) #neoAnn { display: none; }
+#neoFeed .nf { display: flex; align-items: center; gap .8rem; gap: .8rem; font-family: 'Lilita One', sans-serif; font-size: 2.1rem; color: #fff; padding: .5rem 1.4rem; border-radius: 1.3rem; text-shadow: 0 .15rem .3rem rgba(0,0,0,.6);
+  background: linear-gradient(135deg, rgba(20,24,70,.72), rgba(10,12,40,.62)); border: .2rem solid rgba(140,225,255,.35); box-shadow: 0 0 1.6rem rgba(52,245,255,.15); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); animation: nfIn .35s cubic-bezier(.2,1.3,.4,1) both; }
+#neoFeed .nf.out { opacity: 0; transform: translateX(4rem); transition: all .4s; } #neoFeed .nf i { font-style: normal; color: #ff8a8a; } #neoFeed .b { color: #7cc4ff; } #neoFeed .r { color: #ff7a8a; }
+#neoFeed .nf.me-kill { border-color: rgba(255,210,31,.8); box-shadow: 0 0 2rem rgba(255,210,31,.35); } #neoFeed .nf.me-dead { border-color: rgba(255,90,90,.8); }
+@keyframes nfIn { from { opacity: 0; transform: translateX(5rem) scale(.9); } }
+#neoAnn { position: fixed; left: 50%; top: 26%; transform: translateX(-50%); z-index: 41; pointer-events: none; opacity: 0; }
+#neoAnn.go { animation: naGo 1.9s cubic-bezier(.2,1,.3,1) both; }
+#neoAnn .na { display: flex; flex-direction: column; align-items: center; font-family: 'Lilita One', sans-serif; white-space: nowrap; }
+#neoAnn .na b { font-size: 6.4rem; font-weight: 400; color: #fff; letter-spacing: .2rem; text-shadow: 0 0 1.4rem var(--na), 0 0 3.6rem var(--na), 0 .4rem 0 rgba(0,0,0,.6); }
+#neoAnn .na small { font-size: 2.4rem; color: var(--na); letter-spacing: .4rem; text-transform: uppercase; text-shadow: 0 0 1rem var(--na); }
+@keyframes naGo { 0% { opacity: 0; transform: translateX(-50%) scale(1.8); filter: blur(.8rem); } 14% { opacity: 1; transform: translateX(-50%) scale(1); filter: none; } 80% { opacity: 1; transform: translateX(-50%) scale(1.02); } 100% { opacity: 0; transform: translateX(-50%) translateY(-3rem) scale(.95); } }
+body.in-match.neo-super::after { content: ''; position: fixed; inset: 0; z-index: 39; pointer-events: none; box-shadow: inset 0 0 8rem rgba(255,210,31,.55), inset 0 0 2rem rgba(255,240,150,.6); animation: neoSup 1.1s ease-out both; }
+@keyframes neoSup { from { opacity: 1; } to { opacity: 0; } }
