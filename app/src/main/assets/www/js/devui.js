@@ -31,7 +31,8 @@
   const sliders = (list) => list.map(([k, l, a, b, s]) => `<div class="dh-row"><div class="dh-rt"><b>${l} <span class="dp-v">${G.Dev.cfg[k]}</span></b></div><input type="range" data-r="${k}" min="${a}" max="${b}" step="${s}" value="${G.Dev.cfg[k]}"></div>`).join('');
   const CHEATS = [['god', 'Invincible', 'Aucun dégât reçu.'], ['ammo', 'Munitions infinies', 'Trois munitions en permanence.'], ['sup', 'Super toujours prête', 'La super se recharge instantanément.'], ['ohk', 'Un coup = élimination', 'Chaque tir élimine.'], ['aim', 'Aimbot', 'Vise l\'ennemi le plus proche (anticipation en ligne).'], ['dodge', 'Esquive automatique', 'Roulade quand un projectile va toucher.'], ['auto', 'Tir automatique', 'Tire dès qu\'un ennemi est à portée.'], ['gad', 'Gadgets infinis', 'Le gadget se recharge sans limite.']];
   const W = [
-    { k: 'home', n: 'Accueil', s: 'Vue d\'ensemble', ic: 'home', c: '#7c8cff', pages: [{ id: 'home', t: 'Accueil', d: 'État, droits, favoris et accès rapide aux espaces.', view: () => homeView() }] },
+    { k: 'home', n: 'Accueil', s: 'Vue d\'ensemble', ic: 'home', c: '#7c8cff', pages: [{ id: 'home', t: 'Accueil', d: 'État, droits, favoris et accès rapide aux espaces.', view: () => homeView() },
+      { id: 'notes', t: 'Notes de version', d: 'Ce qui a changé à chaque version, pour les joueurs et pour les développeurs.', view: () => (G.Changelog ? '<div class="dh-notes">' + G.Changelog.html(G.CHANGELOG, true) + '</div>' : '') }] },
     { k: 'monitor', n: 'Supervision', s: 'Joueurs, parties, replays', ic: 'monitor', c: '#22d3ee', role: 'observe', pages: [
       { id: 'dash', t: 'Tableau de bord', d: 'Données réelles du serveur, en direct.', role: 'observe', view: 'console:dash' },
       { id: 'players', t: 'Joueurs', d: 'Connectés et récents, recherche, profil, historique.', role: 'observe', view: 'console:players' },

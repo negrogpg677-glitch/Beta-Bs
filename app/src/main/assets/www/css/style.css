@@ -998,3 +998,13 @@ body.spectating #devBtn, body.spectating #devGiftBtn, body.spectating .devbadge,
 @media (max-height: 460px), (max-width: 900px) { .dh-rail { width: 11.6rem; } .dh-ws { flex-direction: column; gap: .3rem; padding: .7rem .4rem; } .dh-ws span { display: flex; align-items: center; } .dh-ws span b { font-size: 1.35rem; font-weight: 700; text-align: center; line-height: 1.1; } .dh-ws span small { display: none; } .dh-ws i { width: 4.2rem; height: 4.2rem; } }
 .dh-ov .dp-map { align-self: center; width: auto; height: auto; max-width: 100%; max-height: 64vh; }
 .dh-page > .dp-chips, .dh-page > .dh-actions { align-self: stretch; }
+/* notes de version */
+.clm .cl-hd { display: flex; align-items: center; gap: 1.4rem; flex-wrap: wrap; } .clm h2 { margin: 0; } .cl-new { font-size: 1.8rem; padding: .4rem 1.2rem; border-radius: 1rem; background: linear-gradient(90deg, #34f5ff, #8a5cff); color: #06102a; text-shadow: none; letter-spacing: .2rem; }
+.cl-devb { margin-left: auto; font-size: 1.8rem; padding: .4rem 1.2rem; border-radius: 1rem; background: linear-gradient(#ff7ae0, #a82ad0); }
+.cl-body { max-height: 56vh; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y; margin-top: 1.2rem; text-align: left; padding-right: .6rem; }
+.cl-v { padding: 1.4rem 1.6rem; border-radius: 1.8rem; background: rgba(0,0,0,.22); border: .2rem solid rgba(140,225,255,.25); margin-bottom: 1.2rem; } .cl-v.old { opacity: .85; border-color: rgba(255,255,255,.1); }
+.cl-vh { display: flex; align-items: baseline; gap: 1.2rem; flex-wrap: wrap; } .cl-vh b { font-size: 3rem; color: #ffd21f; } .cl-vh span { font-size: 2.4rem; } .cl-vh small { margin-left: auto; font-size: 1.8rem; opacity: .7; }
+.cl-sec { margin: 1rem 0 .4rem; font-size: 2.1rem; color: #9dffb4; } .cl-sec.dev { color: #ffb0ee; }
+.cl-v ul { margin: 0; padding-left: 3rem; font-size: 2.2rem; line-height: 1.35; } .cl-v li { margin: .4rem 0; } .cl-v ul.dev li::marker { color: #ff7ae0; }
+.dh-notes .cl-v { background: #131824; border-color: rgba(255,255,255,.07); font-family: system-ui, sans-serif; } .dh-notes .cl-vh b { font-size: 2.6rem; color: #fbbf24; } .dh-notes .cl-vh span { font-size: 2.1rem; font-weight: 700; } .dh-notes .cl-v ul { font-size: 1.9rem; color: #c9cfdc; } .dh-notes .cl-sec { font-size: 1.7rem; font-weight: 800; }
+.clm .cl-devb { margin-right: 6.4rem; }
